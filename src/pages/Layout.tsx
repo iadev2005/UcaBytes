@@ -1,11 +1,17 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
+import { motion } from 'framer-motion';
 
 export default function Layout() {
   const location = useLocation();
   return (
     <div className="min-h-screen flex">
-      <aside className="w-64 h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10">
+      <motion.aside
+        initial={{ x: -100, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 40, damping: 24 }}
+        className="w-64 h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10"
+      >
         <div className="flex-1 flex flex-col pt-12">
           <nav className="flex flex-col gap-2">
             <SidebarLink to="/" icon={HomeIcon} label="Home" active={location.pathname === '/'} />
@@ -20,7 +26,7 @@ export default function Layout() {
             <SidebarLink to="/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} />
           </nav>
         </div>
-      </aside>
+      </motion.aside>
       <main className="flex-1 ml-64 h-screen overflow-y-auto bg-white">
         <Outlet />
       </main>
@@ -30,13 +36,19 @@ export default function Layout() {
 
 function SidebarLink({ to, icon: Icon, label, active }: { to: string, icon: React.FC<React.SVGProps<SVGSVGElement>>, label: string, active?: boolean }) {
   return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all ${active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-50)]'}`}
-      style={{ fontFamily: 'var(--font-syne)' }}
+    <motion.div
+      whileHover={{ scale: 1.04, x: 6 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 60, damping: 18 }}
     >
-      <Icon className="w-6 h-6" />
-      <span className="text-base text-left">{label}</span>
-    </Link>
+      <Link
+        to={to}
+        className={`flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all ${active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-50)]'}`}
+        style={{ fontFamily: 'var(--font-syne)' }}
+      >
+        <Icon className="w-6 h-6" />
+        <span className="text-base text-left">{label}</span>
+      </Link>
+    </motion.div>
   );
 } 
