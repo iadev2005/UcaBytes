@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function ProductsServices() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-background)] p-8">
