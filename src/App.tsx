@@ -1,10 +1,12 @@
-import { HomeIcon } from './icons/Home'
-import { AutomationIcon } from './icons/Automation'
-import { OperationsIcon } from './icons/Operations'
-import { ServicesIcon } from './icons/Services'
-import { MegaphoneIcon } from './icons/Megaphone'
-import { ReturnIcon } from './icons/Return'
-import { NotificationIcon } from './icons/Notification'
+import { 
+  HomeIcon,
+  AutomationIcon,
+  OperationsIcon,
+  ServicesIcon,
+  MegaphoneIcon,
+  ReturnIcon,
+  NotificationIcon
+} from './icons'
 
 function App() {
   const icons = [
