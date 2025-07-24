@@ -90,25 +90,28 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'features':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-16 bg-gray-50">
-              <div className="container mx-auto px-4">
+            <div className="py-8 md:py-16 bg-gray-50">
+              <div className={cn(
+                'px-2 sm:px-4',
+                typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
+              )}>
                 <h2 
                   style={applyStyles(section.content.titleStyle)}
-                  className="text-3xl font-bold text-center mb-12"
+                  className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12"
                 >
                   {section.content.title}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
                   {section.content.features.map((feature, index) => (
                     <div
                       key={index}
                       style={applyStyles(feature.style)}
-                      className="p-6 bg-white rounded-lg shadow-sm"
+                      className="p-4 md:p-6 bg-white rounded-lg shadow-sm w-full h-full flex flex-col"
                     >
-                      <h3 className="text-xl font-semibold mb-3">
+                      <h3 className="text-lg md:text-xl font-semibold mb-2 md:mb-3">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-gray-600 text-sm md:text-base flex-1">
                         {feature.description}
                       </p>
                     </div>
@@ -122,31 +125,34 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'products':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-16">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
+            <div className="py-8 md:py-16">
+              <div className={cn(
+                'px-2 sm:px-4',
+                typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
+              )}>
+                <div className="text-center mb-8 md:mb-12">
                   <h2 
                     style={applyStyles(section.content.titleStyle)}
-                    className="text-3xl font-bold mb-4"
+                    className="text-2xl md:text-3xl font-bold mb-2 md:mb-4"
                   >
                     {section.content.title}
                   </h2>
                   <p 
                     style={applyStyles(section.content.descriptionStyle)}
-                    className="text-xl text-gray-600"
+                    className="text-base md:text-xl text-gray-600"
                   >
                     {section.content.description}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
                   {section.content.products.map((product, index) => (
                     <div 
                       key={index} 
                       style={applyStyles(product.style)}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden"
+                      className="bg-white rounded-lg shadow-sm overflow-hidden w-full flex flex-col"
                     >
                       {product.image && (
-                        <div className="aspect-square">
+                        <div className="aspect-square w-full">
                           <img
                             src={product.image}
                             alt={product.name}
@@ -154,14 +160,14 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                           />
                         </div>
                       )}
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold mb-2">{product.name}</h3>
-                        <p className="text-gray-600 mb-4">{product.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-primary">
+                      <div className="p-4 md:p-6 flex-1 flex flex-col">
+                        <h3 className="text-lg md:text-xl font-semibold mb-1 md:mb-2">{product.name}</h3>
+                        <p className="text-gray-600 text-sm md:text-base mb-2 flex-1">{product.description}</p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-base md:text-lg font-bold text-primary">
                             ${product.price.toFixed(2)}
                           </span>
-                          <button className="px-4 py-2 bg-primary text-white rounded-lg">
+                          <button className="px-3 md:px-4 py-1.5 md:py-2 bg-primary text-white rounded-lg text-xs md:text-base">
                             Ver detalles
                           </button>
                         </div>
@@ -177,43 +183,46 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'testimonials':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-16 bg-gray-50">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
+            <div className="py-8 md:py-16 bg-gray-50">
+              <div className={cn(
+                'px-2 sm:px-4',
+                typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
+              )}>
+                <div className="text-center mb-8 md:mb-12">
                   <h2 
                     style={applyStyles(section.content.titleStyle)}
-                    className="text-3xl font-bold mb-4"
+                    className="text-2xl md:text-3xl font-bold mb-2 md:mb-4"
                   >
                     {section.content.title}
                   </h2>
                   <p 
                     style={applyStyles(section.content.descriptionStyle)}
-                    className="text-xl text-gray-600"
+                    className="text-base md:text-xl text-gray-600"
                   >
                     {section.content.description}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
                   {section.content.testimonials.map((testimonial, index) => (
                     <div 
                       key={index} 
                       style={applyStyles(testimonial.style)}
-                      className="bg-white p-6 rounded-lg shadow-sm"
+                      className="bg-white p-4 md:p-6 rounded-lg shadow-sm w-full flex flex-col"
                     >
-                      <div className="flex items-center gap-4 mb-4">
+                      <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
                         {testimonial.image && (
                           <img
                             src={testimonial.image}
                             alt={testimonial.name}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
                           />
                         )}
                         <div>
-                          <h3 className="font-semibold">{testimonial.name}</h3>
-                          <p className="text-sm text-gray-600">{testimonial.role}</p>
+                          <h3 className="font-semibold text-sm md:text-base">{testimonial.name}</h3>
+                          <p className="text-xs md:text-sm text-gray-600">{testimonial.role}</p>
                         </div>
                       </div>
-                      <p className="text-gray-600 italic">"{testimonial.text}"</p>
+                      <p className="text-gray-600 italic text-sm md:text-base flex-1">"{testimonial.text}"</p>
                     </div>
                   ))}
                 </div>

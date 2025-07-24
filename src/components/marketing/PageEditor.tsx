@@ -448,7 +448,6 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <StyleEditor
                 value={section.content.titleStyle || {}}
                 onChange={(styles) => {
-                  console.log('Actualizando estilos del título:', styles);
                   updateSectionStyles(section.id, 'titleStyle', styles);
                 }}
               />
@@ -471,11 +470,26 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-2">Imagen de fondo</label>
+              <ImageUploader
+                value={section.content.backgroundImage || ''}
+                onChange={(url) => {
+                  const updatedContent = {
+                    ...section.content,
+                    backgroundImage: url
+                  };
+                  updateSectionStyles(section.id, 'style', updatedContent);
+                }}
+                placeholder="Imagen de fondo del hero"
+                className="aspect-video"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-2">Estilos de la descripción</label>
               <StyleEditor
                 value={section.content.descriptionStyle || {}}
                 onChange={(styles) => {
-                  console.log('Actualizando estilos de la descripción:', styles);
                   updateSectionStyles(section.id, 'descriptionStyle', styles);
                 }}
               />
@@ -502,7 +516,6 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <StyleEditor
                 value={section.content.buttonStyle || {}}
                 onChange={(styles) => {
-                  console.log('Actualizando estilos del botón:', styles);
                   updateSectionStyles(section.id, 'buttonStyle', styles);
                 }}
               />
@@ -513,7 +526,6 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <StyleEditor
                 value={section.content.style || {}}
                 onChange={(styles) => {
-                  console.log('Actualizando estilos de la sección:', styles);
                   updateSectionStyles(section.id, 'style', styles);
                 }}
               />
@@ -1059,11 +1071,53 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
 
       {/* Panel central - Vista previa */}
       <div className="flex-1 bg-gray-100 overflow-y-auto p-8">
-        <PagePreview 
-          page={currentPage} 
-          onSectionSelect={(id) => setSelectedSectionId(id ?? undefined)}
-          selectedSectionId={selectedSectionId ?? undefined}
-        />
+        <div
+          className={cn(
+            "mx-auto bg-white shadow-lg transition-all",
+            viewMode === 'desktop' && 'max-w-6xl w-full',
+            viewMode === 'tablet' && 'max-w-md w-full',
+            viewMode === 'mobile' && 'max-w-xs w-full',
+            'relative'
+          )}
+          style={{
+            border: viewMode !== 'desktop' ? '1px solid #e5e7eb' : undefined,
+            borderRadius: viewMode !== 'desktop' ? 24 : undefined,
+            overflow: 'hidden',
+            minHeight: 400
+          }}
+        >
+          {currentPage.content.sections
+            .sort((a, b) => a.order - b.order)
+            .map((section, idx) => (
+              <div
+                key={section.id}
+                draggable
+                onDragStart={() => handleDragStart(section)}
+                onDragOver={e => handleDragOver(e, idx)}
+                onDrop={e => handleDrop(e, idx)}
+                onClick={e => { e.stopPropagation(); setSelectedSectionId(section.id); }}
+                className={cn(
+                  'cursor-pointer group relative transition-all mb-4',
+                  selectedSectionId === section.id ? 'ring-4 ring-primary/60 z-10' : ''
+                )}
+                style={{ position: 'relative' }}
+              >
+                {/* Botón eliminar sección */}
+                <button
+                  onClick={e => { e.stopPropagation(); handleSectionDelete(section.id); }}
+                  className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  title="Eliminar sección"
+                >
+                  Eliminar
+                </button>
+                {/* Renderizado de la sección */}
+                <PagePreview
+                  page={{ ...currentPage, content: { ...currentPage.content, sections: [section] } }}
+                  selectedSectionId={selectedSectionId === section.id ? section.id : undefined}
+                />
+              </div>
+            ))}
+        </div>
       </div>
 
       {/* Panel derecho - Configuración de sección */}
@@ -1084,8 +1138,8 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
         </ResizablePanel>
       )}
 
-      {/* Barra de herramientas flotante */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4">
+      {/* Barra de herramientas flotante SIEMPRE visible y fija */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4 z-50">
         <div className="flex items-center gap-2 border-r pr-4">
           <button
             onClick={() => setViewMode('mobile')}
