@@ -16,6 +16,10 @@ import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import LoginRegister from './pages/Login-register';
+import ChatButton from './components/ChatButton';
 
 function PublicSite() {
   const { siteId } = useParams();
@@ -32,12 +36,24 @@ function PublicSite() {
   return <PagePreview page={page} />;
 }
 
+function LayoutWithChat() {
+  return (
+    <>
+      <Layout />
+      <ChatButton section="global" />
+    </>
+  );
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/site/:siteId" element={<PublicSite />} />
-        <Route path="/" element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/Login-register" element={<LoginRegister />} />
+        <Route path="/" element={<LayoutWithChat />}>
           <Route index element={<App />} />
           <Route path="design-system" element={<DesignSystem />} />
           <Route path="dashboard" element={<Dashboard />} />
