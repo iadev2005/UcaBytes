@@ -1,46 +1,112 @@
 import type { WebTemplate } from '../types/templates';
 
+const defaultStyles = {
+  titleStyle: {
+    fontSize: 48,
+    fontWeight: 700,
+    textAlign: 'center' as const,
+    color: '#1F2937'
+  },
+  descriptionStyle: {
+    fontSize: 20,
+    fontWeight: 400,
+    textAlign: 'center' as const,
+    color: '#4B5563'
+  },
+  buttonStyle: {
+    fontSize: 16,
+    fontWeight: 500,
+    textAlign: 'center' as const,
+    backgroundColor: '#3B82F6',
+    color: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8
+  }
+};
+
 export const WEBSITE_TEMPLATES: WebTemplate[] = [
   {
-    id: 'restaurant-modern',
-    name: 'Restaurante Moderno',
+    id: 'restaurant',
+    name: 'Restaurante',
     category: 'restaurant',
-    thumbnail: '/templates/restaurant-modern.jpg',
+    thumbnail: '/templates/restaurant.jpg',
     features: [
-      'Menú digital interactivo',
-      'Sistema de reservas en línea',
+      'Menú digital',
+      'Reservas online',
       'Galería de platos',
-      'Testimonios de clientes',
-      'Integración con redes sociales',
-      'Mapa de ubicación'
+      'Información de contacto',
+      'Testimonios de clientes'
     ],
     defaultTheme: {
       primaryColor: '#D4B996',
       secondaryColor: '#594545',
-      fontFamily: 'sans',
-      headerStyle: 'hero',
+      fontFamily: 'serif',
+      headerStyle: 'standard',
       footerStyle: 'detailed'
     },
     defaultSections: [
       {
-        id: 'hero-1',
+        id: 'hero',
         type: 'hero',
         content: {
           title: 'Bienvenidos a nuestro restaurante',
-          description: 'Una experiencia culinaria única que deleitará tus sentidos'
+          description: 'Una experiencia culinaria única',
+          features: [],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          descriptionStyle: defaultStyles.descriptionStyle,
+          buttonStyle: defaultStyles.buttonStyle,
+          style: {
+            backgroundColor: '#FFFFFF'
+          }
         },
         isVisible: true,
         order: 0
       },
       {
-        id: 'features-1',
+        id: 'features',
         type: 'features',
         content: {
+          title: 'Por qué elegirnos',
           features: [
-            { title: 'Cocina de autor', description: 'Platos únicos y creativos' },
-            { title: 'Ingredientes locales', description: 'De la granja a la mesa' },
-            { title: 'Ambiente acogedor', description: 'Diseño moderno y cálido' }
-          ]
+            { 
+              title: 'Ingredientes frescos',
+              description: 'Seleccionamos los mejores ingredientes locales',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Chef experto',
+              description: 'Más de 15 años de experiencia culinaria',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Ambiente acogedor',
+              description: 'Un espacio diseñado para tu comodidad',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            }
+          ],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          style: {
+            backgroundColor: '#F9FAFB',
+            padding: 64
+          }
         },
         isVisible: true,
         order: 1
@@ -48,65 +114,41 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     ]
   },
   {
-    id: 'retail-boutique',
-    name: 'Boutique Elegante',
+    id: 'retail',
+    name: 'Tienda',
     category: 'retail',
-    thumbnail: '/templates/retail-boutique.jpg',
+    thumbnail: '/templates/retail.jpg',
     features: [
       'Catálogo de productos',
       'Carrito de compras',
-      'Galería de fotos',
-      'Newsletter',
-      'Filtros de búsqueda',
-      'Reseñas de productos'
+      'Galería de imágenes',
+      'Información de envíos',
+      'Testimonios de clientes'
     ],
     defaultTheme: {
-      primaryColor: '#DFD3C3',
-      secondaryColor: '#596E79',
-      fontFamily: 'serif',
-      headerStyle: 'minimal',
-      footerStyle: 'simple'
-    },
-    defaultSections: [
-      {
-        id: 'hero-1',
-        type: 'hero',
-        content: {
-          title: 'Moda exclusiva para ti',
-          description: 'Descubre nuestra nueva colección'
-        },
-        isVisible: true,
-        order: 0
-      }
-    ]
-  },
-  {
-    id: 'professional-services',
-    name: 'Servicios Profesionales',
-    category: 'services',
-    thumbnail: '/templates/professional-services.jpg',
-    features: [
-      'Portafolio de servicios',
-      'Formulario de contacto',
-      'Calendario de citas',
-      'Blog integrado',
-      'Testimonios de clientes',
-      'Equipo profesional'
-    ],
-    defaultTheme: {
-      primaryColor: '#2C3E50',
-      secondaryColor: '#E74C3C',
+      primaryColor: '#3B82F6',
+      secondaryColor: '#1E40AF',
       fontFamily: 'sans',
       headerStyle: 'standard',
       footerStyle: 'detailed'
     },
     defaultSections: [
       {
-        id: 'hero-1',
+        id: 'hero',
         type: 'hero',
         content: {
-          title: 'Soluciones profesionales a tu medida',
-          description: 'Expertos en hacer crecer tu negocio'
+          title: 'Tu tienda online',
+          description: 'Los mejores productos a un clic de distancia',
+          features: [],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          descriptionStyle: defaultStyles.descriptionStyle,
+          buttonStyle: defaultStyles.buttonStyle,
+          style: {
+            backgroundColor: '#FFFFFF'
+          }
         },
         isVisible: true,
         order: 0
@@ -114,32 +156,41 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     ]
   },
   {
-    id: 'tech-startup',
-    name: 'Startup Tecnológica',
+    id: 'professional',
+    name: 'Profesional',
     category: 'professional',
-    thumbnail: '/templates/tech-startup.jpg',
+    thumbnail: '/templates/professional.jpg',
     features: [
-      'Diseño minimalista',
-      'Animaciones modernas',
-      'Integración API',
-      'Panel de precios',
-      'Demo interactiva',
-      'Chat en vivo'
+      'Portafolio',
+      'Blog',
+      'Servicios',
+      'Formulario de contacto',
+      'Integración con redes sociales'
     ],
     defaultTheme: {
-      primaryColor: '#6C63FF',
-      secondaryColor: '#2F2E41',
+      primaryColor: '#1F2937',
+      secondaryColor: '#4B5563',
       fontFamily: 'sans',
-      headerStyle: 'minimal',
-      footerStyle: 'simple'
+      headerStyle: 'standard',
+      footerStyle: 'detailed'
     },
     defaultSections: [
       {
-        id: 'hero-1',
+        id: 'hero',
         type: 'hero',
         content: {
-          title: 'Innovación que transforma',
-          description: 'Tecnología del futuro, hoy'
+          title: 'Servicios profesionales',
+          description: 'Soluciones a medida para tu negocio',
+          features: [],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          descriptionStyle: defaultStyles.descriptionStyle,
+          buttonStyle: defaultStyles.buttonStyle,
+          style: {
+            backgroundColor: '#FFFFFF'
+          }
         },
         isVisible: true,
         order: 0

@@ -1,35 +1,114 @@
 import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+import { useState, type Dispatch, type SetStateAction } from 'react';
+import { cn } from '../lib/utils';
 
-export default function Sidebar() {
+interface SidebarProps {
+  onCollapse: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function Sidebar({ onCollapse }: SidebarProps) {
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+    onCollapse(!isCollapsed);
+  };
+
   return (
     <motion.aside
       initial={{ x: -100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 40, damping: 24 }}
-      className="w-[20%] h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10"
+      className={cn(
+        "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10 transition-all duration-300",
+        isCollapsed ? "w-[4rem]" : "w-[20%]"
+      )}
     >
       <div className="flex-1 flex flex-col pt-12">
         <nav className="flex flex-col gap-2">
-          <SidebarLink to="/" icon={HomeIcon} label="Home" active={location.pathname === '/'} />
-          <SidebarLink to="/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/dashboard'} />
-          <SidebarLink to="/marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/marketing'} />
-          <SidebarLink to="/products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/products-services'} />
-          <SidebarLink to="/central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/central-operations'} />
-          <SidebarLink to="/automations" icon={AutomationIcon} label="Automatizaciones" active={location.pathname === '/automations'} />
+          <SidebarLink 
+            to="/" 
+            icon={HomeIcon} 
+            label="Home" 
+            active={location.pathname === '/'} 
+            isCollapsed={isCollapsed}
+          />
+          <SidebarLink 
+            to="/dashboard" 
+            icon={NotificationIcon} 
+            label="Dashboard" 
+            active={location.pathname === '/dashboard'} 
+            isCollapsed={isCollapsed}
+          />
+          <SidebarLink 
+            to="/marketing" 
+            icon={MegaphoneIcon} 
+            label="Marketing" 
+            active={location.pathname === '/marketing'} 
+            isCollapsed={isCollapsed}
+          />
+          <SidebarLink 
+            to="/products-services" 
+            icon={ServicesIcon} 
+            label="Productos y Servicios" 
+            active={location.pathname === '/products-services'} 
+            isCollapsed={isCollapsed}
+          />
+          <SidebarLink 
+            to="/central-operations" 
+            icon={OperationsIcon} 
+            label="Operaciones Centrales" 
+            active={location.pathname === '/central-operations'} 
+            isCollapsed={isCollapsed}
+          />
+          <SidebarLink 
+            to="/automations" 
+            icon={AutomationIcon} 
+            label="Automatizaciones" 
+            active={location.pathname === '/automations'} 
+            isCollapsed={isCollapsed}
+          />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">
-          <SidebarLink to="/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} />
+          <SidebarLink 
+            to="/settings" 
+            icon={ConfigurationIcon} 
+            label="Configuración" 
+            active={location.pathname === '/settings'} 
+            isCollapsed={isCollapsed}
+          />
         </nav>
       </div>
+      <button
+        onClick={handleCollapse}
+        className={cn(
+          "absolute top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors",
+          "border border-[var(--color-primary-100)]"
+        )}
+      >
+        {isCollapsed ? '→' : '←'}
+      </button>
     </motion.aside>
   );
 }
 
-function SidebarLink({ to, icon: Icon, label, active }: { to: string, icon: React.FC<React.SVGProps<SVGSVGElement>>, label: string, active?: boolean }) {
+function SidebarLink({ 
+  to, 
+  icon: Icon, 
+  label, 
+  active, 
+  isCollapsed 
+}: { 
+  to: string, 
+  icon: React.FC<React.SVGProps<SVGSVGElement>>, 
+  label: string, 
+  active?: boolean,
+  isCollapsed: boolean 
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.04 }}
@@ -38,12 +117,18 @@ function SidebarLink({ to, icon: Icon, label, active }: { to: string, icon: Reac
     >
       <Link
         to={to}
-        className={`flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all ${active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-50)]'}`}
+        className={cn(
+          'flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all',
+          active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-50)]',
+          isCollapsed && 'px-3 justify-center'
+        )}
         style={{ fontFamily: 'var(--font-syne)' }}
       >
         <Icon className="w-6 h-6" />
-        <span className="text-base text-left">{label}</span>
+        {!isCollapsed && (
+          <span className="text-base text-left">{label}</span>
+        )}
       </Link>
     </motion.div>
   );
-} 
+}

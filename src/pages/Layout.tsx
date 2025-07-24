@@ -1,12 +1,19 @@
-import {  Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/Sidebar';
 import TopInfo from '../components/TopInfo';
+import { useState } from 'react';
+import { cn } from '../lib/utils';
 
 export default function Layout() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   return (
     <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="min-h-screen flex w-[80%] ml-auto flex-col h-full bg-white">
+      <Sidebar onCollapse={setIsSidebarCollapsed} />
+      <div className={cn(
+        "min-h-screen flex flex-col h-full bg-white transition-all duration-300",
+        isSidebarCollapsed ? "w-[calc(100%-4rem)] ml-[4rem]" : "w-[80%] ml-auto"
+      )}>
         <TopInfo />
         <main className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
           <Outlet />
