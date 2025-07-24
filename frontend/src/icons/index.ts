@@ -5,4 +5,5 @@ export { NotificationIcon } from './Notification';
 export { OperationsIcon } from './Operations';
 export { ReturnIcon } from './Return';
 export { ServicesIcon } from './Services';
-export { ConfigurationIcon } from './Configuration'; 
+export { ConfigurationIcon } from './Configuration';
+export { GlobeIcon } from './Globe'; 

@@ -93,7 +93,7 @@ export default function WebsiteBuilder() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tutorial inicial */}
-        {showTutorial && currentStep === 'template' && (
+        {false && (
           <div className="mb-8 bg-blue-50 p-4 rounded-lg">
             <div className="flex justify-between items-start">
               <div className="flex gap-3">
