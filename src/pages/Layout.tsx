@@ -8,7 +8,7 @@ export default function Layout() {
       <Sidebar />
       <div className="min-h-screen flex w-[80%] ml-auto flex-col h-full bg-white">
         <TopInfo />
-        <main className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+        <main className="flex-1" style={{ minHeight: 0 }}>
           <Outlet />
         </main>
       </div>
