@@ -6,4 +6,6 @@ export { OperationsIcon } from './Operations';
 export { ReturnIcon } from './Return';
 export { ServicesIcon } from './Services';
 export { ConfigurationIcon } from './Configuration';
-export { GlobeIcon } from './Globe'; 
+export { GlobeIcon } from './Globe';
+export { SidebarExpandIcon } from './SidebarExpand';
+export { SidebarCollapseIcon } from './SidebarCollapse'; 

@@ -1,4 +1,4 @@
-import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
+import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, type Dispatch, type SetStateAction } from 'react';
@@ -19,11 +19,8 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
 
   return (
     <motion.aside
-      initial={{ x: -100, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 40, damping: 24 }}
       className={cn(
-        "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10 transition-all duration-300",
+        "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-50 transition-all duration-300",
         isCollapsed ? "w-[4rem]" : "w-[20%]"
       )}
     >
@@ -89,8 +86,9 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           "absolute top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors",
           "border border-[var(--color-primary-100)]"
         )}
+        aria-label={isCollapsed ? 'Desplegar sidebar' : 'Replegar sidebar'}
       >
-        {isCollapsed ? '→' : '←'}
+        {isCollapsed ? <SidebarExpandIcon className="w-6 h-6 text-[var(--color-primary-600)]" /> : <SidebarCollapseIcon className="w-6 h-6 text-[var(--color-primary-600)]" />}
       </button>
     </motion.aside>
   );
@@ -119,7 +117,7 @@ function SidebarLink({
         to={to}
         className={cn(
           'flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all',
-          active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-50)]',
+          active ? 'bg-white shadow-lg font-semibold' : 'hover:bg-[var(--color-primary-100)]',
           isCollapsed && 'px-3 justify-center'
         )}
         style={{ fontFamily: 'var(--font-syne)' }}

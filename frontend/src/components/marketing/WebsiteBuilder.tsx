@@ -13,7 +13,6 @@ export default function WebsiteBuilder() {
   const [currentStep, setCurrentStep] = useState<StepId>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<WebTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState<BusinessPage | null>(null);
-  const [showTutorial, setShowTutorial] = useState(true);
   const [publishedLink, setPublishedLink] = useState<string | null>(null);
 
   const handleTemplateSelect = (template: WebTemplate) => {
@@ -73,7 +72,7 @@ export default function WebsiteBuilder() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header simple */}
-      <header className="bg-white border-b sticky top-0 z-50">
+      <header className="bg-white border-b sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-900">
@@ -92,40 +91,6 @@ export default function WebsiteBuilder() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tutorial inicial */}
-        {false && (
-          <div className="mb-8 bg-blue-50 p-4 rounded-lg">
-            <div className="flex justify-between items-start">
-              <div className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
-                    💡
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-blue-800">
-                    ¡Bienvenido al Generador de Sitios Web!
-                  </h3>
-                  <div className="mt-2 text-sm text-blue-700">
-                    <p>Crear tu sitio web es fácil:</p>
-                    <ol className="list-decimal ml-4 mt-2 space-y-1">
-                      <li>Elige una plantilla que te guste</li>
-                      <li>Ingresa la información de tu negocio</li>
-                      <li>Personaliza el contenido a tu gusto</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowTutorial(false)}
-                className="text-blue-700 hover:text-blue-900"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        )}
-
         {currentStep === 'template' && (
           <TemplateGallery
             templates={WEBSITE_TEMPLATES}

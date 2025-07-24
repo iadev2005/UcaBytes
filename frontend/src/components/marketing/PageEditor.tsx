@@ -2073,8 +2073,10 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           <button
             onClick={handleSave}
             className={cn(
-              "px-4 py-2 rounded-lg",
-              isDirty ? "bg-primary text-white" : "bg-gray-100"
+              "px-4 py-2 rounded-lg transition-colors",
+              isDirty
+                ? "bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)]"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
             )}
             disabled={!isDirty}
           >
@@ -2092,7 +2094,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           <button
             onClick={toggleFullscreen}
             className={cn(
-              "p-2 rounded-lg hover:bg-gray-100",
+              "p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]",
               isFullscreen && "bg-gray-100"
             )}
             title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
@@ -2101,7 +2103,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           </button>
           <button
             onClick={() => setShowHelp(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]"
             title="Ayuda"
           >
             ?

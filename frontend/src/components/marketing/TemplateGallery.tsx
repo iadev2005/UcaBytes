@@ -47,13 +47,13 @@ const TemplateCard = ({ template, isSelected, onSelect }: TemplateCardProps) => 
           {template.features.slice(0, 3).map((feature, index) => (
             <span
               key={index}
-              className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+              className="text-xs px-2 py-1 bg-gray-100 rounded-full transition-colors hover:bg-[var(--color-primary-50)]"
             >
               {feature}
             </span>
           ))}
           {template.features.length > 3 && (
-            <span className="text-xs px-2 py-1 bg-gray-100 rounded-full">
+            <span className="text-xs px-2 py-1 bg-gray-100 rounded-full transition-colors hover:bg-[var(--color-primary-50)]">
               +{template.features.length - 3} más
             </span>
           )}
@@ -104,8 +104,8 @@ const TemplateGallery = ({ templates, onTemplateSelect }: TemplateGalleryProps) 
               className={cn(
                 'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 filter === category
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[var(--color-primary-600)] text-white'
+                  : 'bg-gray-100 text-[var(--color-primary-700)] hover:bg-[var(--color-primary-100)] hover:text-[var(--color-primary-900)]'
               )}
             >
               {category.charAt(0).toUpperCase() + category.slice(1)}
