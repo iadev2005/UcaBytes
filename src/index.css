@@ -89,3 +89,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Scroll solo si se desborda */
+.scrollable-content {
+  overflow: auto;
+}

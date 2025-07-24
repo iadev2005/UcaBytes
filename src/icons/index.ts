@@ -4,4 +4,5 @@ export { MegaphoneIcon } from './Megaphone';
 export { NotificationIcon } from './Notification';
 export { OperationsIcon } from './Operations';
 export { ReturnIcon } from './Return';
-export { ServicesIcon } from './Services'; 
+export { ServicesIcon } from './Services';
+export { ConfigurationIcon } from './Configuration'; 
