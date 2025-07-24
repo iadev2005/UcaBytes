@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { BusinessPage, PageSection, ThemeConfig } from '../../types/templates';
+import type { BusinessPage, PageSection } from '../../types/templates';
 import { cn } from '../../lib/utils';
 import ImageUploader from './ImageUploader';
 import StyleEditor from './StyleEditor';
@@ -65,7 +65,6 @@ const SECTION_TYPES = {
   }
 };
 
-type EditorMode = 'desktop' | 'tablet' | 'mobile';
 
 interface PageEditorProps {
   page: BusinessPage;
@@ -183,11 +182,30 @@ const DEFAULT_SECTION_CONTENT = {
   }
 };
 
+type SubElementKey =
+  | 'title'
+  | 'description'
+  | 'backgroundImage'
+  | 'button'
+  | 'about-container'
+  | 'content'
+  | `feature-container-${number}`
+  | `feature-title-${number}`
+  | `feature-description-${number}`
+  | `product-container-${number}`
+  | `product-name-${number}`
+  | `product-description-${number}`
+  | `product-price-${number}`
+  | `testimonial-container-${number}`
+  | `testimonial-name-${number}`
+  | `testimonial-role-${number}`
+  | `testimonial-text-${number}`
+  | `stat-container-${number}`;
+
 export default function PageEditor({ page, onSave, onPublish }: PageEditorProps) {
   const [currentPage, setCurrentPage] = useState<BusinessPage>(page);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
-  const [selectedSubElement, setSelectedSubElement] = useState<null | { sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button' }>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [selectedSubElement, setSelectedSubElement] = useState<null | { sectionId: string, key: SubElementKey }>(null);
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showHelp, setShowHelp] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -224,7 +242,6 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
   const dropTarget = useRef<number | null>(null);
 
   const handleDragStart = (section: PageSection) => {
-    setIsDragging(true);
     draggedSection.current = section;
   };
 
@@ -235,7 +252,6 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    setIsDragging(false);
 
     if (!draggedSection.current) return;
 

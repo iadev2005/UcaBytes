@@ -1,17 +1,35 @@
 import type { BusinessPage, PageSection, StyleConfig } from '../../types/templates';
 import { cn } from '../../lib/utils';
 
+type SubElementKey =
+  | 'title'
+  | 'description'
+  | 'backgroundImage'
+  | 'button'
+  | 'about-container'
+  | 'content'
+  | `feature-container-${number}`
+  | `feature-title-${number}`
+  | `feature-description-${number}`
+  | `product-container-${number}`
+  | `product-name-${number}`
+  | `product-description-${number}`
+  | `product-price-${number}`
+  | `testimonial-container-${number}`
+  | `testimonial-name-${number}`
+  | `testimonial-role-${number}`
+  | `testimonial-text-${number}`
+  | `stat-container-${number}`;
+
 type PagePreviewProps = {
   page: BusinessPage;
   onSectionSelect?: (sectionId: string) => void;
   selectedSectionId?: string;
-  onSubElementDoubleClick?: (sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button') => void;
-  selectedSubElement?: { sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button' } | null;
+  onSubElementDoubleClick?: (sectionId: string, key: SubElementKey) => void;
+  selectedSubElement?: { sectionId: string, key: SubElementKey } | null;
 };
 
 const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement }: PagePreviewProps) => {
-  const { theme } = page.content;
-
   // Función simple para aplicar estilos
   const applyStyles = (styles?: StyleConfig): React.CSSProperties => {
     if (!styles) return {};

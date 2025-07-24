@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { BusinessPage, WebTemplate } from '../../types/templates';
 import { WEBSITE_TEMPLATES } from '../../config/templates';
-import { cn } from '../../lib/utils';
 import TemplateGallery from './TemplateGallery';
 import PageBuilder from './PageBuilder';
 import BusinessInfoForm from './BusinessInfoForm';

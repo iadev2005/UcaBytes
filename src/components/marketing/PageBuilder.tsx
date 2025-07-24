@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { BusinessPage } from '../../types/templates';
 import PageEditor from './PageEditor';
 
