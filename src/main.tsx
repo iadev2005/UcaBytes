@@ -11,11 +11,19 @@ import Automations from './pages/Automations.tsx'
 import Settings from './pages/Settings.tsx'
 import Layout from './pages/Layout.tsx'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Login from './pages/Login.tsx'
+import Register from './pages/Register.tsx'
+ import LoginRegister from './pages/Login-register.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        {/* Rutas públicas sin Layout */}
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+        { <Route path="login-register" element={<LoginRegister />} /> }
+        {/* Rutas protegidas con Layout */}
         <Route path="/" element={<Layout />}>
           <Route index element={<App />} />
           <Route path="design-system" element={<DesignSystem />} />
