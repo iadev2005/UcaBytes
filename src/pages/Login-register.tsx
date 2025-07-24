@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function LoginRegister() {
     return (
-      <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo01.jpg')"}}>
+      <div className="bg-cover bg-center min-h-screen min-w-full" style={{background: "#fffaff"}}>
         <div className="flex flex-col items-center justify-center absolute top-1/2 left-2/6 h-screen w-2/6 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
             <img src="/images/Coffee.jpg" alt="Coffee" className="mb-10 w-52 h-52 object-cover rounded-full" />
             <h2 className="text-[3rem] font-bold text-[#0A2463] mb-24">Nombre de la Empresa</h2>
