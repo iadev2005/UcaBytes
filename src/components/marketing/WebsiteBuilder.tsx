@@ -13,6 +13,7 @@ export default function WebsiteBuilder() {
   const [selectedTemplate, setSelectedTemplate] = useState<WebTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState<BusinessPage | null>(null);
   const [showTutorial, setShowTutorial] = useState(true);
+  const [publishedLink, setPublishedLink] = useState<string | null>(null);
 
   const handleTemplateSelect = (template: WebTemplate) => {
     setSelectedTemplate(template);
@@ -53,6 +54,11 @@ export default function WebsiteBuilder() {
     };
     console.log('Publicando página:', publishedPage);
     setCurrentPage(publishedPage);
+    // Guardar en localStorage bajo una clave única
+    if (publishedPage.url) {
+      localStorage.setItem(`site:${publishedPage.url}`, JSON.stringify(publishedPage));
+      setPublishedLink(`/site/${publishedPage.url}`);
+    }
   };
 
   const handleBack = () => {
@@ -172,6 +178,18 @@ export default function WebsiteBuilder() {
             onPublish={handlePublishPage}
           />
         )}
+      {publishedLink && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-white shadow-lg rounded-lg px-6 py-4 z-50 border border-primary flex flex-col items-center gap-2">
+          <div className="font-semibold text-primary">¡Tu sitio está publicado!</div>
+          <a href={publishedLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{window.location.origin + publishedLink}</a>
+          <button
+            className="mt-2 px-4 py-1 bg-primary text-white rounded"
+            onClick={() => navigator.clipboard.writeText(window.location.origin + publishedLink)}
+          >
+            Copiar enlace
+          </button>
+        </div>
+      )}
       </main>
     </div>
   );
