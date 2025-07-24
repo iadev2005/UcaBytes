@@ -9,7 +9,7 @@ export default function Sidebar() {
       initial={{ x: -100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 40, damping: 24 }}
-      className="w-[20%] h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10"
+      className="w-[20%] h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] px-2 flex flex-col gap-0 shadow-lg z-10"
     >
       <div className="flex-1 flex flex-col pt-12">
         <nav className="flex flex-col gap-2">
