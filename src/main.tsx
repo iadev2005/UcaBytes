@@ -14,14 +14,18 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import PagePreview from './components/marketing/PagePreview';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { db } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 function PublicSite() {
   const { siteId } = useParams();
-  const [page, setPage] = useState(null);
+  const [page, setPage] = useState<any>(null);
   useEffect(() => {
     if (siteId) {
-      const data = localStorage.getItem(`site:${siteId}`);
-      if (data) setPage(JSON.parse(data));
+      getDoc(doc(db, 'sites', siteId)).then((snap) => {
+        if (snap.exists()) setPage(snap.data());
+        else setPage(null);
+      });
     }
   }, [siteId]);
   if (!page) return <div className="min-h-screen flex items-center justify-center text-gray-500">Sitio no encontrado</div>;

@@ -5,6 +5,8 @@ import { cn } from '../../lib/utils';
 import TemplateGallery from './TemplateGallery';
 import PageBuilder from './PageBuilder';
 import BusinessInfoForm from './BusinessInfoForm';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 type StepId = 'template' | 'info' | 'editor';
 
@@ -46,7 +48,6 @@ export default function WebsiteBuilder() {
   };
 
   const handlePublishPage = async (page: BusinessPage) => {
-    // TODO: Implementar publicación en backend
     const publishedPage = {
       ...page,
       status: 'published' as const,
@@ -54,9 +55,9 @@ export default function WebsiteBuilder() {
     };
     console.log('Publicando página:', publishedPage);
     setCurrentPage(publishedPage);
-    // Guardar en localStorage bajo una clave única
+    // Guardar en Firestore bajo la colección 'sites' y el ID igual a la url
     if (publishedPage.url) {
-      localStorage.setItem(`site:${publishedPage.url}`, JSON.stringify(publishedPage));
+      await setDoc(doc(db, 'sites', publishedPage.url), publishedPage);
       setPublishedLink(`/site/${publishedPage.url}`);
     }
   };
