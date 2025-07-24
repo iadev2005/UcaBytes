@@ -1,7 +1,7 @@
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { useState, type Dispatch, type SetStateAction } from 'react';
 import { cn } from '../lib/utils';
 
 interface SidebarProps {
@@ -11,86 +11,86 @@ interface SidebarProps {
 export default function Sidebar({ onCollapse }: SidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleCollapse = () => {
     setIsCollapsed(!isCollapsed);
     onCollapse(!isCollapsed);
   };
 
-  return (
-    <motion.aside
-      className={cn(
-        "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-50 transition-all duration-300",
-        isCollapsed ? "w-[4rem]" : "w-[20%]"
-      )}
-    >
+  // Sidebar content as a component for reuse
+  const sidebarContent = (
+    <>
       <div className="flex-1 flex flex-col pt-12">
         <nav className="flex flex-col gap-2">
-          <SidebarLink 
-            to="/" 
-            icon={HomeIcon} 
-            label="Home" 
-            active={location.pathname === '/'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/dashboard" 
-            icon={NotificationIcon} 
-            label="Dashboard" 
-            active={location.pathname === '/dashboard'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/marketing" 
-            icon={MegaphoneIcon} 
-            label="Marketing" 
-            active={location.pathname === '/marketing'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/products-services" 
-            icon={ServicesIcon} 
-            label="Productos y Servicios" 
-            active={location.pathname === '/products-services'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/central-operations" 
-            icon={OperationsIcon} 
-            label="Operaciones Centrales" 
-            active={location.pathname === '/central-operations'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/automations" 
-            icon={AutomationIcon} 
-            label="Automatizaciones" 
-            active={location.pathname === '/automations'} 
-            isCollapsed={isCollapsed}
-          />
+          <SidebarLink to="/" icon={HomeIcon} label="Home" active={location.pathname === '/'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/dashboard'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/marketing'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/products-services'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/central-operations'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/automations" icon={AutomationIcon} label="Automatizaciones" active={location.pathname === '/automations'} isCollapsed={isCollapsed} />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">
-          <SidebarLink 
-            to="/settings" 
-            icon={ConfigurationIcon} 
-            label="Configuración" 
-            active={location.pathname === '/settings'} 
-            isCollapsed={isCollapsed}
-          />
+          <SidebarLink to="/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} isCollapsed={isCollapsed} />
         </nav>
       </div>
       <button
         onClick={handleCollapse}
         className={cn(
           "absolute top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors",
-          "border border-[var(--color-primary-100)]"
+          "border border-[var(--color-primary-100)]",
+          "hidden md:flex"
         )}
         aria-label={isCollapsed ? 'Desplegar sidebar' : 'Replegar sidebar'}
       >
         {isCollapsed ? <SidebarExpandIcon className="w-6 h-6 text-[var(--color-primary-600)]" /> : <SidebarCollapseIcon className="w-6 h-6 text-[var(--color-primary-600)]" />}
       </button>
-    </motion.aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        className="fixed top-4 left-4 z-[60] md:hidden bg-white rounded-full shadow-lg w-10 h-10 flex items-center justify-center border border-[var(--color-primary-100)]"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Abrir menú"
+      >
+        <SidebarExpandIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
+      </button>
+      {/* Sidebar for desktop */}
+      <motion.aside
+        className={cn(
+          "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex-col gap-0 shadow-lg z-50 transition-all duration-300 hidden md:flex",
+          isCollapsed ? "w-[4rem]" : "w-[20%]"
+        )}
+      >
+        {sidebarContent}
+      </motion.aside>
+      {/* Sidebar overlay for mobile */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/40 flex">
+          <motion.aside
+            className="h-full w-64 bg-[var(--color-primary-100)] shadow-lg flex flex-col relative"
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            exit={{ x: -300 }}
+            transition={{ type: 'spring', stiffness: 40, damping: 24 }}
+          >
+            <button
+              className="absolute top-4 right-4 bg-white rounded-full shadow w-8 h-8 flex items-center justify-center border border-[var(--color-primary-100)]"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Cerrar menú"
+            >
+              <SidebarCollapseIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
+            </button>
+            {sidebarContent}
+          </motion.aside>
+          <div className="flex-1" onClick={() => setMobileOpen(false)} />
+        </div>
+      )}
+    </>
   );
 }
 

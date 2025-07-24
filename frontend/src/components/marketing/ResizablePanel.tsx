@@ -84,7 +84,8 @@ export default function ResizablePanel({
       className={cn(
         "fixed bg-white rounded-lg shadow-lg overflow-hidden z-50 transition-transform",
         isMinimized && "h-12 overflow-visible",
-        className
+        className,
+        "w-full left-0 right-0 bottom-0 top-auto rounded-none h-[60vh] md:w-auto md:left-auto md:right-auto md:bottom-auto md:top-auto md:rounded-lg md:h-auto"
       )}
       style={{
         width: isMinimized ? 200 : width,

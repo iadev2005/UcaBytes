@@ -2036,8 +2036,9 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       )}
 
       {/* Barra de herramientas flotante SIEMPRE visible y fija */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4 z-50">
-        <div className="flex items-center gap-2 border-r pr-4">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4 z-50 w-auto max-w-full md:left-1/2 md:translate-x-[-50%] md:rounded-full md:px-4 md:py-2 md:bottom-4 md:w-auto md:max-w-none
+        w-full left-0 right-0 bottom-0 px-2 py-1 rounded-none md:rounded-full md:w-auto md:left-1/2 md:right-auto md:translate-x-[-50%]">
+        <div className="flex items-center gap-2 border-r pr-2 md:pr-4 w-full md:w-auto justify-center">
           <button
             onClick={() => setViewMode('desktop')}
             className={cn(
@@ -2046,15 +2047,15 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
             )}
             title="Vista escritorio"
           >
-            <DesktopIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
+            <DesktopIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto justify-center">
           <button
             onClick={handleSave}
             className={cn(
-              "px-4 py-2 rounded-lg transition-colors",
+              "px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors text-sm md:text-base",
               isDirty
                 ? "bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)]"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -2065,13 +2066,13 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           </button>
           <button
             onClick={handlePublish}
-            className="px-4 py-2 rounded-lg transition-colors bg-[var(--color-secondary-400)] text-white hover:bg-[var(--color-secondary-600)]"
+            className="px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors bg-[var(--color-secondary-400)] text-white hover:bg-[var(--color-secondary-600)] text-sm md:text-base"
           >
             Publicar
           </button>
         </div>
 
-        <div className="flex items-center gap-2 border-l pl-4">
+        <div className="flex items-center gap-2 border-l pl-2 md:pl-4 w-full md:w-auto justify-center">
           <button
             onClick={toggleFullscreen}
             className={cn(
@@ -2080,14 +2081,14 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
             )}
             title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           >
-            {isFullscreen ? <MinimizeIcon className="w-6 h-6 text-[var(--color-primary-600)]" /> : <MaximizeIcon className="w-6 h-6 text-[var(--color-primary-600)]" />}
+            {isFullscreen ? <MinimizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" /> : <MaximizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />}
           </button>
           <button
             onClick={() => setShowHelp(true)}
             className="p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]"
             title="Ayuda"
           >
-            <HelpIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
+            <HelpIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />
           </button>
         </div>
       </div>
