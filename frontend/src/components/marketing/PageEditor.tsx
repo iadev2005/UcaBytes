@@ -5,6 +5,7 @@ import ImageUploader from './ImageUploader';
 import StyleEditor from './StyleEditor';
 import ResizablePanel from './ResizablePanel';
 import PagePreview from './PagePreview';
+import { DesktopIcon, MaximizeIcon, MinimizeIcon, HelpIcon } from '../../icons';
 
 // Tipos de secciones disponibles
 const SECTION_TYPES = {
@@ -2038,34 +2039,14 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4 z-50">
         <div className="flex items-center gap-2 border-r pr-4">
           <button
-            onClick={() => setViewMode('mobile')}
-            className={cn(
-              "p-2 rounded-lg",
-              viewMode === 'mobile' && "bg-gray-100"
-            )}
-            title="Vista móvil"
-          >
-            📱
-          </button>
-          <button
-            onClick={() => setViewMode('tablet')}
-            className={cn(
-              "p-2 rounded-lg",
-              viewMode === 'tablet' && "bg-gray-100"
-            )}
-            title="Vista tablet"
-          >
-            📟
-          </button>
-          <button
             onClick={() => setViewMode('desktop')}
             className={cn(
-              "p-2 rounded-lg",
-              viewMode === 'desktop' && "bg-gray-100"
+              "p-2 rounded-lg transition-colors",
+              viewMode === 'desktop' ? 'bg-[var(--color-primary-100)]' : 'hover:bg-[var(--color-primary-50)]'
             )}
             title="Vista escritorio"
           >
-            🖥
+            <DesktopIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
           </button>
         </div>
 
@@ -2084,7 +2065,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           </button>
           <button
             onClick={handlePublish}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg"
+            className="px-4 py-2 rounded-lg transition-colors bg-[var(--color-secondary-400)] text-white hover:bg-[var(--color-secondary-600)]"
           >
             Publicar
           </button>
@@ -2099,14 +2080,14 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
             )}
             title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           >
-            {isFullscreen ? '⊹' : '⊏'}
+            {isFullscreen ? <MinimizeIcon className="w-6 h-6 text-[var(--color-primary-600)]" /> : <MaximizeIcon className="w-6 h-6 text-[var(--color-primary-600)]" />}
           </button>
           <button
             onClick={() => setShowHelp(true)}
             className="p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]"
             title="Ayuda"
           >
-            ?
+            <HelpIcon className="w-6 h-6 text-[var(--color-primary-600)]" />
           </button>
         </div>
       </div>
