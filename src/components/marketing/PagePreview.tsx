@@ -5,9 +5,11 @@ type PagePreviewProps = {
   page: BusinessPage;
   onSectionSelect?: (sectionId: string) => void;
   selectedSectionId?: string;
+  onSubElementDoubleClick?: (sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button') => void;
+  selectedSubElement?: { sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button' } | null;
 };
 
-const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewProps) => {
+const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement }: PagePreviewProps) => {
   const { theme } = page.content;
 
   // Función simple para aplicar estilos
@@ -48,9 +50,22 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                   <img
                     src={section.content.backgroundImage}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'backgroundImage' && 'ring-4 ring-primary-400 ring-offset-2 z-20'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'backgroundImage'); } : undefined}
                   />
-                  <div className="absolute inset-0 bg-black/50" />
+                  {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                        opacity: section.content.style?.overlayOpacity ?? 0,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
                 </div>
               )}
               <div className="container mx-auto px-4 relative">
@@ -59,16 +74,20 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                     style={applyStyles(section.content.titleStyle)}
                     className={cn(
                       "mb-6",
-                      section.content.backgroundImage ? "text-white" : "text-gray-900"
+                      section.content.backgroundImage ? "text-white" : "text-gray-900",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'title' && 'ring-2 ring-primary-400'
                     )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'title'); } : undefined}
                   >
                     {section.content.title}
                   </h1>
                   <p 
                     style={applyStyles(section.content.descriptionStyle)}
                     className={cn(
-                      section.content.backgroundImage ? "text-white/90" : "text-gray-600"
+                      section.content.backgroundImage ? "text-white/90" : "text-gray-600",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'description' && 'ring-2 ring-primary-400'
                     )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'description'); } : undefined}
                   >
                     {section.content.description}
                   </p>
@@ -76,7 +95,11 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                     <a
                       href={section.content.buttonLink}
                       style={applyStyles(section.content.buttonStyle)}
-                      className="inline-block px-8 py-3 mt-8 rounded-lg"
+                      className={cn(
+                        "inline-block px-8 py-3 mt-8 rounded-lg",
+                        selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'button' && 'ring-2 ring-primary-400 ring-offset-2 z-20'
+                      )}
+                      onDoubleClick={onSubElementDoubleClick ? (e) => { e.preventDefault(); e.stopPropagation(); onSubElementDoubleClick(section.id, 'button'); } : undefined}
                     >
                       {section.content.buttonText}
                     </a>
@@ -90,28 +113,58 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'features':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-8 md:py-16 bg-gray-50">
+            <div className="relative py-8 md:py-16 overflow-hidden">
+              {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                    opacity: section.content.style?.overlayOpacity ?? 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
               <div className={cn(
                 'px-2 sm:px-4',
                 typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
               )}>
-                <h2 
+                <h2
                   style={applyStyles(section.content.titleStyle)}
-                  className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12"
+                  className={cn(
+                    'text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12',
+                    selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'title' && 'ring-2 ring-primary-400'
+                  )}
+                  onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'title'); } : undefined}
                 >
                   {section.content.title}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 relative z-10">
                   {section.content.features.map((feature, index) => (
                     <div
                       key={index}
                       style={applyStyles(feature.style)}
-                      className="p-4 md:p-6 bg-white rounded-lg shadow-sm w-full h-full flex flex-col"
+                      className={cn(
+                        "p-4 md:p-6 bg-white rounded-lg shadow-sm w-full h-full flex flex-col",
+                        selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `feature-container-${index}` && 'ring-2 ring-primary-400'
+                      )}
+                      onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `feature-container-${index}` as any); } : undefined}
                     >
-                      <h3 className="text-lg md:text-xl font-semibold mb-2 md:mb-3">
+                      <h3
+                        className={cn(
+                          'text-lg md:text-xl font-semibold mb-2 md:mb-3',
+                          selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `feature-title-${index}` && 'ring-2 ring-primary-400'
+                        )}
+                        onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `feature-title-${index}` as any); } : undefined}
+                      >
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600 text-sm md:text-base flex-1">
+                      <p
+                        className={cn(
+                          'text-gray-600 text-sm md:text-base flex-1',
+                          selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `feature-description-${index}` && 'ring-2 ring-primary-400'
+                        )}
+                        onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `feature-description-${index}` as any); } : undefined}
+                      >
                         {feature.description}
                       </p>
                     </div>
@@ -125,7 +178,17 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'products':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-8 md:py-16">
+            <div className="relative py-8 md:py-16 overflow-hidden">
+              {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                    opacity: section.content.style?.overlayOpacity ?? 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
               <div className={cn(
                 'px-2 sm:px-4',
                 typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
@@ -133,23 +196,35 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                 <div className="text-center mb-8 md:mb-12">
                   <h2 
                     style={applyStyles(section.content.titleStyle)}
-                    className="text-2xl md:text-3xl font-bold mb-2 md:mb-4"
+                    className={cn(
+                      "text-2xl md:text-3xl font-bold mb-2 md:mb-4",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'title' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'title'); } : undefined}
                   >
                     {section.content.title}
                   </h2>
                   <p 
                     style={applyStyles(section.content.descriptionStyle)}
-                    className="text-base md:text-xl text-gray-600"
+                    className={cn(
+                      "text-base md:text-xl text-gray-600",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'description' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'description'); } : undefined}
                   >
                     {section.content.description}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 relative z-10">
                   {section.content.products.map((product, index) => (
                     <div 
                       key={index} 
                       style={applyStyles(product.style)}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden w-full flex flex-col"
+                      className={cn(
+                        "bg-white rounded-lg shadow-sm overflow-hidden w-full flex flex-col",
+                        selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `product-container-${index}` && 'ring-2 ring-primary-400'
+                      )}
+                      onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `product-container-${index}` as any); } : undefined}
                     >
                       {product.image && (
                         <div className="aspect-square w-full">
@@ -161,10 +236,32 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                         </div>
                       )}
                       <div className="p-4 md:p-6 flex-1 flex flex-col">
-                        <h3 className="text-lg md:text-xl font-semibold mb-1 md:mb-2">{product.name}</h3>
-                        <p className="text-gray-600 text-sm md:text-base mb-2 flex-1">{product.description}</p>
+                        <h3
+                          className={cn(
+                            "text-lg md:text-xl font-semibold mb-1 md:mb-2",
+                            selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `product-name-${index}` && 'ring-2 ring-primary-400'
+                          )}
+                          onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `product-name-${index}` as any); } : undefined}
+                        >
+                          {product.name}
+                        </h3>
+                        <p
+                          className={cn(
+                            "text-gray-600 text-sm md:text-base mb-2 flex-1",
+                            selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `product-description-${index}` && 'ring-2 ring-primary-400'
+                          )}
+                          onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `product-description-${index}` as any); } : undefined}
+                        >
+                          {product.description}
+                        </p>
                         <div className="flex items-center justify-between mt-auto">
-                          <span className="text-base md:text-lg font-bold text-primary">
+                          <span
+                            className={cn(
+                              "text-base md:text-lg font-bold text-primary",
+                              selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `product-price-${index}` && 'ring-2 ring-primary-400'
+                            )}
+                            onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `product-price-${index}` as any); } : undefined}
+                          >
                             ${product.price.toFixed(2)}
                           </span>
                           <button className="px-3 md:px-4 py-1.5 md:py-2 bg-primary text-white rounded-lg text-xs md:text-base">
@@ -183,7 +280,17 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'testimonials':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-8 md:py-16 bg-gray-50">
+            <div className="relative py-8 md:py-16 overflow-hidden">
+              {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                    opacity: section.content.style?.overlayOpacity ?? 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
               <div className={cn(
                 'px-2 sm:px-4',
                 typeof window !== 'undefined' && window.innerWidth <= 480 ? 'w-full' : 'container mx-auto'
@@ -191,23 +298,35 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                 <div className="text-center mb-8 md:mb-12">
                   <h2 
                     style={applyStyles(section.content.titleStyle)}
-                    className="text-2xl md:text-3xl font-bold mb-2 md:mb-4"
+                    className={cn(
+                      "text-2xl md:text-3xl font-bold mb-2 md:mb-4",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'title' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'title'); } : undefined}
                   >
                     {section.content.title}
                   </h2>
                   <p 
                     style={applyStyles(section.content.descriptionStyle)}
-                    className="text-base md:text-xl text-gray-600"
+                    className={cn(
+                      "text-base md:text-xl text-gray-600",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'description' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'description'); } : undefined}
                   >
                     {section.content.description}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 relative z-10">
                   {section.content.testimonials.map((testimonial, index) => (
                     <div 
                       key={index} 
                       style={applyStyles(testimonial.style)}
-                      className="bg-white p-4 md:p-6 rounded-lg shadow-sm w-full flex flex-col"
+                      className={cn(
+                        "bg-white p-4 md:p-6 rounded-lg shadow-sm w-full flex flex-col",
+                        selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `testimonial-container-${index}` && 'ring-2 ring-primary-400'
+                      )}
+                      onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `testimonial-container-${index}` as any); } : undefined}
                     >
                       <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
                         {testimonial.image && (
@@ -218,11 +337,35 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
                           />
                         )}
                         <div>
-                          <h3 className="font-semibold text-sm md:text-base">{testimonial.name}</h3>
-                          <p className="text-xs md:text-sm text-gray-600">{testimonial.role}</p>
+                          <h3
+                            className={cn(
+                              "font-semibold text-sm md:text-base",
+                              selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `testimonial-name-${index}` && 'ring-2 ring-primary-400'
+                            )}
+                            onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `testimonial-name-${index}` as any); } : undefined}
+                          >
+                            {testimonial.name}
+                          </h3>
+                          <p
+                            className={cn(
+                              "text-xs md:text-sm text-gray-600",
+                              selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `testimonial-role-${index}` && 'ring-2 ring-primary-400'
+                            )}
+                            onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `testimonial-role-${index}` as any); } : undefined}
+                          >
+                            {testimonial.role}
+                          </p>
                         </div>
                       </div>
-                      <p className="text-gray-600 italic text-sm md:text-base flex-1">"{testimonial.text}"</p>
+                      <p
+                        className={cn(
+                          "text-gray-600 italic text-sm md:text-base flex-1",
+                          selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `testimonial-text-${index}` && 'ring-2 ring-primary-400'
+                        )}
+                        onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `testimonial-text-${index}` as any); } : undefined}
+                      >
+                        "{testimonial.text}"
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -234,28 +377,55 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'about':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-16">
-              <div className="container mx-auto px-4">
+            <div className="relative py-16 overflow-hidden">
+              {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                    opacity: section.content.style?.overlayOpacity ?? 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
+              <div className={cn(
+                "container mx-auto px-4",
+                selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'about-container' && 'ring-2 ring-primary-400'
+              )}
+                onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'about-container'); } : undefined}
+              >
                 <div className="max-w-3xl mx-auto">
                   <h2 
                     style={applyStyles(section.content.titleStyle)}
-                    className="text-3xl font-bold mb-6 text-center"
+                    className={cn(
+                      "text-3xl font-bold mb-6 text-center",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'title' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'title'); } : undefined}
                   >
                     {section.content.title}
                   </h2>
                   <div 
                     style={applyStyles(section.content.contentStyle)}
-                    className="prose prose-lg mx-auto"
+                    className={cn(
+                      "prose prose-lg mx-auto",
+                      selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'content' && 'ring-2 ring-primary-400'
+                    )}
+                    onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, 'content'); } : undefined}
                   >
                     {section.content.content}
                   </div>
                   {section.content.stats && section.content.stats.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-12">
                       {section.content.stats.map((stat, index) => (
-                        <div 
-                          key={index} 
+                        <div
+                          key={index}
                           style={applyStyles(stat.style)}
-                          className="text-center"
+                          className={cn(
+                            "text-center",
+                            selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === `stat-container-${index}` && 'ring-2 ring-primary-400'
+                          )}
+                          onDoubleClick={onSubElementDoubleClick ? (e) => { e.stopPropagation(); onSubElementDoubleClick(section.id, `stat-container-${index}` as any); } : undefined}
                         >
                           <div className="text-3xl font-bold text-primary mb-2">
                             {stat.value}
@@ -276,7 +446,17 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId }: PagePreviewPr
       case 'contact':
         return (
           <section style={applyStyles(section.content.style)}>
-            <div className="py-16 bg-gray-50">
+            <div className="relative py-16 overflow-hidden">
+              {(section.content.style?.overlayOpacity ?? 0) > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: section.content.style?.overlayColor ?? '#000000',
+                    opacity: section.content.style?.overlayOpacity ?? 0,
+                    zIndex: 1,
+                  }}
+                />
+              )}
               <div className="container mx-auto px-4">
                 <div className="max-w-xl mx-auto">
                   <h2 

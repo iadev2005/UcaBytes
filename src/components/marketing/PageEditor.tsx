@@ -186,6 +186,7 @@ const DEFAULT_SECTION_CONTENT = {
 export default function PageEditor({ page, onSave, onPublish }: PageEditorProps) {
   const [currentPage, setCurrentPage] = useState<BusinessPage>(page);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedSubElement, setSelectedSubElement] = useState<null | { sectionId: string, key: 'title' | 'description' | 'backgroundImage' | 'button' }>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showHelp, setShowHelp] = useState(false);
@@ -423,21 +424,555 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
 
   // Renderizar campos de edición según el tipo de sección
   const renderSectionFields = (section: PageSection) => {
+    // Si hay un sub-elemento seleccionado, mostrar solo ese campo
+    if (selectedSubElement && selectedSubElement.sectionId === section.id) {
+      // Features: feature-title-X, feature-description-X, feature-container-X
+      if (section.type === 'features' && selectedSubElement.key.startsWith('feature-')) {
+        const match = selectedSubElement.key.match(/feature\-(title|description|container)\-(\d+)/);
+        if (match) {
+          const [, field, idxStr] = match;
+          const idx = parseInt(idxStr, 10);
+          const feature = section.content.features[idx];
+          if (!feature) return null;
+          if (field === 'title') {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Título de la característica</label>
+                  <input
+                    type="text"
+                    value={feature.title}
+                    onChange={e => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, title: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos del título</label>
+                  <StyleEditor
+                    value={feature.style || {}}
+                    onChange={styles => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, style: { ...feature.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          } else if (field === 'description') {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Descripción de la característica</label>
+                  <textarea
+                    value={feature.description}
+                    onChange={e => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, description: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos de la descripción</label>
+                  <StyleEditor
+                    value={feature.style || {}}
+                    onChange={styles => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, style: { ...feature.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          } else if (field === 'container') {
+            // Edición granular: estilos del contenedor + campos y estilos independientes de sub-elementos
+            return (
+              <div className="space-y-6">
+                {/* Estilos del contenedor */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos del contenedor</label>
+                  <StyleEditor
+                    value={feature.style || {}}
+                    onChange={styles => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, style: { ...feature.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                  />
+                </div>
+                {/* Título */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-2">Título de la característica</label>
+                  <input
+                    type="text"
+                    value={feature.title}
+                    onChange={e => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, title: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                  <label className="block text-xs font-medium mb-1">Estilos del título</label>
+                  <StyleEditor
+                    value={feature.titleStyle || {}}
+                    onChange={styles => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, titleStyle: { ...feature.titleStyle, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                  />
+                </div>
+                {/* Descripción */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-2">Descripción de la característica</label>
+                  <textarea
+                    value={feature.description}
+                    onChange={e => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, description: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                  />
+                  <label className="block text-xs font-medium mb-1">Estilos de la descripción</label>
+                  <StyleEditor
+                    value={feature.descriptionStyle || {}}
+                    onChange={styles => {
+                      const features = [...section.content.features];
+                      features[idx] = { ...feature, descriptionStyle: { ...feature.descriptionStyle, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, features } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      // Products: product-name-X, product-description-X, product-price-X, product-container-X
+      if (section.type === 'products' && selectedSubElement.key.startsWith('product-')) {
+        const match = selectedSubElement.key.match(/product\-(name|description|price|container)\-(\d+)/);
+        if (match) {
+          const [, field, idxStr] = match;
+          const idx = parseInt(idxStr, 10);
+          const product = section.content.products[idx];
+          if (!product) return null;
+          if (field === 'name') {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nombre del producto</label>
+                  <input
+                    type="text"
+                    value={product.name}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, name: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos del nombre</label>
+                  <StyleEditor
+                    value={product.style || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, style: { ...product.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          } else if (field === 'description') {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Descripción del producto</label>
+                  <textarea
+                    value={product.description}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, description: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos de la descripción</label>
+                  <StyleEditor
+                    value={product.style || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, style: { ...product.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          } else if (field === 'price') {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Precio</label>
+                  <input
+                    type="number"
+                    value={product.price}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, price: parseFloat(e.target.value) };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    min={0}
+                    step={0.01}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos del precio</label>
+                  <StyleEditor
+                    value={product.style || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, style: { ...product.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          } else if (field === 'container') {
+            // Edición granular: estilos del contenedor + campos y estilos independientes de sub-elementos
+            return (
+              <div className="space-y-6">
+                {/* Estilos del contenedor */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Estilos del contenedor</label>
+                  <StyleEditor
+                    value={product.style || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, style: { ...product.style, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+                {/* Nombre */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-2">Nombre del producto</label>
+                  <input
+                    type="text"
+                    value={product.name}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, name: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                  <label className="block text-xs font-medium mb-1">Estilos del nombre</label>
+                  <StyleEditor
+                    value={product.nameStyle || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, nameStyle: { ...product.nameStyle, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+                {/* Descripción */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-2">Descripción del producto</label>
+                  <textarea
+                    value={product.description}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, description: e.target.value };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                  />
+                  <label className="block text-xs font-medium mb-1">Estilos de la descripción</label>
+                  <StyleEditor
+                    value={product.descriptionStyle || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, descriptionStyle: { ...product.descriptionStyle, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+                {/* Precio */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium mb-2">Precio</label>
+                  <input
+                    type="number"
+                    value={product.price}
+                    onChange={e => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, price: parseFloat(e.target.value) };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    min={0}
+                    step={0.01}
+                  />
+                  <label className="block text-xs font-medium mb-1">Estilos del precio</label>
+                  <StyleEditor
+                    value={product.priceStyle || {}}
+                    onChange={styles => {
+                      const products = [...section.content.products];
+                      products[idx] = { ...product, priceStyle: { ...product.priceStyle, ...styles } };
+                      handleSectionUpdate(section.id, { content: { ...section.content, products } });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      switch (selectedSubElement.key) {
+        case 'title':
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Título</label>
+                <input
+                  type="text"
+                  value={section.content.title || ''}
+                  onChange={(e) => {
+                    handleSectionUpdate(section.id, {
+                      content: { ...section.content, title: e.target.value }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border rounded-md"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Estilos del título</label>
+                <StyleEditor
+                  value={section.content.titleStyle || {}}
+                  onChange={(styles) => {
+                    updateSectionStyles(section.id, 'titleStyle', styles);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        case 'description':
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Descripción</label>
+                <textarea
+                  value={section.content.description || ''}
+                  onChange={(e) => {
+                    handleSectionUpdate(section.id, {
+                      content: { ...section.content, description: e.target.value }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border rounded-md"
+                  rows={3}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Estilos de la descripción</label>
+                <StyleEditor
+                  value={section.content.descriptionStyle || {}}
+                  onChange={(styles) => {
+                    updateSectionStyles(section.id, 'descriptionStyle', styles);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        case 'backgroundImage':
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Imagen de fondo</label>
+                <ImageUploader
+                  value={section.content.backgroundImage || ''}
+                  onChange={(url) => {
+                    handleSectionUpdate(section.id, {
+                      content: { ...section.content, backgroundImage: url }
+                    });
+                  }}
+                  placeholder="Imagen de fondo del hero"
+                  className="aspect-video"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Estilos de la sección</label>
+                <StyleEditor
+                  value={section.content.style || {}}
+                  onChange={(styles) => {
+                    updateSectionStyles(section.id, 'style', styles);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        case 'button':
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Texto del botón</label>
+                <input
+                  type="text"
+                  value={section.content.buttonText || ''}
+                  onChange={(e) => {
+                    handleSectionUpdate(section.id, {
+                      content: { ...section.content, buttonText: e.target.value }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border rounded-md"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Estilos del botón</label>
+                <StyleEditor
+                  value={section.content.buttonStyle || {}}
+                  onChange={(styles) => {
+                    updateSectionStyles(section.id, 'buttonStyle', styles);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        default:
+          break;
+      }
+    }
     switch (section.type) {
       case 'hero':
         return (
           <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Imagen de fondo</label>
+                <ImageUploader
+                  value={section.content.backgroundImage || ''}
+                  onChange={(url) => {
+                    handleSectionUpdate(section.id, {
+                      content: { ...section.content, backgroundImage: url }
+                    });
+                  }}
+                  placeholder="Imagen de fondo del hero"
+                  className="aspect-video"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Título</label>
               <input
                 type="text"
                 value={section.content.title || ''}
                 onChange={(e) => {
-                  const updatedContent = {
-                    ...section.content,
-                    title: e.target.value
-                  };
-                  updateSectionStyles(section.id, 'style', updatedContent);
+                  handleSectionUpdate(section.id, {
+                    content: { ...section.content, title: e.target.value }
+                  });
                 }}
                 className="w-full px-3 py-2 border rounded-md"
               />
@@ -458,11 +993,9 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <textarea
                 value={section.content.description || ''}
                 onChange={(e) => {
-                  const updatedContent = {
-                    ...section.content,
-                    description: e.target.value
-                  };
-                  updateSectionStyles(section.id, 'style', updatedContent);
+                  handleSectionUpdate(section.id, {
+                    content: { ...section.content, description: e.target.value }
+                  });
                 }}
                 className="w-full px-3 py-2 border rounded-md"
                 rows={3}
@@ -474,11 +1007,9 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <ImageUploader
                 value={section.content.backgroundImage || ''}
                 onChange={(url) => {
-                  const updatedContent = {
-                    ...section.content,
-                    backgroundImage: url
-                  };
-                  updateSectionStyles(section.id, 'style', updatedContent);
+                  handleSectionUpdate(section.id, {
+                    content: { ...section.content, backgroundImage: url }
+                  });
                 }}
                 placeholder="Imagen de fondo del hero"
                 className="aspect-video"
@@ -501,11 +1032,9 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
                 type="text"
                 value={section.content.buttonText || ''}
                 onChange={(e) => {
-                  const updatedContent = {
-                    ...section.content,
-                    buttonText: e.target.value
-                  };
-                  updateSectionStyles(section.id, 'style', updatedContent);
+                  handleSectionUpdate(section.id, {
+                    content: { ...section.content, buttonText: e.target.value }
+                  });
                 }}
                 className="w-full px-3 py-2 border rounded-md"
               />
@@ -536,6 +1065,47 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       case 'features':
         return (
           <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Título de la sección</label>
               <input
@@ -629,6 +1199,47 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       case 'products':
         return (
           <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Título</label>
               <input
@@ -771,6 +1382,47 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       case 'testimonials':
         return (
           <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Título</label>
               <input
@@ -904,6 +1556,47 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       case 'about':
         return (
           <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Título</label>
               <input
@@ -1019,6 +1712,173 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           </div>
         );
 
+      case 'contact':
+        return (
+          <div className="space-y-4">
+            {/* Fondo de la sección */}
+            <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="font-semibold mb-2">Fondo de la sección</div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color de fondo</label>
+                <input
+                  type="color"
+                  value={section.content.style?.backgroundColor || '#ffffff'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { backgroundColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color del overlay</label>
+                <input
+                  type="color"
+                  value={section.content.style?.overlayColor || '#000000'}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayColor: e.target.value });
+                  }}
+                  className="w-12 h-8 p-0 border-0 bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Opacidad del overlay</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={section.content.style?.overlayOpacity ?? 0}
+                  onChange={e => {
+                    updateSectionStyles(section.id, 'style', { overlayOpacity: parseFloat(e.target.value) });
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs ml-2">{Math.round((section.content.style?.overlayOpacity ?? 0) * 100)}%</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Título</label>
+              <input
+                type="text"
+                value={section.content.title || ''}
+                onChange={(e) => handleSectionUpdate(section.id, {
+                  content: { ...section.content, title: e.target.value }
+                })}
+                className="w-full px-3 py-2 border rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Descripción</label>
+              <textarea
+                value={section.content.description || ''}
+                onChange={(e) => handleSectionUpdate(section.id, {
+                  content: { ...section.content, description: e.target.value }
+                })}
+                className="w-full px-3 py-2 border rounded-md"
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Información de contacto</label>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={section.content.email || ''}
+                    onChange={(e) => handleSectionUpdate(section.id, {
+                      content: { ...section.content, email: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Teléfono</label>
+                  <input
+                    type="tel"
+                    value={section.content.phone || ''}
+                    onChange={(e) => handleSectionUpdate(section.id, {
+                      content: { ...section.content, phone: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Dirección</label>
+                  <textarea
+                    value={section.content.address || ''}
+                    onChange={(e) => handleSectionUpdate(section.id, {
+                      content: { ...section.content, address: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mapa de Google</label>
+                  <textarea
+                    value={section.content.mapEmbed || ''}
+                    onChange={(e) => handleSectionUpdate(section.id, {
+                      content: { ...section.content, mapEmbed: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Enlaces de redes sociales</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      value={section.content.socialLinks?.facebook || ''}
+                      onChange={(e) => handleSectionUpdate(section.id, {
+                        content: { ...section.content, socialLinks: { ...section.content.socialLinks, facebook: e.target.value } }
+                      })}
+                      placeholder="Facebook"
+                    />
+                    <input
+                      type="text"
+                      value={section.content.socialLinks?.instagram || ''}
+                      onChange={(e) => handleSectionUpdate(section.id, {
+                        content: { ...section.content, socialLinks: { ...section.content.socialLinks, instagram: e.target.value } }
+                      })}
+                      placeholder="Instagram"
+                    />
+                    <input
+                      type="text"
+                      value={section.content.socialLinks?.twitter || ''}
+                      onChange={(e) => handleSectionUpdate(section.id, {
+                        content: { ...section.content, socialLinks: { ...section.content.socialLinks, twitter: e.target.value } }
+                      })}
+                      placeholder="Twitter"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mostrar redes sociales</label>
+                  <input
+                    type="checkbox"
+                    checked={section.content.showSocialMedia || false}
+                    onChange={(e) => handleSectionUpdate(section.id, {
+                      content: { ...section.content, showSocialMedia: e.target.checked }
+                    })}
+                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Estilos</label>
+              <StyleEditor
+                value={section.content.style || {}}
+                onChange={(style) => handleSectionUpdate(section.id, {
+                  content: { ...section.content, style }
+                })}
+              />
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1095,7 +1955,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
                 onDragStart={() => handleDragStart(section)}
                 onDragOver={e => handleDragOver(e, idx)}
                 onDrop={e => handleDrop(e, idx)}
-                onClick={e => { e.stopPropagation(); setSelectedSectionId(section.id); }}
+                onClick={e => { e.stopPropagation(); setSelectedSectionId(section.id); setSelectedSubElement(null); }}
                 className={cn(
                   'cursor-pointer group relative transition-all mb-4',
                   selectedSectionId === section.id ? 'ring-4 ring-primary/60 z-10' : ''
@@ -1104,7 +1964,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               >
                 {/* Botón eliminar sección */}
                 <button
-                  onClick={e => { e.stopPropagation(); handleSectionDelete(section.id); }}
+                  onClick={e => { e.stopPropagation(); handleSectionDelete(section.id); setSelectedSubElement(null); }}
                   className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity z-20"
                   title="Eliminar sección"
                 >
@@ -1114,6 +1974,8 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
                 <PagePreview
                   page={{ ...currentPage, content: { ...currentPage.content, sections: [section] } }}
                   selectedSectionId={selectedSectionId === section.id ? section.id : undefined}
+                  onSubElementDoubleClick={(sectionId, key) => { setSelectedSectionId(sectionId); setSelectedSubElement({ sectionId, key }); }}
+                  selectedSubElement={selectedSubElement}
                 />
               </div>
             ))}
@@ -1125,15 +1987,33 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
         <ResizablePanel
           title="Configuración"
           defaultWidth={360}
-          onClose={() => setSelectedSectionId(null)}
+          onClose={() => { setSelectedSectionId(null); setSelectedSubElement(null); }}
           className={cn(
             isFullscreen && "border-gray-200"
           )}
         >
           <div className="p-4">
-            {renderSectionFields(
-              currentPage.content.sections.find(s => s.id === selectedSectionId)!
-            )}
+            {(() => {
+              const section = currentPage.content.sections.find(s => s.id === selectedSectionId)!;
+              // Si es testimonials y hay sub-elemento seleccionado, filtrar solo ese testimonial
+              if (section.type === 'testimonials' && selectedSubElement && selectedSubElement.key.startsWith('testimonial-')) {
+                const match = selectedSubElement.key.match(/testimonial\-(name|role|text|container)\-(\d+)/);
+                if (match) {
+                  const idx = parseInt(match[2], 10);
+                  const testimonial = section.content.testimonials[idx];
+                  if (testimonial) {
+                    const filteredSection = { ...section, content: { ...section.content, testimonials: [testimonial] } };
+                    return renderSectionFields(filteredSection);
+                  }
+                }
+              }
+              // Si es contact y hay sub-elemento seleccionado, renderizar solo ese campo
+              if (section.type === 'contact' && selectedSubElement && selectedSubElement.key.startsWith('contact-')) {
+                return renderSectionFields(section);
+              }
+              // Por defecto, renderizar toda la sección
+              return renderSectionFields(section);
+            })()}
           </div>
         </ResizablePanel>
       )}

@@ -29,7 +29,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     id: 'restaurant',
     name: 'Restaurante',
     category: 'restaurant',
-    thumbnail: '/templates/restaurant.jpg',
+    thumbnail: '/templates/restaurant-modern.jpg',
     features: [
       'Menú digital',
       'Reservas online',
@@ -117,7 +117,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     id: 'retail',
     name: 'Tienda',
     category: 'retail',
-    thumbnail: '/templates/retail.jpg',
+    thumbnail: '/templates/retail-boutique.jpg',
     features: [
       'Catálogo de productos',
       'Carrito de compras',
@@ -159,7 +159,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     id: 'professional',
     name: 'Profesional',
     category: 'professional',
-    thumbnail: '/templates/professional.jpg',
+    thumbnail: '/templates/professional-services.jpg',
     features: [
       'Portafolio',
       'Blog',

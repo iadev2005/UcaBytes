@@ -20,7 +20,7 @@ const COLORS = [
 ];
 
 export default function StyleEditor({ value, onChange, className }: StyleEditorProps) {
-  const [activeTab, setActiveTab] = useState<'texto' | 'fondo' | 'borde' | 'espaciado' | 'efectos'>('texto');
+  const [activeTab, setActiveTab] = useState<'texto' | 'fondo'>('texto');
 
   const updateStyle = (updates: Partial<StyleConfig>) => {
     // Crear un nuevo objeto de estilo con los valores actualizados
@@ -42,7 +42,7 @@ export default function StyleEditor({ value, onChange, className }: StyleEditorP
     <div className={cn("space-y-4", className)}>
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 p-1 bg-gray-100 rounded-lg">
-        {(['texto', 'fondo', 'borde', 'espaciado', 'efectos'] as const).map((tab) => (
+        {(['texto', 'fondo'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}

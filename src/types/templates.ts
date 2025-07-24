@@ -15,6 +15,8 @@ export type StyleConfig = {
   boxShadow?: string;
   opacity?: number;
   animation?: string;
+  overlayColor?: string;
+  overlayOpacity?: number;
 };
 
 export type SectionContent = {
@@ -46,6 +48,8 @@ export type Feature = {
   title: string;
   description: string;
   style?: StyleConfig;
+  titleStyle?: StyleConfig;
+  descriptionStyle?: StyleConfig;
 };
 
 export type Product = {
@@ -54,6 +58,9 @@ export type Product = {
   price: number;
   image?: string;
   style?: StyleConfig;
+  nameStyle?: StyleConfig;
+  descriptionStyle?: StyleConfig;
+  priceStyle?: StyleConfig;
 };
 
 export type Testimonial = {
@@ -62,12 +69,17 @@ export type Testimonial = {
   text: string;
   image?: string;
   style?: StyleConfig;
+  nameStyle?: StyleConfig;
+  roleStyle?: StyleConfig;
+  textStyle?: StyleConfig;
 };
 
 export type Stat = {
   label: string;
   value: string;
   style?: StyleConfig;
+  titleStyle?: StyleConfig;
+  contentStyle?: StyleConfig;
 };
 
 export type SocialLinks = {
