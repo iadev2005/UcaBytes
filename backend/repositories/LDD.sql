@@ -13,7 +13,7 @@ CHECK(
 	
 ); 
 
-create table MARIA.app.Proveedores(
+create table Proveedores(
 
 	rif varchar(100) PRIMARY KEY,
 	razon_social varchar(200) unique not null, 
@@ -22,7 +22,7 @@ create table MARIA.app.Proveedores(
 	descripcion varchar(255)
 );
 
-create table MARIA.Empresas(
+create table Empresas(
 	id serial PRIMARY KEY,
 	email varchar(200) not null unique, 
 	nombreComerciar varchar(200) not null, 
@@ -33,7 +33,7 @@ create table MARIA.Empresas(
 	password varchar(255)
 );
 
-create table MARIA.Servicios(
+create table Servicios(
 	id_empresa INT, 
 	nro_servicio INT, 
 	nombre varchar(100) not null, 
@@ -42,26 +42,26 @@ create table MARIA.Servicios(
 	precio float check(precio >= 0),
 	
 	PRIMARY KEY(id_empresa,nro_servicio),
-	foreign key(id_empresa) references MARIA.Empresas(id)
+	foreign key(id_empresa) references Empresas(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.OrdenCompra(
+create table OrdenCompra(
 	nro_orden serial PRIMARY KEY,
 	desripcion varchar(255),
 	fecha_compra date not null, 
 	id_empresa int, 
-	rif_proveedor int,
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	rif_proveedor varchar(100),
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT,
-	foreign key (rif_proveedor) references MARIA.Proveedores(rif)
+	foreign key (rif_proveedor) references Proveedores(rif)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.Productos(
+create table Productos(
 	id serial primary key, 
 	nombre varchar(255) not null, 
 	descripcion varchar(255),
@@ -70,12 +70,12 @@ create table MARIA.Productos(
 	precio_venta float check (precio_venta >= 0)
 );
 
-create table MARIA.Bancos(
+create table Bancos(
 	codigo codigo_banco PRIMARY KEY,
 	nombre varchar(100) unique not null
 );
 
-create table MARIA.Empleados(
+create table Empleados(
 	CI varchar(100) primary key,
 	email varchar(200) not null unique, 
 	nombre varchar(100) not null, 
@@ -88,15 +88,15 @@ create table MARIA.Empleados(
 	empresaEncargado int, 
 	fecha_encargo date, 
 	
-	foreign key (empresa_trabaja) references MARIA.Empresa(id)
+	foreign key (empresa_trabaja) references Empresas(id)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT,
-	foreign key (empresaEncargado) references MARIA.Empresa(id)
+	foreign key (empresaEncargado) references Empresas(id)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT
 );
 
-create table MARIA.Automatizaciones(
+create table Automatizaciones(
 
 	id serial primary key, 
 	nombre varchar(255) not null, 
@@ -104,20 +104,20 @@ create table MARIA.Automatizaciones(
 	jsonString varchar(255), 
 	id_empresa int,
 	
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT
 );
 
-create table MARIA.Cientes(
+create table Clientes(
 
 	CI varchar(100) PRIMARY KEY, 
 	nombre varchar(100) not null, 
-	apellido varchar(100) not null
-	email varchar(100),
+	apellido varchar(100) not null,
+	email varchar(100)
 );
 
-create table MARIA.OrdenVenta(
+create table OrdenVenta(
 
 	nro_orden serial primary key, 
 	descripcion varchar(255), 
@@ -126,52 +126,60 @@ create table MARIA.OrdenVenta(
 	ci_cliente varchar(100),
 	id_empresa int, 
 	
-	foreign key (ci_cliente) references MARIA.Clientes(CI)
+	foreign key (ci_cliente) references Clientes(CI)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT
 );
 
-create table MARIA.PagoMovil( 
+create table PagoMovil( 
 	codigoBanco codigo_banco, 
 	cedula_RIF varchar(100), 
 	telefono varchar(100),
 	
 	
 	PRIMARY KEY(codigoBanco,cedula_RIF,telefono),
-	foreign key(codigoBanco) references MARIA.Bancos(codigo)
+	foreign key(codigoBanco) references Bancos(codigo)
 		ON UPDATE CASCADE
 		ON DELETE RESTRICT
 );
 
-create table MARIA.DatosBancarios(
+create table DatosBancarios(
 	codigoBanco codigo_banco, 
-	nro_cuenta MARIA.NRO_CUENTA,
+	nro_cuenta NRO_CUENTA,
+	rif_cedula varchar(100),
+	id_empresa INT,
 	
 	PRIMARY KEY(codigoBanco,nro_cuenta),
-	foreign key(codigoBanco) references MARIA.Bancos(codigo)
+	foreign key(codigoBanco) references Bancos(codigo)
 		ON UPDATE CASCADE
-		ON DELETE RESTRICT
+		ON DELETE restrict,
+	foreign key (id_empresa) references Empresas(id)
+		on update restrict
+		on delete cascade
 );
 
-create table MARIA.OrdenCompraProducto(
+drop table DatosBancarios; 
+
+
+create table OrdenCompraProducto(
 	nro_orden INT, 
 	id_producto INT, 
 	cantidad int CHECK(cantidad >= 0), 
 	precioUnidad float check(precioUnidad >= 0),
 	
 	PRIMARY KEY(nro_orden,id_producto),
-	foreign key (id_producto) references MARIA.Productos(id)
+	foreign key (id_producto) references Productos(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key nro_orden) references MARIA.OrdenCompra(nro_orden)
+	foreign key (nro_orden) references OrdenCompra(nro_orden)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.ProductosServicios(
+create table ProductosServicios(
 
 	id_producto int, 
 	id_empresa INT, 
@@ -179,25 +187,25 @@ create table MARIA.ProductosServicios(
 	cantidad int CHECK(cantidad >= 0), 
 	
 	PRIMARY KEY(id_producto, id_empresa,nro_servicio),
-	foreign key(id_empresa,nro_servicio) references MARIA.Servicios(id_empresa,nro_servicio),
+	foreign key(id_empresa,nro_servicio) references Servicios(id_empresa,nro_servicio)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key(id_producto) references MARIA.Productos(id)	
+	foreign key(id_producto) references Productos(id)	
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.Inventario(
+create table Inventario(
 
 	id_empresa int,
 	id_producto int, 
 	cantidad_actual int check(cantidad_actual >= 0),
 	
 	PRIMARY KEY(id_empresa, id_producto),
-	foreign key(id_producto) references MARIA.Productos(id)
+	foreign key(id_producto) references Productos(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
@@ -206,7 +214,7 @@ create domain estadoServicio AS varchar(20)
 NOT NULL
 check( VALUE IN ('VIGENTE','POR VENCER','VENCIDO'));
 
-create table MARIA.OrdenVentaServicios(
+create table OrdenVentaServicios(
 
 	nro_orden INT, 
 	id_empresa int, 
@@ -215,15 +223,15 @@ create table MARIA.OrdenVentaServicios(
 	estado estadoServicio default 'VIGENTE',
 	
 	PRIMARY KEY(nro_orden,id_empresa,nro_servicio), 
-	foreign key(id_empresa,nro_servicio) references MARIA.Servicios(id_empresa,nro_servicio),
+	foreign key(id_empresa,nro_servicio) references Servicios(id_empresa,nro_servicio)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key (nro_orden) references MARIA.OrdenVenta(nro_orden)
-		ON UPDATE RESTRICT,
+	foreign key (nro_orden) references OrdenVenta(nro_orden)
+		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.OrdenVentaProductos(
+create table OrdenVentaProductos(
 
 	nro_orden int, 
 	id_producto int, 
@@ -231,78 +239,55 @@ create table MARIA.OrdenVentaProductos(
 	cantidad int check (cantidad >= 0), 
 	
 	PRIMARY KEY(nro_orden,id_producto),
-	foreign key(id_producto) references MARIA.Productos(id)
+	foreign key(id_producto) references Productos(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key (nro_orden) references MARIA.OrdenVenta(nro_orden)
-		ON UPDATE RESTRICT,
+	foreign key (nro_orden) references OrdenVenta(nro_orden)
+		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.ClientesEmpresa(
+create table ClientesEmpresa(
 
 	id_empresa int, 
 	ci_cliente varchar(100),
 	
 	PRIMARY KEY(id_empresa, ci_cliente),
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT,
-	foreign key (ci_cliente) references MARIA.Clientes(CI)
-		ON UPDATE RESTRICT,
+	foreign key (ci_cliente) references Clientes(CI)
+		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
 
-create table MARIA.TelefonosCliente(
+create table TelefonosCliente(
 	ci_cliente varchar(100),
-	telefono varchar(100)
+	telefono varchar(100),
 	PRIMARY KEY(ci_cliente,telefono),
-	foreign key (ci_cliente) references MARIA.Clientes(CI)
-		ON UPDATE RESTRICT,
-		ON DELETE RESTRICT
+	foreign key (ci_cliente) references Clientes(CI)
+		ON UPDATE RESTRICT
+		ON DELETE restrict)
 ;
 
-create table MARIA.TelefonosEmpresa(
+create table TelefonosEmpresa(
 	id_empresa int, 
 	telefono varchar(100),
 	PRIMARY KEY (id_empresa,telefono),
-	foreign key (id_empresa) references MARIA.Empresas(id)
+	foreign key (id_empresa) references Empresas(id)
 		ON UPDATE CASCADE
-		ON DELETE CASCADE,
+		ON DELETE CASCADE
 );
 
-create table MARIA.TelefonosProveedores(
+create table TelefonosProveedores(
 	
 	rif varchar(100),
 	telefono varchar(100),
 	PRIMARY KEY(rif,telefono),
-	foreign key (rif) references MARIA.Proveedores(rif)
-		ON UPDATE RESTRICT,
-		ON DELETE CASCADE
-);
-
-create table MARIA.DatosBancariosPropietarios(
-
-	nro_cuenta MARIA.NRO_CUENTA,
-	cedula_RIF varchar(100),
-	PRIMARY KEY(nro_cuenta,cedula_RIF),
-	foreign key(nro_cuenta) references MARIA.Bancos(nro_cuenta)
+	foreign key (rif) references Proveedores(rif)
 		ON UPDATE RESTRICT
 		ON DELETE CASCADE
 );
-
-create table MARIA.DatosBancariosEmpresa(
-	
-	nro_cuenta MARIA.NRO_CUENTA,
-	id_empresa INT, 
-	foreign key(nro_cuenta) references MARIA.Bancos(nro_cuenta)
-		ON UPDATE RESTRICT
-		ON DELETE CASCADE,
-	foreign key (id_empresa) references MARIA.Empresas(id)
-		ON UPDATE RESTRICT
-		ON DELETE CASCADE,
-);
-
 
 
 
