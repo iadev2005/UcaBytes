@@ -2036,8 +2036,9 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       )}
 
       {/* Barra de herramientas flotante SIEMPRE visible y fija */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-4 z-50 w-auto max-w-full md:left-1/2 md:translate-x-[-50%] md:rounded-full md:px-4 md:py-2 md:bottom-4 md:w-auto md:max-w-none
-        w-full left-0 right-0 bottom-0 px-2 py-1 rounded-none md:rounded-full md:w-auto md:left-1/2 md:right-auto md:translate-x-[-50%]">
+      <div className="fixed z-50 bg-white shadow-lg flex items-center gap-4
+        w-full left-0 bottom-0 px-2 py-1 rounded-none
+        md:w-auto md:left-1/2 md:bottom-4 md:translate-x-[-50%] md:rounded-full md:px-4 md:py-2">
         <div className="flex items-center gap-2 border-r pr-2 md:pr-4 w-full md:w-auto justify-center">
           <button
             onClick={() => setViewMode('desktop')}
