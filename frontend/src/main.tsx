@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import LoginRegister from './pages/Login-register';
 import ChatButton from './components/ChatButton';
+import Home from './pages/Home.tsx';
 
 function PublicSite() {
   const { siteId } = useParams();
@@ -54,7 +55,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/register" element={<Register />} />
         <Route path="/Login-register" element={<LoginRegister />} />
         <Route path="/" element={<LayoutWithChat />}>
-          <Route index element={<App />} />
+          <Route index element={<Home />} />
           <Route path="design-system" element={<DesignSystem />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="marketing" element={<Marketing />} />
@@ -62,6 +63,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="central-operations" element={<CentralOperations />} />
           <Route path="automations" element={<Automations />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="home" element={<Home/>}/>
         </Route>
       </Routes>
     </BrowserRouter>

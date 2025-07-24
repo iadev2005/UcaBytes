@@ -32,7 +32,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           <SidebarLink 
             to="/" 
             icon={HomeIcon} 
-            label="Home" 
+            label="Inicio" 
             active={location.pathname === '/'} 
             isCollapsed={isCollapsed}
           />
