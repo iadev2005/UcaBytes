@@ -16,3 +16,4 @@ export { HelpIcon } from './Help';
 export { ChatIcon } from './Chat'; 
 export { DashboardIcon } from './Dashboard'; 
 export { KebabIcon } from './Kebab'; 
+export { LogOutIcon } from './LogOut';

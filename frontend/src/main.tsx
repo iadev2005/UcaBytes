@@ -71,7 +71,7 @@ createRoot(document.getElementById('root')!).render(
             <LayoutWithChat />
           </RequireAuth>
         }>
-          <Route path="home" element={<Home />} />
+          <Route index element={<Home />} />
           <Route path="design-system" element={<DesignSystem />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="marketing" element={<Marketing />} />

@@ -1,8 +1,9 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon } from '../icons';
+import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon, LogOutIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation, useNavigate} from 'react-router-dom';
 import { cn } from '../lib/utils';
+import logo from '../assets/logo/logo.svg';
 
 interface SidebarProps {
   onCollapse: Dispatch<SetStateAction<boolean>>;
@@ -27,26 +28,54 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
   // Sidebar content as a component for reuse
   const sidebarContent = (
     <>
-      <div className="flex-1 flex flex-col pt-12">
+      <div className="flex flex-col items-center pt-8 pb-4">
+        <img src={logo} alt="Logo" className={cn("transition-all", isCollapsed ? "w-10 h-10" : "w-32 h-32")} />
+        {!isCollapsed && (
+          <span
+            style={{
+              fontFamily: 'Syne, var(--font-syne)',
+              fontWeight: 800,
+              color: 'var(--color-primary-600)'
+            }}
+            className="mt-2 text-2xl tracking-wide"
+          >
+            PymeUp
+          </span>
+        )}
+      </div>
+      <div className="flex-1 flex flex-col pt-4">
         <nav className="flex flex-col gap-2">
-          <SidebarLink to="./home" icon={HomeIcon} label="Home" active={location.pathname === '/'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/dashboard'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/marketing'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/products-services'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/central-operations'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app" icon={HomeIcon} label="Home" active={location.pathname === '/app'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/app/dashboard'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/app/marketing'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/app/products-services'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/app/central-operations'} isCollapsed={isCollapsed} />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">
-          <SidebarLink to="./settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} isCollapsed={isCollapsed} />
+          <motion.div
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 60, damping: 18 }}
+          >
+            <button
+              onClick={handleLogout}
+              className={cn(
+                'flex items-center gap-3 px-6 py-3 rounded-xl font-normal text-[var(--color-primary-600)] transition-all',
+                'hover:bg-[var(--color-primary-100)]',
+                isCollapsed && 'px-3 justify-center',
+                'w-full'
+              )}
+              style={{ fontFamily: 'var(--font-syne)' }}
+            >
+              <LogOutIcon className="w-6 h-6" />
+              {!isCollapsed && (
+                <span className="text-base text-left">Cerrar sesión</span>
+              )}
+            </button>
+          </motion.div>
+          <SidebarLink to="/app/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/app/settings'} isCollapsed={isCollapsed} />
         </nav>
-      </div>
-      <div className="mb-8 px-6">
-        <button
-          onClick={handleLogout}
-          className="w-full bg-[var(--color-secondary-400)] text-white rounded-xl py-3 font-semibold shadow hover:bg-[var(--color-secondary-500)] transition-colors"
-        >
-          Cerrar sesión
-        </button>
       </div>
       <button
         onClick={handleCollapse}
