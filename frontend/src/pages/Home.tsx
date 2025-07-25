@@ -169,6 +169,27 @@ export default function Home() {
 
   const eventosFecha: string[] = selectedDate ? eventosPorFecha[selectedDate.toISOString().slice(0, 10)] || [] : [];
 
+  // Lista de tips útiles para mejorar la empresa
+  const tipsUtiles = [
+    "Automatiza tareas repetitivas para ahorrar tiempo.",
+    "Escucha el feedback de tus clientes y adáptate.",
+    "Invierte en la capacitación de tu equipo.",
+    "Analiza tus métricas clave cada semana.",
+    "Fomenta la innovación y la creatividad.",
+    "Mantén una comunicación clara y abierta.",
+    "Diversifica tus fuentes de ingreso.",
+    "Aprovecha herramientas digitales para marketing.",
+    "Establece metas claras y medibles.",
+    "Cuida la experiencia del cliente en cada punto de contacto."
+  ];
+  const [tipIndex, setTipIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % tipsUtiles.length);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [tipsUtiles.length]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-8 items-center relative overflow-hidden">
       {/* Fondo decorativo */}
@@ -283,7 +304,7 @@ export default function Home() {
                 <MegaphoneIcon className="text-[var(--color-secondary-600)] w-6 h-6" />
                 <h2 className="text-2xl font-bold text-[var(--color-secondary-800)]">Tips Útiles</h2>
               </div>
-              <p className="text-lg">Un tip útil debería estar aquí...</p>
+              <p className="text-lg transition-all duration-500 min-h-[32px]">{tipsUtiles[tipIndex]}</p>
             </div>
 
             <div className="bg-white rounded-3xl shadow-2xl p-6 border border-gray-200 w-full animate-fade-in-up">
