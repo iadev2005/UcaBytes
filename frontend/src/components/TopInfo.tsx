@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NotificationIcon } from '../icons/Notification';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 export default function TopInfo() {
   const [date, setDate] = useState(new Date());
@@ -22,7 +23,12 @@ export default function TopInfo() {
   const avatar = 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128';
 
   return (
-    <div className="w-full flex items-center justify-between px-6 bg-white border-b border-[var(--color-primary-100)] h-[70px] min-h-[50px] sticky top-0 z-20">
+    <motion.div
+      className="w-full flex items-center justify-between px-6 bg-white border-b border-[var(--color-primary-100)] h-[70px] min-h-[50px] sticky top-0 z-20"
+      initial={{ opacity: 0, y: -30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+    >
       {/* Izquierda: Notificación, hora y fecha */}
       <div className="flex items-center gap-6">
         <button className="w-12 h-12 bg-[var(--color-primary-100)] rounded-lg flex items-center justify-center shadow hover:bg-[var(--color-primary-200)] transition-colors">
@@ -38,6 +44,6 @@ export default function TopInfo() {
         </span>
         <img src={avatar} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-[var(--color-primary-200)] group-hover:border-[var(--color-primary-400)] transition-colors" />
       </Link>
-    </div>
+    </motion.div>
   );
 } 

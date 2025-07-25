@@ -7,3 +7,4 @@ export { ReturnIcon } from './Return';
 export { ServicesIcon } from './Services';
 export { ConfigurationIcon } from './Configuration';
 export { DashboardIcon } from './Dashboard'; 
+export { KebabIcon } from './Kebab'; 
