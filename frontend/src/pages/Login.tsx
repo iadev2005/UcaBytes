@@ -11,41 +11,85 @@ export default function Login() {
       navigate('/app');
     };
     return (
-      <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo01.jpg')"}}>
-        <div className="flex flex-col items-center justify-center absolute top-1/2 left-3/5 h-screen w-2/5 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
-            <div className="absolute top-6 left-6">
-                <Link to="/Login-register" className="text-[1.5rem] font-normal text-[#3e92ee]">
-                    <ReturnIcon className="w-12 h-12" />
-                </Link>
-            </div>
-            <h2 className="text-[3rem] font-bold text-[#0A2463] mb-24">Iniciar Sesión</h2>
-            <form className="w-full flex flex-col items-center" onSubmit={handleSubmit}>
-              <div className="flex flex-col gap-4 w-full items-center">
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Correo / Usuario</p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
-                        <input type="text" placeholder="Correo electrónico / Usuario" required className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
-                    </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Contraseña</p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
-                        <input type="password" placeholder="Contraseña" required className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
-                    </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                  <button type="submit" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Iniciar Sesión</button>
-                </div>
+      <div className="min-h-screen flex flex-col lg:flex-row">
+        {/* Left side - Office photo */}
+        <div className="w-full lg:w-3/5 h-64 lg:h-auto bg-cover bg-center" style={{backgroundImage: "url('/images/EquipoTrabajo01.jpg')"}}>
+          {/* Photo takes full height and width of left side */}
+        </div>
+        
+        {/* Right side - Login form */}
+        <div className="w-full lg:w-2/5 bg-white flex flex-col justify-center px-6 sm:px-8 lg:px-10 py-8 lg:py-0 relative">
+          {/* Back button */}
+          <div className="absolute top-4 lg:top-6 left-4 lg:left-6">
+            <Link to="/Login-register" className="text-[var(--color-primary-600)] hover:text-[#2b7de0] transition-colors">
+              <ReturnIcon className="w-6 h-6 lg:w-8 lg:h-8" />
+            </Link>
+          </div>
+          
+          {/* Login form container */}
+          <div className="w-full max-w-sm sm:max-w-md mx-auto">
+            {/* Title */}
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0A2463] text-center mb-6 sm:mb-8 lg:mb-10">Iniciar Sesión</h2>
+            
+            {/* Form */}
+            <form className="w-full space-y-6 sm:space-y-8" onSubmit={handleSubmit}>
+              {/* Email/Username field */}
+              <div className="space-y-2 sm:space-y-3">
+                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
+                  E-mail/usuario:
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ingresa tu correo o usuario" 
+                  required 
+                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
+                />
+              </div>
+              
+              {/* Password field */}
+              <div className="space-y-2 sm:space-y-3">
+                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
+                  Contraseña:
+                </label>
+                <input 
+                  type="password" 
+                  placeholder="Ingresa tu contraseña" 
+                  required 
+                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
+                />
+              </div>
+              
+              {/* Login button */}
+              <div className="flex justify-center">
+                <button 
+                  type="submit" 
+                  className="w-48 md:w-56 lg:w-64 bg-[#D8315B] text-white py-2 md:py-3 lg:py-3 rounded-xl text-base md:text-lg lg:text-xl font-medium hover:bg-[#b81e48] transition-all duration-500 cursor-pointer shadow-lg hover:shadow-2xl transform hover:scale-110 hover:-translate-y-1 active:scale-95"
+                >
+                  Iniciar Sesión
+                </button>
               </div>
             </form>
-            <p className="mt-6 text-base text-[#0A2463] text-[1.5rem] font-normal">
-                ¿No tienes cuenta? <Link to="/Register" className="text-[#D8315B] hover:underline text-[1.5rem] font-normal">Regístrate</Link>
-            </p>
+            
+            {/* Links */}
+            <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 text-center">
+              <Link 
+                to="/forgot-password" 
+                className="block text-sm sm:text-base text-[#0A2463] hover:underline cursor-pointer"
+              >
+                ¿Olvido su contraseña?
+              </Link>
+              <p className="text-sm sm:text-base text-gray-500">
+                ¿No tienes una cuenta?{' '}
+                <Link 
+                  to="/Register" 
+                  className="text-[#D8315B] hover:underline cursor-pointer"
+                >
+                  Regístrate aquí
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
-  } 
+} 

@@ -68,9 +68,9 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
               )}
               style={{ fontFamily: 'var(--font-syne)' }}
             >
-              <LogOutIcon className="w-6 h-6" />
+              <LogOutIcon className="w-6 h-6 cursor-pointer" />
               {!isCollapsed && (
-                <span className="text-base text-left">Cerrar sesión</span>
+                <span className="text-base text-left cursor-pointer">Cerrar sesión</span>
               )}
             </button>
           </motion.div>
@@ -80,7 +80,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
       <button
         onClick={handleCollapse}
         className={cn(
-          "absolute top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors",
+          "absolute top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer",
           "border border-[var(--color-primary-100)]",
           "hidden md:flex"
         )}

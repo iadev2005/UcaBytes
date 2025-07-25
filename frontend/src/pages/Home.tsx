@@ -79,9 +79,9 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                     onDateClick(new Date(year, month, day));
                   }}
                   className={`w-full aspect-square rounded-full text-sm transition-all
-                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold" : ""}
+                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold  " : ""}
                     ${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() && day !== selected ? "bg-gray-200 font-bold" : ""}
-                    hover:bg-[var(--color-secondary-100)]
+                    hover:bg-[var(--color-secondary-100)] cursor-pointer
                   `}
                 >
                   {day}
@@ -114,17 +114,36 @@ export default function Home() {
   const [openKebab, setOpenKebab] = useState<number | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [newEventText, setNewEventText] = useState('');
+  
+  // Estado persistente para eventos
+  const [eventosPorFecha, setEventosPorFecha] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('eventos_calendario');
+      return saved ? JSON.parse(saved) : {
+        "2025-01-24": ["Reunión con equipo de ventas", "Llamada con cliente importante"],
+        "2025-01-25": ["Entrega de reporte mensual"],
+      };
+    }
+    return {
+      "2025-01-24": ["Reunión con equipo de ventas", "Llamada con cliente importante"],
+      "2025-01-25": ["Entrega de reporte mensual"],
+    };
+  });
 
   useEffect(() => {
     localStorage.setItem('accesos_rapidos', JSON.stringify(accesos));
   }, [accesos]);
 
-  const accesosDisponibles: string[] = ["Ventas", "Inventario", "Facturación", "Marketing"];
-  const eventosPorFecha: Record<string, string[]> = {
-    "2025-07-24": ["Reunión con equipo de ventas", "Llamada con cliente importante"],
-    "2025-07-25": ["Entrega de reporte mensual"],
-  };
+  // Guardar eventos en localStorage cuando cambien
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('eventos_calendario', JSON.stringify(eventosPorFecha));
+    }
+  }, [eventosPorFecha]);
 
+  const accesosDisponibles: string[] = ["Ventas", "Inventario", "Facturación", "Marketing"];
   const agregarAcceso = (acceso: string) => {
     if (acceso && !accesos.includes(acceso) && accesos.length < 4) {
       setAccesos([...accesos, acceso]);
@@ -135,6 +154,45 @@ export default function Home() {
   const eliminarAcceso = (idx: number) => {
     setAccesos(accesos.filter((_, i) => i !== idx));
     setOpenKebab(null);
+  };
+
+  // Funciones para manejar eventos
+  const agregarEvento = () => {
+    if (!selectedDate || !newEventText.trim()) return;
+    
+    const dateKey = selectedDate.toISOString().slice(0, 10);
+    const nuevosEventos = {
+      ...eventosPorFecha,
+      [dateKey]: [...(eventosPorFecha[dateKey] || []), newEventText.trim()]
+    };
+    
+    setEventosPorFecha(nuevosEventos);
+    setNewEventText('');
+    setShowAddEventForm(false);
+  };
+
+  const eliminarEvento = (eventIndex: number) => {
+    if (!selectedDate) return;
+    
+    const dateKey = selectedDate.toISOString().slice(0, 10);
+    const eventosActuales = eventosPorFecha[dateKey] || [];
+    const nuevosEventos = {
+      ...eventosPorFecha,
+      [dateKey]: eventosActuales.filter((_, idx) => idx !== eventIndex)
+    };
+    
+    // Si no quedan eventos para esa fecha, eliminar la entrada
+    if (nuevosEventos[dateKey].length === 0) {
+      delete nuevosEventos[dateKey];
+    }
+    
+    setEventosPorFecha(nuevosEventos);
+  };
+
+  const handleEventModalClose = () => {
+    setEventModalOpen(false);
+    setShowAddEventForm(false);
+    setNewEventText('');
   };
 
   const activarArrastrar = (idx: number) => {
@@ -362,16 +420,74 @@ export default function Home() {
         </div>
       </div>
 
-      <Modal open={eventModalOpen} onClose={() => setEventModalOpen(false)} title={selectedDate ? `Eventos para ${selectedDate.toLocaleDateString()}` : "Eventos"}>
-        {eventosFecha.length > 0 ? (
-          <ul className="list-disc pl-5">
-            {eventosFecha.map((evento: string, idx: number) => (
-              <li key={idx}>{evento}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No hay eventos para este día.</p>
-        )}
+      <Modal open={eventModalOpen} onClose={handleEventModalClose} title={selectedDate ? `Eventos para ${selectedDate.toLocaleDateString()}` : "Eventos"}>
+        <div className="w-full max-w-md">
+          {/* Lista de eventos existentes */}
+          {eventosFecha.length > 0 ? (
+            <div className="mb-4">
+              <h3 className="font-semibold mb-2">Eventos existentes:</h3>
+              <ul className="space-y-2">
+                {eventosFecha.map((evento: string, idx: number) => (
+                  <li key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                    <span className="flex-1">{evento}</span>
+                    <button
+                      onClick={() => eliminarEvento(idx)}
+                      className="ml-2 text-red-500 hover:text-red-700 cursor-pointer text-sm font-semibold"
+                      title="Eliminar evento"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-gray-500 mb-4">No hay eventos para este día.</p>
+          )}
+
+          {/* Botón para mostrar formulario o formulario de agregar evento */}
+          {!showAddEventForm ? (
+            <button
+              onClick={() => setShowAddEventForm(true)}
+              className="w-full bg-[var(--color-secondary-500)] text-white py-2 px-4 rounded-lg hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+            >
+              + Agregar evento
+            </button>
+          ) : (
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-2">Agregar nuevo evento:</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={newEventText}
+                  onChange={(e) => setNewEventText(e.target.value)}
+                  placeholder="Describe el evento..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-300)] cursor-pointer"
+                  onKeyDown={(e) => e.key === 'Enter' && agregarEvento()}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={agregarEvento}
+                    disabled={!newEventText.trim()}
+                    className="flex-1 bg-[var(--color-primary-600)] text-white py-2 px-4 rounded-lg hover:bg-[var(--color-primary-700)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddEventForm(false);
+                      setNewEventText('');
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );
