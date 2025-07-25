@@ -9,11 +9,9 @@ export default function Settings() {
   const [primaryColor, setPrimaryColor] = useState('#3E92EE');
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(false);
-  const [smsNotif, setSmsNotif] = useState(false);
-  const [whatsappNotif, setWhatsappNotif] = useState(false);
 
   return (
-    <div className=" bg-[var(--color-background)] min-h-screen h-screen w-full p-10 overflow-y-auto">
+    <div className="min-h-screen h-screen w-full p-10 overflow-y-auto">
       <h1 className="text-3xl font-bold mb-8">Configuración</h1>
       {/* General */}
       <section className="mb-10">
@@ -29,13 +27,13 @@ export default function Settings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Teléfono</label>
-            <input type="tel" value={phone} placeholder="Ingrese su número de teléfono" onChange={e => setPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" />
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Idioma</label>
-            <select value={language}  onChange={e => setLanguage(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
+            <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
               <option value="es">Español</option>
-              <option value="en">Más idiomas próximamente...</option>
+              <option value="en">Inglés</option>
             </select>
           </div>
         </div>
@@ -50,8 +48,11 @@ export default function Settings() {
             <select value={theme} onChange={e => setTheme(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
               <option value="light">Claro</option>
               <option value="dark">Oscuro</option>
-              <option value="dark">Sistema</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Color primario</label>
+            <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-12 h-12 p-0 border-2 border-gray-300 rounded-lg cursor-pointer" />
           </div>
         </div>
       </section>
@@ -70,7 +71,6 @@ export default function Settings() {
           </label>
         </div>
       </section>
-      
     </div>
   );
 } 
