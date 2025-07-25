@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useEffect, useState } from 'react';
 
 interface FollowerData {
@@ -23,6 +23,12 @@ const AGE_RANGES = [
   { id: '65+', label: '65 años o más', fill: '#ffc658' },
 ];
 
+const GENDER_COLORS: { [key: string]: string } = {
+  F: '#FF69B4',  // Rosa para Femenino
+  M: '#4169E1',  // Azul para Masculino
+  U: '#808080'   // Gris para No especificado
+};
+
 export default function Dashboard() {
   const [followersData, setFollowersData] = useState<FollowerData[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +36,7 @@ export default function Dashboard() {
   const [growthPercentage, setGrowthPercentage] = useState(0);
   const [firstDate, setFirstDate] = useState<string>('');
   const [demographics, setDemographics] = useState<DemographicsData | null>(null);
+  const [currentFollowers, setCurrentFollowers] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +49,12 @@ export default function Dashboard() {
           throw new Error(`Error HTTP: ${followersResponse.status}`);
         }
         const followersJson = await followersResponse.json();
+        
+        // Get current followers count (last date)
+        const lastDate = Object.keys(followersJson).sort().pop();
+        if (lastDate) {
+          setCurrentFollowers(followersJson[lastDate]);
+        }
         
         // Transform followers data
         const formattedData = Object.entries(followersJson).map(([date, followers]) => ({
@@ -79,9 +92,6 @@ export default function Dashboard() {
         const latestDate = Object.keys(demographicsJson).sort().pop();
         if (latestDate) {
           setDemographics(demographicsJson[latestDate]);
-          console.log('Datos demográficos cargados:', demographicsJson[latestDate]);
-        } else {
-          console.log('No se encontraron datos demográficos');
         }
 
         setError(null);
@@ -104,24 +114,84 @@ export default function Dashboard() {
     },
   ];
 
-  // Calcular el total de seguidores por edad
-  const totalFollowers = demographics?.age ? 
-    Object.values(demographics.age).reduce((sum, value) => sum + value, 0) : 0;
+  // Preparar datos para el gráfico de edad usando el número actual de seguidores
+  const ageData = demographics?.age ? (() => {
+    // Calcular el total de seguidores especificados por edad
+    const specifiedTotal = Object.values(demographics.age).reduce((sum, count) => sum + count, 0);
+    // Calcular los no especificados
+    const unspecified = currentFollowers - specifiedTotal;
 
-  // Preparar datos para el gráfico de edad
-  const ageData = AGE_RANGES.map(range => ({
-    name: range.label,
-    value: ((demographics?.age?.[range.id] || 0) / totalFollowers) * 100,
-    fill: range.fill,
-  })).sort((a, b) => b.value - a.value); // Ordenar por porcentaje descendente
+    // Crear el array base con los rangos de edad
+    const data = AGE_RANGES.map(range => {
+      const count = demographics.age[range.id] || 0;
+      return {
+        name: range.label,
+        value: currentFollowers > 0 ? (count / currentFollowers) * 100 : 0,
+        fill: range.fill,
+        count: count
+      };
+    });
+
+    // Agregar los no especificados si hay alguno
+    if (unspecified > 0) {
+      data.push({
+        name: 'No especificado',
+        value: currentFollowers > 0 ? (unspecified / currentFollowers) * 100 : 0,
+        fill: '#808080', // Gris para no especificados
+        count: unspecified
+      });
+    }
+
+    return data.sort((a, b) => b.value - a.value);
+  })() : [];
+
+  // Preparar datos para el gráfico de género
+  const genderData = demographics?.gender ? (() => {
+    const female = demographics.gender['F'] || 0;
+    const male = demographics.gender['M'] || 0;
+    const unspecified = currentFollowers - (female + male);
+    
+    return [
+      { name: 'Femenino', value: female, key: 'F' },
+      { name: 'Masculino', value: male, key: 'M' },
+      { name: 'No especificado', value: unspecified, key: 'U' }
+    ].filter(item => item.value > 0);
+  })() : [];
+
+  // Preparar datos para el gráfico de ciudades
+  const cityData = demographics?.city ? (() => {
+    // Calcular el total de seguidores especificados por ciudad
+    const specifiedTotal = Object.values(demographics.city).reduce((sum, count) => sum + count, 0);
+    // Calcular los no especificados
+    const unspecified = currentFollowers - specifiedTotal;
+
+    // Obtener las ciudades y ordenarlas por cantidad
+    const data = Object.entries(demographics.city)
+      .map(([city, count]) => ({
+        name: city,
+        value: count
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // Agregar los no especificados si hay alguno
+    if (unspecified > 0) {
+      data.push({
+        name: 'No especificado',
+        value: unspecified
+      });
+    }
+
+    return data;
+  })() : [];
 
   return (
     <div className="min-h-screen p-8 bg-[var(--color-background)]">
       <h1 className="text-2xl font-bold text-[var(--color-primary-700)] mb-6 text-left">Vista General</h1>
-      <div className="w-full bg-white rounded-2xl shadow-lg p-8">
-        <div className="w-full flex flex-col md:flex-row gap-8 justify-center items-center">
+      <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8">
+        {/* Primera fila: Histograma y Crecimiento */}
+        <div className="w-full flex flex-col md:flex-row gap-8 justify-center items-stretch">
           {/* Gráfico de barras */}
-          <div className="bg-gray-50 rounded-3xl p-4 flex-1 flex flex-col items-center border-2 border-gray-800">
+          <div className="bg-white rounded-3xl p-4 flex-1 flex flex-col items-center shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <span className="text-xs mb-2 text-gray-500">Histórico de Seguidores en Instagram</span>
             {loading ? (
               <div className="h-[200px] flex items-center justify-center">
@@ -144,7 +214,7 @@ export default function Dashboard() {
             )}
           </div>
           {/* Gráfico radial de crecimiento */}
-          <div className="bg-gray-50 rounded-3xl p-4 flex-1 flex flex-col items-center relative border-2 border-gray-800">
+          <div className="bg-white rounded-3xl p-4 flex-1 flex flex-col items-center relative shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <span className="text-xs mb-2 text-gray-500">Crecimiento de Seguidores</span>
             <div className="relative w-[180px] h-[180px] flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -177,59 +247,167 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Sección de distribución por edad */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4 text-left">Distribución por Edad</h2>
-          <div className="bg-gray-50 rounded-3xl p-6 border-2 border-gray-800">
-            {loading ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <p>Cargando datos demográficos...</p>
-              </div>
-            ) : error ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <p className="text-red-500">{error}</p>
-              </div>
-            ) : !demographics?.age ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <p>No hay datos demográficos disponibles</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <RadialBarChart
-                  innerRadius="10%"
-                  outerRadius="80%"
-                  data={ageData}
-                  startAngle={180}
-                  endAngle={0}
-                >
-                  <RadialBar
-                    label={{
-                      fill: '#666',
-                      position: 'insideStart',
-                      formatter: (label: any) => typeof label === 'number' ? `${label.toFixed(1)}%` : ''
-                    }}
-                    background
-                    dataKey="value"
-                  />
-                  <Legend
-                    iconSize={10}
-                    width={120}
-                    height={140}
-                    layout="vertical"
-                    verticalAlign="middle"
-                    align="right"
-                    wrapperStyle={{
-                      top: '50%',
-                      right: 0,
-                      transform: 'translate(0, -50%)'
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Porcentaje']}
-                  />
-                </RadialBarChart>
-              </ResponsiveContainer>
-            )}
+        {/* Segunda fila: Distribución por edad y ciudades */}
+        <div className="w-full flex flex-col md:flex-row gap-8 justify-start">
+          {/* Columna izquierda: Edad y Género */}
+          <div className="w-full md:w-1/2 flex flex-col gap-8">
+            {/* Distribución por edad */}
+            <div className="bg-white rounded-3xl p-4 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+              <span className="text-xs mb-2 text-gray-500 text-center w-full">
+                Distribución por Edad
+              </span>
+              {loading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <p>Cargando datos demográficos...</p>
+                </div>
+              ) : error ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <p className="text-red-500">{error}</p>
+                </div>
+              ) : !demographics?.age ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <p>No hay datos demográficos disponibles</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadialBarChart
+                    innerRadius="10%"
+                    outerRadius="80%"
+                    data={ageData}
+                    startAngle={180}
+                    endAngle={0}
+                    cx="30%"
+                    cy="55%"
+                  >
+                    <RadialBar
+                      label={{
+                        fill: '#666',
+                        position: 'insideStart',
+                        formatter: (label: any) => typeof label === 'number' ? `${label.toFixed(1)}%` : ''
+                      }}
+                      background
+                      dataKey="value"
+                    />
+                    <Legend
+                      iconSize={10}
+                      width={180}
+                      height={140}
+                      layout="vertical"
+                      verticalAlign="middle"
+                      align="right"
+                      wrapperStyle={{
+                        top: '15%',
+                        right: 20,
+                        transform: 'translate(0, 0)',
+                        lineHeight: '24px'
+                      }}
+                    />
+                    <Tooltip
+                      labelFormatter={(index) => {
+                        const count = ageData[index].count;
+                        return `${count} ${count === 1 ? 'seguidor' : 'seguidores'}`;
+                      }}
+                      formatter={(value: number) => [`Porcentaje`, `${value.toFixed(1)}%`]}
+                    />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Distribución por género */}
+            <div className="bg-white rounded-3xl p-4 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+              <span className="text-xs mb-2 text-gray-500 text-center w-full">
+                Distribución por Género
+              </span>
+              {loading ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p>Cargando datos demográficos...</p>
+                </div>
+              ) : error ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p className="text-red-500">{error}</p>
+                </div>
+              ) : !demographics?.gender ? (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p>No hay datos de género disponibles</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={genderData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ value }) => `${value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {genderData.map((entry) => (
+                        <Cell key={entry.key} fill={GENDER_COLORS[entry.key]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => [`${value} seguidores`, 'Cantidad']}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Columna derecha: Ciudades (altura completa) */}
+          <div className="w-full md:w-1/2 flex flex-col">
+            <div className="bg-white rounded-3xl p-4 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.12)] h-full">
+              <span className="text-xs mb-2 text-gray-500 text-center w-full">
+                Procedencia de Seguidores
+              </span>
+              {loading ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p>Cargando datos demográficos...</p>
+                </div>
+              ) : error ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-red-500">{error}</p>
+                </div>
+              ) : !demographics?.city ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p>No hay datos de ciudades disponibles</p>
+                </div>
+              ) : (
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={cityData}
+                      layout="vertical"
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        width={150}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} seguidores`, 'Cantidad']}
+                      />
+                      <Bar 
+                        dataKey="value" 
+                        radius={[0, 6, 6, 0]}
+                      >
+                        {cityData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.name === 'No especificado' ? '#808080' : '#8884d8'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
