@@ -14,3 +14,5 @@ export { MaximizeIcon } from './Maximize';
 export { MinimizeIcon } from './Minimize';
 export { HelpIcon } from './Help';
 export { ChatIcon } from './Chat'; 
+export { DashboardIcon } from './Dashboard'; 
+export { KebabIcon } from './Kebab'; 

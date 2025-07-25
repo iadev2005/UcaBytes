@@ -1,7 +1,15 @@
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ReturnIcon } from '../icons/Return';
 
 export default function Login() {
+    const navigate = useNavigate();
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      // Aquí iría la lógica real de autenticación
+      localStorage.setItem('auth', 'true');
+      navigate('/app');
+    };
     return (
       <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo01.jpg')"}}>
         <div className="flex flex-col items-center justify-center absolute top-1/2 left-3/5 h-screen w-2/5 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
@@ -11,7 +19,7 @@ export default function Login() {
                 </Link>
             </div>
             <h2 className="text-[3rem] font-bold text-[#0A2463] mb-24">Iniciar Sesión</h2>
-            <form className="w-full flex flex-col items-center">
+            <form className="w-full flex flex-col items-center" onSubmit={handleSubmit}>
               <div className="flex flex-col gap-4 w-full items-center">
                 <div className="flex flex-col w-4/5">
                     <div className="flex flex-row">
@@ -30,7 +38,7 @@ export default function Login() {
                     </div>
                 </div>
                 <div className="flex flex-col w-4/5">
-                  <button type="submit" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Iniciar Seccion</button>
+                  <button type="submit" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Iniciar Sesión</button>
                 </div>
               </div>
             </form>

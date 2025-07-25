@@ -18,6 +18,11 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
     onCollapse(!isCollapsed);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth');
+    navigate('/');
+  };
+
   // Sidebar content as a component for reuse
   const sidebarContent = (
     <>
@@ -34,6 +39,14 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
         <nav className="flex flex-col gap-2 mb-8">
           <SidebarLink to="/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} isCollapsed={isCollapsed} />
         </nav>
+      </div>
+      <div className="mb-8 px-6">
+        <button
+          onClick={handleLogout}
+          className="w-full bg-[var(--color-secondary-400)] text-white rounded-xl py-3 font-semibold shadow hover:bg-[var(--color-secondary-500)] transition-colors"
+        >
+          Cerrar sesión
+        </button>
       </div>
       <button
         onClick={handleCollapse}
