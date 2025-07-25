@@ -1,12 +1,9 @@
 import React, { useState, useContext } from 'react';
 import WebsiteBuilder from '../components/marketing/WebsiteBuilder';
-<<<<<<< HEAD
-import { GlobeIcon } from '../icons';
-=======
 import InstagramAssistant from '../components/marketing/InstagramAssistant';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import { SidebarCollapseContext } from './Layout';
->>>>>>> samuel
+import { GlobeIcon } from '../icons';
 
 export default function Marketing() {
   const { isSidebarCollapsed } = useContext(SidebarCollapseContext);
@@ -34,28 +31,6 @@ export default function Marketing() {
           </h1>
         </div>
 
-<<<<<<< HEAD
-        <div className="max-w-md mx-auto">
-          <div
-            tabIndex={0}
-            role="button"
-            onClick={() => setShowBuilder(true)}
-            onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setShowBuilder(true)}
-            className="group w-full bg-white border border-gray-100 rounded-2xl shadow-lg px-8 py-8 flex flex-col gap-4 transition-all duration-200 cursor-pointer hover:shadow-2xl hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-primary/30"
-            aria-label="Abrir generador de sitios web"
-          >
-            <div className="flex items-center gap-4 mb-2">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--color-primary-100)]">
-                <GlobeIcon className="w-7 h-7" style={{ color: 'var(--color-primary-600)' }} />
-              </span>
-              <h2 className="text-2xl font-bold text-[var(--color-primary-700)]">
-                Generador de Sitios Web
-              </h2>
-            </div>
-            <p className="text-base text-gray-600">
-              Crea sitios web profesionales para PyMEs en minutos. Selecciona una plantilla, personaliza el contenido y publica tu sitio web en pocos pasos.
-            </p>
-=======
         <div className="flex flex-col min-h-[60vh] justify-center items-center">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto">
           {/* Card WebsiteBuilder */}
@@ -65,7 +40,7 @@ export default function Marketing() {
           >
             <div className="flex items-center justify-center mb-6">
               <div className="bg-[var(--color-primary-50)] rounded-full p-4 shadow group-hover:scale-110 transition-transform duration-300">
-                <span className="text-5xl">🌐</span>
+                <GlobeIcon className="w-14 h-14" style={{ color: 'var(--color-primary-600)' }} />
               </div>
             </div>
             <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary-700)] tracking-tight">Generador de Sitios Web</h2>
@@ -102,7 +77,6 @@ export default function Marketing() {
             <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary-700)] tracking-tight">Asistente de Instagram</h2>
             <p className="text-gray-500 text-lg leading-relaxed">Gestiona tu presencia en Instagram de manera profesional. Visualiza y programa posts, recibe sugerencias con IA, y mantén un calendario de publicaciones optimizado.</p>
           </button>
->>>>>>> samuel
           </div>
         </div>
       </div>
