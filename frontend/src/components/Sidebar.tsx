@@ -1,6 +1,6 @@
 import { HomeIcon, DashboardIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, ConfigurationIcon } from '../icons';
 import { motion } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { cn } from '../lib/utils';
 
@@ -11,10 +11,16 @@ interface SidebarProps {
 export default function Sidebar({ onCollapse }: SidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const handleCollapse = () => {
     setIsCollapsed(!isCollapsed);
     onCollapse(!isCollapsed);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth');
+    navigate('/');
   };
 
   return (
@@ -75,6 +81,14 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
             isCollapsed={isCollapsed}
           />
         </nav>
+      </div>
+      <div className="mb-8 px-6">
+        <button
+          onClick={handleLogout}
+          className="w-full bg-[var(--color-secondary-400)] text-white rounded-xl py-3 font-semibold shadow hover:bg-[var(--color-secondary-500)] transition-colors"
+        >
+          Cerrar sesión
+        </button>
       </div>
       <button
         onClick={handleCollapse}

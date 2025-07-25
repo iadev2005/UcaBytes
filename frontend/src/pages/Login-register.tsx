@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 export default function LoginRegister() {
@@ -10,7 +9,7 @@ export default function LoginRegister() {
             <h3 className="text-[2rem] font-bold text-[#0A2463] mb-24">Frase inspirdaoras</h3>
             <div className="flex flex-col w-4/5 " style={{paddingBottom: "1vh"}}>
               <Link to="/login">
-                <button type="button" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Iniciar Seccion</button>
+                <button type="button" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Iniciar Sesión</button>
               </Link>
             </div>
             <div className="flex flex-col w-4/5 mt-4" style={{paddingBottom: "1vh"}}>

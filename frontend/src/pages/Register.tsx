@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { ReturnIcon } from '../icons/Return';
 
@@ -7,7 +6,7 @@ export default function Register() {
       <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')", background:"cover" }}>
         <div className="flex flex-col items-center justify-center absolute top-1/2 left-0/5 h-screen w-2/5 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
             <div className="absolute top-6 left-6">
-                <Link to="/Login-register" className="text-[1.5rem] font-normal text-[#3e92ee]">
+                <Link to="/" className="text-[1.5rem] font-normal text-[#3e92ee]">
                     <ReturnIcon className="w-12 h-12" />
                 </Link>
             </div>
