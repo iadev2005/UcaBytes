@@ -4,11 +4,11 @@ import json
 from datetime import datetime, timedelta
 import time
 
-TOKEN = "EAAKJrM0WC6IBPIHgHOPYNvFrFRAZB3j9WftQZBR5Rpf2kB4EzpmEV1WoDZADZBYCzZBT6LMdbrehsVm7qoWUEl8zXdJeTmBkfzOrCrgKrYOA2lhb9yX0O3PaUbuJf9sesfhWZBZBrYaiqE3L2C0haV14Rp0fGFzpvOE3hzC5z7Ur7fLD78IRHwqAN655IqKMyvl82ecefJMdzZBOOlrobCBJm13FCSSt2yC1aRB93wZDZD"
+TOKEN = "EAAKJrM0WC6IBPFdiZAPTzMbpYEmZChXZA087DPQFkDWHNAeD9EVPZBC8Gq3yvg0ZCN1xk6OdnyCEjihagP1TBVX6BOCHwCnVZBK9vdu45FSTkPbfBkCBLH59zEitX53XWGQAVIHB9bj32C5kxtbDITZC2C25ZC9Xufzp6HmzMiN1ciJlK5l6z1jYXSrBCveswsZB4OCjcLunMkPL3NKZCZCkaYithPxBenMmhiQYz1F"
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
-SCHEDULED_POSTS_FILE = "scheduled_posts.json"
+SCHEDULED_POSTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scheduled_posts.json")
 
 def make_api_request(endpoint, params=None, method="GET"):
     if params is None:

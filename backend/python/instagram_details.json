@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "instagram_business_account": {
+        "followers_count": 164,
+        "follows_count": 13,
+        "media_count": 19,
+        "name": "Prueba",
+        "biography": "Empresa donde probaré instagram",
+        "username": "empr.esaprueba",
+        "id": "17841475801593188"
+      },
+      "id": "643130258894839"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFGbTlXSk5Nbjl3NmdrTDMyR0liTXlrREMtTWxzejNBQWJiem04ZAzlrTnJLY3NOaUpFUE1pNUZAGcGdFSkh6dExhNjN5aGxGQTdjc1FkMTM1ejVDU3k3WmhB",
+      "after": "QVFGbTlXSk5Nbjl3NmdrTDMyR0liTXlrREMtTWxzejNBQWJiem04ZAzlrTnJLY3NOaUpFUE1pNUZAGcGdFSkh6dExhNjN5aGxGQTdjc1FkMTM1ejVDU3k3WmhB"
+    }
+  }
+}

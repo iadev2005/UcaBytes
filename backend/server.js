@@ -4,6 +4,7 @@ const cors = require('cors');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -71,8 +72,149 @@ app.post('/api/ia-chat', async (req, res) => {
   }
 });
 
+app.post('/api/instagram/fetch-posts', (req, res) => {
+  const scriptPath = path.join(__dirname, 'python', 'save_instagram_posts.py');
+  execFile('python', [scriptPath], { cwd: path.dirname(scriptPath) }, (error, stdout, stderr) => {
+    if (error) {
+      console.error('Error ejecutando script:', error, stderr);
+      return res.status(500).json({ error: 'Error ejecutando script de Instagram' });
+    }
+    // Después de guardar los posts, guardamos los detalles generales
+    const detailsScript = path.join(__dirname, 'python', 'save_instagram_details.py');
+    execFile('python', [detailsScript], { cwd: path.dirname(detailsScript) }, (err2, stdout2, stderr2) => {
+      if (err2) {
+        console.error('Error ejecutando script de detalles:', err2, stderr2);
+        // No detenemos la respuesta, solo avisamos en consola
+      }
+      // Leer el archivo generado y devolverlo
+      const postsPath = path.join(__dirname, 'python', 'instagram_posts.json');
+      if (fs.existsSync(postsPath)) {
+        const data = fs.readFileSync(postsPath, 'utf8');
+        return res.json({ success: true, posts: JSON.parse(data) });
+      } else {
+        return res.status(500).json({ error: 'No se generó el archivo de publicaciones' });
+      }
+    });
+  });
+});
+
+// Endpoint para crear una publicación inmediata en Instagram
+app.post('/api/instagram/create-post', (req, res) => {
+  const { image_url, caption } = req.body;
+  if (!image_url || !caption) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+  const scriptPath = path.join(__dirname, 'python', 'create_instagram_post.py');
+  const args = ['--image_url', image_url, '--caption', caption];
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  py.stdout.on('data', (data) => { output += data.toString(); });
+  py.stderr.on('data', (data) => { output += data.toString(); });
+  py.on('close', (code) => {
+    try {
+      const json = JSON.parse(output);
+      res.json(json);
+    } catch (e) {
+      res.status(500).json({ error: 'Error ejecutando script', details: output });
+    }
+  });
+});
+
+app.post('/api/instagram/schedule-post', async (req, res) => {
+  const { image_url, caption, date, time } = req.body;
+  if (!image_url || !caption || !date || !time) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+  // Convertir fecha y hora a timestamp
+  const fechaHora = `${date} ${time}`;
+  const fecha_dt = new Date(`${date}T${time}`);
+  const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
+  try {
+    // Obtener instagram_id
+    const scriptPath = path.join(__dirname, 'python', 'create_instagram_post.py');
+    const { spawnSync } = require('child_process');
+    // Usar extract_instagram_id desde Python
+    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
+    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
+    const [instagram_id] = JSON.parse(idResult.stdout.toString());
+    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
+    // Crear contenedor
+    const makeApiScript = `from graphAPI import make_api_request; import sys, json; params = {'image_url': sys.argv[1], 'caption': sys.argv[2]}; print(json.dumps(make_api_request(f'{sys.argv[3]}/media', params, method='POST')))`;
+    const contResult = spawnSync('python', ['-c', makeApiScript, image_url, caption, instagram_id], { cwd: path.join(__dirname, 'python') });
+    const container_response = JSON.parse(contResult.stdout.toString());
+    if (!container_response || !container_response.id) return res.status(500).json({ error: 'No se pudo crear el contenedor de la publicación' });
+    const creation_id = container_response.id;
+    // Guardar en scheduled_posts.json
+    const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+    let posts = [];
+    if (fs.existsSync(scheduledPath)) {
+      posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+    }
+    posts.push({ instagram_id, creation_id, scheduled_time, caption, image_url });
+    fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Error programando publicación', details: e.message });
+  }
+});
+
+app.post('/api/instagram/suggestions', async (req, res) => {
+  try {
+    const postsPath = path.join(__dirname, 'python', 'instagram_posts.json');
+    const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+    const detailsPath = path.join(__dirname, 'python', 'instagram_details.json');
+    const posts = fs.existsSync(postsPath) ? JSON.parse(fs.readFileSync(postsPath, 'utf8')) : [];
+    const scheduled = fs.existsSync(scheduledPath) ? JSON.parse(fs.readFileSync(scheduledPath, 'utf8')) : [];
+    const details = fs.existsSync(detailsPath) ? JSON.parse(fs.readFileSync(detailsPath, 'utf8')) : {};
+    // Construir prompt
+    const prompt = `Eres un experto en marketing digital para Instagram. Analiza los siguientes datos generales de la cuenta, publicaciones actuales y programadas, junto con sus estadísticas. Responde de forma muy concisa y puntualiza las sugerencias en una lista breve de acciones concretas para mejorar el engagement del negocio.\n\nDatos generales de la cuenta:\n${JSON.stringify(details, null, 2)}\n\nPublicaciones actuales:\n${JSON.stringify(posts, null, 2)}\n\nPublicaciones programadas:\n${JSON.stringify(scheduled, null, 2)}\n\nSugerencias (lista breve y concreta):`;
+    // Llamar al endpoint de IA ya existente
+    const iaRes = await axios.post('http://localhost:3001/api/ia-chat', {
+      question: prompt,
+      section: 'Instagram Marketing'
+    });
+    res.json({ suggestions: iaRes.data.answer });
+  } catch (e) {
+    res.status(500).json({ error: 'Error generando sugerencias', details: e.message });
+  }
+});
+
 // Middleware para servir archivos estáticos desde la carpeta python
 app.use('/python', express.static(path.join(__dirname, 'python')));
+
+// Endpoint para obtener los posts programados de Instagram
+app.get('/api/instagram/scheduled-posts', (req, res) => {
+  const filePath = path.join(__dirname, 'python', 'scheduled_posts.json');
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.json([]); // Devuelve array vacío si no existe
+    }
+    const data = fs.readFileSync(filePath, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    console.error('Error al leer scheduled_posts.json:', error);
+    res.status(500).json({ error: 'Error al leer los posts programados' });
+  }
+});
+
+// Endpoint para eliminar una publicación programada por creation_id
+app.delete('/api/instagram/scheduled-posts/:creation_id', (req, res) => {
+  const filePath = path.join(__dirname, 'python', 'scheduled_posts.json');
+  const { creation_id } = req.params;
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Archivo no encontrado' });
+    }
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const newData = data.filter(post => String(post.creation_id) !== String(creation_id));
+    fs.writeFileSync(filePath, JSON.stringify(newData, null, 2));
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error al eliminar publicación programada:', error);
+    res.status(500).json({ error: 'Error al eliminar publicación programada' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Servidor IA escuchando en http://localhost:${PORT}`);
