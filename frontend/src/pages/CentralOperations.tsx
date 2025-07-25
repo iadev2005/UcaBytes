@@ -8,7 +8,7 @@ const categorias = ['Todos', 'Administrativo', 'Ventas', 'Soporte'];
 const prioridades = ['Alta', 'Media', 'Baja'];
 
 export default function CentralOperations() {
-  const [tab, setTab] = useState<'empleados' | 'tareas'>('empleados');
+  const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
   const [cat, setCat] = useState('Todos');
   // Task planner state
   const [tareas, setTareas] = useState([
@@ -102,31 +102,30 @@ export default function CentralOperations() {
   return (
     <div className="w-full mx-auto px-20 py-10 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
       {/* Tabs */}
-      <div className="flex mb-8 w-full max-w-lg mx-auto">
+      <div className="flex mb-8 w-full px-20 mx-auto">
         <div className="flex w-full rounded-2xl border-2 border-[var(--color-primary-600)] bg-white overflow-hidden">
-          <button
-            className={`flex-1 py-2 text-xl font-bold transition-all duration-200
-              ${tab === 'empleados'
-                ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
-                : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'}
-              rounded-l-2xl`}
-            style={{ borderRight: '1.5px solid var(--color-primary-600)' }}
-            onClick={() => setTab('empleados')}
-          >
-            Empleados
-          </button>
-          <button
-            className={`flex-1 py-2 text-xl font-bold transition-all duration-200
-              ${tab === 'tareas'
-                ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
-                : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'}
-              rounded-r-2xl`}
-            onClick={() => setTab('tareas')}
-          >
-            Tareas
-          </button>
-        </div>
+          {[
+            { key: 'empleados', label: 'Empleados' },
+            { key: 'tareas', label: 'Tareas' },
+            { key: 'ventas', label: 'Ventas' },
+            { key: 'servicios', label: 'Control de Servicios' }
+          ].map(({ key, label }, index, arr) => (
+        <button
+          key={key}
+          className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 ${
+          tab === key
+            ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
+            : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'
+            } ${index === 0 ? 'rounded-l-2xl' : index === arr.length - 1 ? 'rounded-r-2xl' : ''}`}
+          style={index < arr.length - 1 ? { borderRight: '1.5px solid var(--color-primary-600)' } : {}}
+          onClick={() => setTab(key as typeof tab)}
+         >
+          {label}
+        </button>
+
+      ))}
       </div>
+    </div>
       {/* Barra de acciones */}
       {tab === 'empleados' && (
         <div className="flex items-center justify-between mb-6">
@@ -239,7 +238,20 @@ export default function CentralOperations() {
             </div>
           ))}
         </div>
+        
       )}
+      {tab === 'ventas' && (
+  <div className="text-center text-gray-500 py-10 text-xl">
+    Módulo de <span className="font-bold text-[var(--color-primary-600)]">Ventas</span> en desarrollo...
+  </div>
+)}
+
+{tab === 'servicios' && (
+  <div className="text-center text-gray-500 py-10 text-xl">
+    Módulo de <span className="font-bold text-[var(--color-primary-600)]">Control de Servicios</span> en desarrollo...
+  </div>
+)}
+
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Agregar empleado">
         <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-72">
           <label className="flex flex-col gap-1">
