@@ -1,4 +1,4 @@
-import { HomeIcon, DashboardIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
+import { HomeIcon, DashboardIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, ConfigurationIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, type Dispatch, type SetStateAction } from 'react';
@@ -62,13 +62,6 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
             icon={OperationsIcon} 
             label="Operaciones Centrales" 
             active={location.pathname === '/central-operations'} 
-            isCollapsed={isCollapsed}
-          />
-          <SidebarLink 
-            to="/automations" 
-            icon={AutomationIcon} 
-            label="Automatizaciones" 
-            active={location.pathname === '/automations'} 
             isCollapsed={isCollapsed}
           />
         </nav>
