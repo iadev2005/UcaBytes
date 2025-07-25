@@ -1,4 +1,4 @@
-import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
+import { HomeIcon, DashboardIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, type Dispatch, type SetStateAction } from 'react';
@@ -19,9 +19,9 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
 
   return (
     <motion.aside
-      initial={{ x: -100, opacity: 0 }}
+      initial={{ x: -80, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 40, damping: 24 }}
+      transition={{ duration: 0, ease: 'easeOut' }}
       className={cn(
         "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex flex-col gap-0 shadow-lg z-10 transition-all duration-300",
         isCollapsed ? "w-[4rem]" : "w-[20%]"
@@ -38,7 +38,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
           />
           <SidebarLink 
             to="/dashboard" 
-            icon={NotificationIcon} 
+            icon={DashboardIcon} 
             label="Dashboard" 
             active={location.pathname === '/dashboard'} 
             isCollapsed={isCollapsed}

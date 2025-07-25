@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { NotificationIcon } from '../icons/Notification';
+import { Link } from 'react-router-dom';
 
 export default function TopInfo() {
   const [date, setDate] = useState(new Date());
@@ -20,21 +22,22 @@ export default function TopInfo() {
   const avatar = 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128';
 
   return (
-    <div className="w-full flex items-center justify-between px-10 bg-white border-b border-[var(--color-primary-100)] h-[20%] min-h-[50px] sticky top-0 z-20">
-      {/* Botón de notificación */}
-      <button className="w-10 h-10 bg-[var(--color-primary-100)] rounded-lg flex items-center justify-center shadow hover:bg-[var(--color-primary-200)] transition-colors">
-        <div className="w-5 h-5 bg-[var(--color-primary-400)] rounded-sm" />
-      </button>
-      {/* Hora y fecha */}
-      <div className="flex items-center gap-4">
-        <span className="font-mono text-lg text-[var(--color-primary-700)]">{time}</span>
-        <span className="text-base text-[var(--color-primary-400)]">{fullDate}</span>
+    <div className="w-full flex items-center justify-between px-6 bg-white border-b border-[var(--color-primary-100)] h-[70px] min-h-[50px] sticky top-0 z-20">
+      {/* Izquierda: Notificación, hora y fecha */}
+      <div className="flex items-center gap-6">
+        <button className="w-12 h-12 bg-[var(--color-primary-100)] rounded-lg flex items-center justify-center shadow hover:bg-[var(--color-primary-200)] transition-colors">
+          <NotificationIcon className="w-7 h-7 text-[var(--color-primary-600)]" />
+        </button>
+        <span className="font-mono text-xl text-[var(--color-primary-700)]">{time}</span>
+        <span className="text-lg text-[var(--color-primary-400)]">{fullDate}</span>
       </div>
-      {/* Empresa y avatar */}
-      <div className="flex items-center gap-3">
-        <span className="font-semibold text-[var(--color-primary-700)] leading-tight">{company}</span>
-        <img src={avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-[var(--color-primary-200)]" />
-      </div>
+      {/* Derecha: Empresa y avatar */}
+      <Link to="/profile" className="flex items-center gap-4 cursor-pointer group px-3 py-1 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors" style={{ textDecoration: 'none' }}>
+        <span className="font-semibold text-xl text-[var(--color-primary-700)] leading-tight whitespace-nowrap">
+          {company}
+        </span>
+        <img src={avatar} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-[var(--color-primary-200)] group-hover:border-[var(--color-primary-400)] transition-colors" />
+      </Link>
     </div>
   );
 } 

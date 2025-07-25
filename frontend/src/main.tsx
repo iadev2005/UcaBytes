@@ -63,7 +63,6 @@ createRoot(document.getElementById('root')!).render(
           <Route path="central-operations" element={<CentralOperations />} />
           <Route path="automations" element={<Automations />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="home" element={<Home/>}/>
         </Route>
       </Routes>
     </BrowserRouter>
