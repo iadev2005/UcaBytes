@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import type { BusinessPage } from '../../types/templates';
 import { cn } from '../../lib/utils';
 
 type BusinessInfoFormProps = {
-  onSubmit: (info: { url: string; rif: string; businessName: string; fontFamily: 'sans' | 'serif' | 'mono' }) => void;
+  onSubmit: (info: { url: string; rif: string; businessName: string; fontFamily: 'syne' | 'arial' | 'georgia' | 'mono' }) => void;
 };
 
 const FONT_OPTIONS = [

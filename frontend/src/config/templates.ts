@@ -40,7 +40,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     defaultTheme: {
       primaryColor: '#D4B996',
       secondaryColor: '#594545',
-      fontFamily: 'serif',
+      fontFamily: 'georgia',
       headerStyle: 'standard',
       footerStyle: 'detailed'
     },
@@ -128,7 +128,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     defaultTheme: {
       primaryColor: '#3B82F6',
       secondaryColor: '#1E40AF',
-      fontFamily: 'sans',
+      fontFamily: 'syne',
       headerStyle: 'standard',
       footerStyle: 'detailed'
     },
@@ -170,7 +170,7 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
     defaultTheme: {
       primaryColor: '#1F2937',
       secondaryColor: '#4B5563',
-      fontFamily: 'sans',
+      fontFamily: 'syne',
       headerStyle: 'standard',
       footerStyle: 'detailed'
     },
