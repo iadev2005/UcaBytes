@@ -105,7 +105,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
       <motion.aside
         className={cn(
           "h-screen fixed top-0 left-0 bg-[var(--color-primary-100)] p-0 flex-col gap-0 shadow-lg z-50 transition-all duration-300 hidden md:flex",
-          isCollapsed ? "w-[4rem]" : "w-[20%]"
+          isCollapsed ? "w-[4rem]" : "w-[20rem]"
         )}
       >
         {sidebarContent}
@@ -129,7 +129,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
             </button>
             {sidebarContent}
           </motion.aside>
-          <div className="flex-1" onClick={() => setMobileOpen(false)} />
+          <div className="flex-1 cursor-pointer" onClick={() => setMobileOpen(false)} />
         </div>
       )}
     </>

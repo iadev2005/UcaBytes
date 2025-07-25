@@ -112,7 +112,7 @@ export default function CentralOperations() {
           ].map(({ key, label }, index, arr) => (
         <button
           key={key}
-          className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 ${
+          className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 cursor-pointer ${
           tab === key
             ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
             : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'
@@ -130,13 +130,13 @@ export default function CentralOperations() {
       {tab === 'empleados' && (
         <div className="flex items-center justify-between mb-6">
           <button
-            className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors"
+            className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
             onClick={() => setModalOpen(true)}
           >
             Agregar empleado
           </button>
           <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+            className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer"
             value={cat}
             onChange={e => setCat(e.target.value)}
           >
@@ -158,7 +158,7 @@ export default function CentralOperations() {
                 <span className="text-sm text-gray-700">Salario: <span className="font-semibold">${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></span>
                 <span className="text-sm text-[var(--color-primary-400)]">Pago quincenal: <span className="font-semibold">${emp.salario ? (emp.salario/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></span>
                 <label className="flex items-center gap-2 text-xs">
-                  <input type="checkbox" checked={emp.pagado} onChange={() => togglePagado(idx)} className="accent-[var(--color-primary-400)] w-5 h-5" />
+                  <input type="checkbox" checked={emp.pagado} onChange={() => togglePagado(idx)} className="accent-[var(--color-primary-400)] w-5 h-5 cursor-pointer" />
                   Nómina pagada
                 </label>
               </div>
@@ -178,16 +178,16 @@ export default function CentralOperations() {
               value={nuevaTarea}
               onChange={e => setNuevaTarea(e.target.value)}
               placeholder="Nueva tarea..."
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer"
             />
             <select
               value={prioridad}
               onChange={e => setPrioridad(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer"
             >
               {prioridades.map(p => <option key={p}>{p}</option>)}
             </select>
-            <button type="submit" className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors">
+            <button type="submit" className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer">
               Agregar tarea
             </button>
           </form>
@@ -212,7 +212,7 @@ export default function CentralOperations() {
                        onDragEnd={handleDragEnd}
                        style={{ cursor: 'grab' }}
                      >
-                       <input type="checkbox" checked={t.completada} onChange={() => toggleCompletada(globalIdx)} className="accent-[var(--color-primary-400)] w-5 h-5" />
+                       <input type="checkbox" checked={t.completada} onChange={() => toggleCompletada(globalIdx)} className="accent-[var(--color-primary-400)] w-5 h-5 cursor-pointer" />
                        {editIdx === globalIdx ? (
                          <input
                            className="flex-1 border-b border-[var(--color-primary-400)] outline-none px-1 py-0.5"
@@ -230,7 +230,7 @@ export default function CentralOperations() {
                            {t.texto}
                          </span>
                        )}
-                       <button onClick={() => eliminarTarea(globalIdx)} className="text-red-500 hover:text-red-700 text-sm font-semibold">Eliminar</button>
+                       <button onClick={() => eliminarTarea(globalIdx)} className="text-red-500 hover:text-red-700 text-sm font-semibold cursor-pointer">Eliminar</button>
                      </li>
                    );
                  })}
@@ -256,24 +256,24 @@ export default function CentralOperations() {
         <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-72">
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Nombre</span>
-            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer" required />
           </label>
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Puesto</span>
-            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer" required />
           </label>
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Categoría</span>
-            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
+            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer">
               {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Salario mensual</span>
-            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer" required />
           </label>
           <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
-          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors">Agregar</button>
+          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer">Agregar</button>
         </form>
       </Modal>
     </div>

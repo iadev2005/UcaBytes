@@ -88,14 +88,14 @@ export default function ImageUploader({ value, onChange, className, placeholder 
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
               <button
                 onClick={() => setShowPreview(true)}
-                className="p-2 bg-white rounded-full hover:bg-gray-100"
+                className="p-2 bg-white rounded-full hover:bg-gray-100 cursor-pointer"
                 title="Cambiar imagen"
               >
                 📝
               </button>
               <button
                 onClick={() => onChange('')}
-                className="p-2 bg-white rounded-full hover:bg-gray-100"
+                className="p-2 bg-white rounded-full hover:bg-gray-100 cursor-pointer"
                 title="Eliminar imagen"
               >
                 🗑
@@ -111,16 +111,16 @@ export default function ImageUploader({ value, onChange, className, placeholder 
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline cursor-pointer"
               >
                 selecciona un archivo
               </button>
               <span className="text-gray-400">|</span>
               <button
                 onClick={() => setShowPreview(true)}
-                className="text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline cursor-pointer"
               >
-                ingresa una URL
+                introduce URL
               </button>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function ImageUploader({ value, onChange, className, placeholder 
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-primary hover:underline cursor-pointer"
                 >
                   selecciona un archivo
                 </button>

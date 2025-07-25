@@ -28,9 +28,10 @@ type PagePreviewProps = {
   onSubElementDoubleClick?: (sectionId: string, key: SubElementKey) => void;
   selectedSubElement?: { sectionId: string, key: SubElementKey } | null;
   isEditor?: boolean;
+  isFullscreen?: boolean;
 };
 
-const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement, isEditor = false }: PagePreviewProps) => {
+const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement, isEditor = false, isFullscreen = false }: PagePreviewProps) => {
   // Función simple para aplicar estilos
   const applyStyles = (styles?: StyleConfig): React.CSSProperties => {
     if (!styles) return {};
@@ -115,7 +116,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                       href={section.content.buttonLink}
                       style={applyStyles(section.content.buttonStyle)}
                       className={cn(
-                        "inline-block px-8 py-3 mt-8 rounded-lg",
+                        "inline-block px-8 py-3 mt-8 rounded-lg cursor-pointer",
                         selectedSubElement && selectedSubElement.sectionId === section.id && selectedSubElement.key === 'button' && 'ring-2 ring-primary-400 ring-offset-2 z-20'
                       )}
                       onDoubleClick={onSubElementDoubleClick ? (e) => { e.preventDefault(); e.stopPropagation(); onSubElementDoubleClick(section.id, 'button'); } : undefined}
@@ -283,7 +284,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                           >
                             ${product.price.toFixed(2)}
                           </span>
-                          <button className="px-3 md:px-4 py-1.5 md:py-2 bg-primary text-white rounded-lg text-xs md:text-base">
+                          <button className="px-3 md:px-4 py-1.5 md:py-2 bg-primary text-white rounded-lg text-xs md:text-base cursor-pointer">
                             Ver detalles
                           </button>
                         </div>
@@ -494,7 +495,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                           <span className="text-xl">📧</span>
                           <div>
                             <div className="font-medium">Email</div>
-                            <a href={`mailto:${section.content.email}`} className="text-primary">
+                            <a href={`mailto:${section.content.email}`} className="text-primary cursor-pointer">
                               {section.content.email}
                             </a>
                           </div>
@@ -505,7 +506,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                           <span className="text-xl">📞</span>
                           <div>
                             <div className="font-medium">Teléfono</div>
-                            <a href={`tel:${section.content.phone}`} className="text-primary">
+                            <a href={`tel:${section.content.phone}`} className="text-primary cursor-pointer">
                               {section.content.phone}
                             </a>
                           </div>
@@ -539,7 +540,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                               href={section.content.socialLinks.facebook}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-2xl hover:text-primary"
+                              className="text-2xl hover:text-primary cursor-pointer"
                             >
                               📘
                             </a>
@@ -549,7 +550,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                               href={section.content.socialLinks.instagram}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-2xl hover:text-primary"
+                              className="text-2xl hover:text-primary cursor-pointer"
                             >
                               📸
                             </a>
@@ -559,7 +560,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
                               href={section.content.socialLinks.twitter}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-2xl hover:text-primary"
+                              className="text-2xl hover:text-primary cursor-pointer"
                             >
                               🐦
                             </a>
@@ -583,7 +584,7 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
     <div
       className={cn(
         'mx-auto bg-white shadow-lg transition-all',
-        'max-w-6xl'
+        isFullscreen ? 'w-full' : 'max-w-6xl'
       )}
       style={{
         fontFamily:

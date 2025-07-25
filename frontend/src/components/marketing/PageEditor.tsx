@@ -6,6 +6,8 @@ import StyleEditor from './StyleEditor';
 import ResizablePanel from './ResizablePanel';
 import PagePreview from './PagePreview';
 import { DesktopIcon, MaximizeIcon, MinimizeIcon, HelpIcon } from '../../icons';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Tipos de secciones disponibles
 const SECTION_TYPES = {
@@ -211,6 +213,8 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
   const [showHelp, setShowHelp] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -244,15 +248,31 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
 
   const handleDragStart = (section: PageSection) => {
     draggedSection.current = section;
+    setIsDragging(true);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDragOverIndex(null);
+    draggedSection.current = null;
+    dropTarget.current = null;
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     dropTarget.current = index;
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
   };
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
+    setIsDragging(false);
+    setDragOverIndex(null);
 
     if (!draggedSection.current) return;
 
@@ -286,6 +306,10 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       }
     });
     setIsDirty(true);
+    
+    // Reset drag state
+    draggedSection.current = null;
+    dropTarget.current = null;
   };
 
   // Función para actualizar estilos directamente
@@ -1912,11 +1936,11 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       {/* Panel izquierdo - Secciones disponibles */}
       <ResizablePanel
         title="Secciones"
-        defaultWidth={280}
+        defaultWidth={isFullscreen ? 220 : 280}
         position="left"
         className={cn(
           "border-r",
-          isFullscreen && "border-gray-200"
+          isFullscreen && "border-gray-200 fixed z-40 bg-white/95 backdrop-blur-sm shadow-xl rounded-r-lg"
         )}
       >
         <div className="p-4 space-y-2">
@@ -1931,14 +1955,19 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
                 isVisible: true,
                 order: 0
               })}
+              onDragEnd={handleDragEnd}
               onClick={() => handleAddSection(type as PageSection['type'])}
-              className="p-3 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
+              className={cn(
+                "p-3 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-all duration-200",
+                isFullscreen && "p-2",
+                isDragging && "hover:bg-primary/20 hover:border-primary border-2 border-transparent"
+              )}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{config.icon}</span>
-                <div>
+                <span className={cn("text-2xl", isFullscreen && "text-lg")}>{config.icon}</span>
+                <div className={cn(isFullscreen && "text-sm")}>
                   <h3 className="font-medium">{config.name}</h3>
-                  <p className="text-sm text-gray-500">{config.description}</p>
+                  {!isFullscreen && <p className="text-sm text-gray-500">{config.description}</p>}
                 </div>
               </div>
             </div>
@@ -1947,55 +1976,156 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       </ResizablePanel>
 
       {/* Panel central - Vista previa */}
-      <div className="flex-1 bg-gray-100 p-8 mb-12">
+      <div className={cn(
+        "flex-1 bg-gray-100 transition-all",
+        isFullscreen ? "p-4 overflow-y-auto" : "p-8 mb-12"
+      )}>
+        {/* Fullscreen indicator */}
+        {isFullscreen && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-black/80 text-white px-4 py-2 rounded-lg shadow-lg">
+            <span className="text-sm">Modo pantalla completa</span>
+            <button
+              onClick={toggleFullscreen}
+              className="text-white hover:text-gray-300 transition-colors"
+              title="Salir de pantalla completa"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        
         <div
           className={cn(
             "mx-auto bg-white shadow-lg transition-all",
-            viewMode === 'desktop' && 'max-w-6xl w-full',
-            viewMode === 'tablet' && 'max-w-md w-full',
-            viewMode === 'mobile' && 'max-w-xs w-full',
+            isFullscreen ? 'w-full' : (
+              viewMode === 'desktop' && 'max-w-6xl w-full' ||
+              viewMode === 'tablet' && 'max-w-md w-full' ||
+              viewMode === 'mobile' && 'max-w-xs w-full'
+            ),
             'relative'
           )}
           style={{
             border: viewMode !== 'desktop' ? '1px solid #e5e7eb' : undefined,
             borderRadius: viewMode !== 'desktop' ? 24 : undefined,
             overflow: 'hidden',
-            minHeight: 400
+            minHeight: isFullscreen ? 'calc(100vh - 2rem)' : 400
           }}
         >
+          {/* Initial drop zone */}
+          {isDragging && (
+            <motion.div
+              className={cn(
+                "h-2 mx-4 mb-2 border-2 border-dashed border-primary/30 rounded transition-all",
+                dragOverIndex === 0 ? "border-primary bg-primary/10 h-8" : "opacity-50"
+              )}
+              onDragOver={e => handleDragOver(e, 0)}
+              onDrop={e => handleDrop(e, 0)}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: dragOverIndex === 0 ? 32 : 8 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+          
           {currentPage.content.sections
             .sort((a, b) => a.order - b.order)
             .map((section, idx) => (
-              <div
-                key={section.id}
-                draggable
-                onDragStart={() => handleDragStart(section)}
-                onDragOver={e => handleDragOver(e, idx)}
-                onDrop={e => handleDrop(e, idx)}
-                onClick={e => { e.stopPropagation(); setSelectedSectionId(section.id); setSelectedSubElement(null); }}
-                className={cn(
-                  'cursor-pointer group relative transition-all mb-4',
-                  selectedSectionId === section.id ? 'ring-4 ring-primary/60 z-10' : ''
+              <React.Fragment key={section.id}>
+                {/* Drop zone visual indicator */}
+                {isDragging && (
+                  <motion.div
+                    className={cn(
+                      "h-2 mx-4 mb-2 border-2 border-dashed border-primary/30 rounded transition-all",
+                      dragOverIndex === idx ? "border-primary bg-primary/10 h-8" : "opacity-50"
+                    )}
+                    onDragOver={e => handleDragOver(e, idx)}
+                    onDrop={e => handleDrop(e, idx)}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: dragOverIndex === idx ? 32 : 8 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  />
                 )}
-                style={{ position: 'relative' }}
-              >
-                {/* Botón eliminar sección */}
-                <button
-                  onClick={e => { e.stopPropagation(); handleSectionDelete(section.id); setSelectedSubElement(null); }}
-                  className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                  title="Eliminar sección"
+                
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: isDragging && draggedSection.current?.id === section.id ? 0.3 : 1,
+                    y: 0,
+                    scale: isDragging && draggedSection.current?.id === section.id ? 0.95 : 1
+                  }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ 
+                    layout: { duration: 0.3, ease: "easeInOut" },
+                    opacity: { duration: 0.2 },
+                    scale: { duration: 0.2 }
+                  }}
+                  draggable
+                  onDragStart={() => handleDragStart(section)}
+                  onDragEnd={handleDragEnd}
+                  onClick={e => { e.stopPropagation(); setSelectedSectionId(section.id); setSelectedSubElement(null); }}
+                  className={cn(
+                    'cursor-pointer group relative transition-all mb-4',
+                    selectedSectionId === section.id ? 'ring-4 ring-primary/60 z-10' : '',
+                    isDragging && 'cursor-grabbing'
+                  )}
+                  style={{ position: 'relative' }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                 >
-                  Eliminar
-                </button>
-                {/* Renderizado de la sección */}
-                <PagePreview
-                  page={{ ...currentPage, content: { ...currentPage.content, sections: [section] } }}
-                  selectedSectionId={selectedSectionId === section.id ? section.id : undefined}
-                  onSubElementDoubleClick={(sectionId, key) => { setSelectedSectionId(sectionId); setSelectedSubElement({ sectionId, key }); }}
-                  selectedSubElement={selectedSubElement}
-                  isEditor={true}
-                />
-              </div>
+                  {/* Drag handle indicator */}
+                  <motion.div 
+                    className="absolute top-2 right-2 bg-gray-800 text-white p-1 rounded text-xs cursor-grab z-20"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    ⋮⋮
+                  </motion.div>
+                  
+                  {/* Botón eliminar sección */}
+                  <motion.button
+                    onClick={e => { e.stopPropagation(); handleSectionDelete(section.id); setSelectedSubElement(null); }}
+                    className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded shadow z-20"
+                    title="Eliminar sección"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1, scale: 1.05 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    Eliminar
+                  </motion.button>
+                  {/* Renderizado de la sección */}
+                  <PagePreview
+                    page={{ ...currentPage, content: { ...currentPage.content, sections: [section] } }}
+                    selectedSectionId={selectedSectionId === section.id ? section.id : undefined}
+                    onSubElementDoubleClick={(sectionId, key) => { setSelectedSectionId(sectionId); setSelectedSubElement({ sectionId, key }); }}
+                    selectedSubElement={selectedSubElement}
+                    isEditor={true}
+                    isFullscreen={isFullscreen}
+                  />
+                </motion.div>
+
+                {/* Final drop zone */}
+                {isDragging && idx === currentPage.content.sections.length - 1 && (
+                  <motion.div
+                    className={cn(
+                      "h-2 mx-4 mt-2 border-2 border-dashed border-primary/30 rounded transition-all",
+                      dragOverIndex === idx + 1 ? "border-primary bg-primary/10 h-8" : "opacity-50"
+                    )}
+                    onDragOver={e => handleDragOver(e, idx + 1)}
+                    onDrop={e => handleDrop(e, idx + 1)}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: dragOverIndex === idx + 1 ? 32 : 8 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                )}
+              </React.Fragment>
             ))}
         </div>
       </div>
@@ -2004,10 +2134,10 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       {selectedSectionId && (
         <ResizablePanel
           title="Configuración"
-          defaultWidth={360}
+          defaultWidth={isFullscreen ? 300 : 360}
           onClose={() => { setSelectedSectionId(null); setSelectedSubElement(null); }}
           className={cn(
-            isFullscreen && "border-gray-200"
+            isFullscreen && "fixed right-0 z-40 bg-white/95 backdrop-blur-sm shadow-xl rounded-l-lg border-gray-200"
           )}
         >
           <div className="p-4">
@@ -2044,7 +2174,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           <button
             onClick={() => setViewMode('desktop')}
             className={cn(
-              "p-2 rounded-lg transition-colors",
+              "p-2 rounded-lg transition-colors cursor-pointer",
               viewMode === 'desktop' ? 'bg-[var(--color-primary-100)]' : 'hover:bg-[var(--color-primary-50)]'
             )}
             title="Vista escritorio"
@@ -2057,37 +2187,33 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           <button
             onClick={handleSave}
             className={cn(
-              "px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors text-sm md:text-base",
-              isDirty
-                ? "bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)]"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              "px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors text-sm md:text-base cursor-pointer",
+              isDirty ? "bg-yellow-500 text-white" : "bg-gray-100 text-gray-500"
             )}
             disabled={!isDirty}
           >
-            Guardar borrador
+            Guardar
           </button>
           <button
             onClick={handlePublish}
-            className="px-3 py-2 md:px-4 md:py-2 rounded-lg transition-colors bg-[var(--color-secondary-400)] text-white hover:bg-[var(--color-secondary-600)] text-sm md:text-base"
+            className="px-3 py-2 md:px-4 md:py-2 bg-[var(--color-primary-600)] text-white rounded-lg hover:bg-[var(--color-primary-700)] transition-colors text-sm md:text-base cursor-pointer"
           >
             Publicar
           </button>
-        </div>
-
-        <div className="flex items-center gap-2 border-l pl-2 md:pl-4 w-full md:w-auto justify-center">
           <button
             onClick={toggleFullscreen}
-            className={cn(
-              "p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]",
-              isFullscreen && "bg-gray-100"
-            )}
+            className="p-2 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors cursor-pointer"
             title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           >
-            {isFullscreen ? <MinimizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" /> : <MaximizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />}
+            {isFullscreen ? (
+              <MinimizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />
+            ) : (
+              <MaximizeIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />
+            )}
           </button>
           <button
             onClick={() => setShowHelp(true)}
-            className="p-2 rounded-lg transition-colors hover:bg-[var(--color-primary-100)]"
+            className="p-2 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors cursor-pointer"
             title="Ayuda"
           >
             <HelpIcon className="w-5 h-5 md:w-6 md:h-6 text-[var(--color-primary-600)]" />
@@ -2106,7 +2232,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
               <h3 className="text-lg font-medium">Ayuda</h3>
               <button
                 onClick={() => setShowHelp(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 ×
               </button>
