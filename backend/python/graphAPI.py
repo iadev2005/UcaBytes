@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 import time
 
-TOKEN = "EAAKJrM0WC6IBPFdiZAPTzMbpYEmZChXZA087DPQFkDWHNAeD9EVPZBC8Gq3yvg0ZCN1xk6OdnyCEjihagP1TBVX6BOCHwCnVZBK9vdu45FSTkPbfBkCBLH59zEitX53XWGQAVIHB9bj32C5kxtbDITZC2C25ZC9Xufzp6HmzMiN1ciJlK5l6z1jYXSrBCveswsZB4OCjcLunMkPL3NKZCZCkaYithPxBenMmhiQYz1F"
+TOKEN = "EAAKJrM0WC6IBPBebpZAYYI0xolEilmzvbRStQtDWZCH1Fdp6e7pYTplxhuzSGoywKfmWjgVz3dQAMcvLbQ2Lfef79Q7iiG2ibmcxHZCkFX3bCQSkubw65ZC2jCIwYywZCcYrjhTUIQlqEJIMFpfMnSDpN0hXkJRA4Cp5F09zboWUNRzBAe6URjNH7ZAmKrHRZAWCaG83gmlbJZCyZCESmjiqst4MAf4Jisz37Tp1UaKmP2oUDzhsZD"
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -36,7 +36,7 @@ def get_instagram_business_account():
     return make_api_request(endpoint)
 
 def get_instagram_details(instagram_id):
-    fields = "followers_count,follows_count,media_count,name,biography,username"
+    fields = "followers_count,follows_count,media_count,name,biography,username,profile_picture_url"
     return make_api_request(f"me/accounts?fields=instagram_business_account{{{fields}}}")
 
 def get_instagram_posts(instagram_id):

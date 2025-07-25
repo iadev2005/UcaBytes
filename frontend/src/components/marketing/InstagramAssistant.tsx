@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface InstagramAssistantProps {
   posts: any[] | null;
@@ -10,6 +10,19 @@ function formatDateDMYHM(timestamp: number) {
   const dmy = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
   const hm = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return `${dmy} ${hm}`;
+}
+
+// Función auxiliar para obtener el número de veces que se guardó un post
+function getSavedCount(post: any): number {
+  if (!post.insights || !post.insights.data) return 0;
+  
+  const savedInsight = post.insights.data.find((insight: any) =>
+    insight.title === "Veces que se guardó"
+  );
+  
+  return savedInsight && savedInsight.values && savedInsight.values[0]
+    ? savedInsight.values[0].value
+    : 0;
 }
 
 export default function InstagramAssistant({ posts, isSidebarCollapsed }: InstagramAssistantProps) {
@@ -27,7 +40,29 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   const [imageError, setImageError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+  
+  // Efecto para cargar las sugerencias al montar el componente
+  useEffect(() => {
+    // Solo cargar sugerencias si showSuggestions es true (que lo será por defecto)
+    if (showSuggestions) {
+      handleShowSuggestions();
+    }
+  }, []); // Array vacío para que solo se ejecute al montar el componente
+  
+  // Función para abrir el modal con los detalles del post
+  const handleOpenPostModal = (post: any) => {
+    setSelectedPost(post);
+    setShowPostModal(true);
+  };
+  
+  // Función para cerrar el modal
+  const handleClosePostModal = () => {
+    setShowPostModal(false);
+    setSelectedPost(null);
+  };
   const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -163,18 +198,73 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
           {posts && posts.map(post => (
             <div
               key={post.id}
-              className="flex flex-col items-center bg-white rounded-xl shadow-md p-3 pt-3 pb-6 w-full polaroid-post"
+              className="flex flex-col bg-white rounded-xl shadow-md w-full mb-6 cursor-pointer hover:shadow-lg transition-shadow"
               style={{ boxShadow: '0 4px 16px 0 rgba(31,38,135,0.10)' }}
+              onClick={() => handleOpenPostModal(post)}
             >
-              <div className="bg-white rounded-md overflow-hidden w-full flex justify-center" style={{ padding: '8px 8px 24px 8px' }}>
+              {/* Encabezado del post */}
+              <div className="flex items-center p-3 border-b border-gray-100">
+                <img
+                  src="https://scontent.fccs11-2.fna.fbcdn.net/v/t51.82787-15/523364984_17847760164526720_6719431624113204233_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=7d201b&_nc_ohc=Jwva6KWDPW0Q7kNvwGFzX-V&_nc_oc=Adks6t3CwfGCiReMXFxiO7DmfzuDxpQCrSamaSOASlHSpfksGrEROkUqslW28Ev62nM&_nc_zt=23&_nc_ht=scontent.fccs11-2.fna&edm=AGaHXAAEAAAA&_nc_gid=qJA6BaZAO1sj-VfYGhyzfw&oh=00_AfSt5x4zmozukhttFkm6CpLrbfiSwq2Q7YyRjY3el49HRw&oe=6889B457"
+                  alt="Foto de perfil"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <div className="ml-2">
+                  <p className="font-semibold text-sm">empr.esaprueba</p>
+                  <p className="text-xs text-gray-500">Prueba</p>
+                </div>
+                <div className="ml-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                  </svg>
+                </div>
+              </div>
+              
+              {/* Imagen del post */}
+              <div className="w-full">
                 <img
                   src={post.media_url || post.image || ''}
                   alt={post.caption || 'Instagram post'}
-                  className="object-cover rounded-md w-full h-56"
-                  style={{ boxShadow: '0 2px 8px 0 rgba(31,38,135,0.08)' }}
+                  className="object-cover w-full"
+                  style={{ maxHeight: '300px' }}
                 />
               </div>
-              <p className="text-gray-700 text-center mt-2 text-base font-medium w-full" style={{ minHeight: '2.5em' }}>{post.caption}</p>
+              
+              {/* Iconos de interacción con contadores */}
+              <div className="flex items-center p-3">
+                <div className="flex space-x-4">
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span className="ml-1 text-sm">{post.like_count}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="ml-1 text-sm">{post.comments_count}</span>
+                  </div>
+                </div>
+                <div className="ml-auto flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span className="ml-1 text-sm">{getSavedCount(post)}</span>
+                </div>
+              </div>
+              
+              {/* Caption */}
+              <div className="px-3 pb-2">
+                <p className="text-sm">
+                  <span className="font-semibold">empr.esaprueba</span> {post.caption}
+                </p>
+                {post.comments_count > 0 && (
+                  <p className="text-gray-500 text-sm mt-1">
+                    Ver los {post.comments_count} comentarios
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -308,6 +398,119 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
           scrollbar-color: #e0e0e0 transparent;
         }
       `}</style>
+      
+      {/* Modal de detalles del post */}
+      {showPostModal && selectedPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col md:flex-row overflow-hidden">
+            {/* Imagen del post (lado izquierdo en desktop) */}
+            <div className="w-full md:w-1/2 bg-black flex items-center justify-center">
+              <img
+                src={selectedPost.media_url || selectedPost.image || ''}
+                alt={selectedPost.caption || 'Instagram post'}
+                className="object-contain max-h-[70vh] w-full"
+              />
+            </div>
+            
+            {/* Detalles del post (lado derecho en desktop) */}
+            <div className="w-full md:w-1/2 flex flex-col h-full">
+              {/* Contenido y comentarios */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {/* Botón de cerrar */}
+                <div className="flex justify-end mb-4">
+                  <button
+                    className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                    onClick={handleClosePostModal}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Caption con foto de perfil y nombre de usuario */}
+                <div className="flex mb-4">
+                  <img
+                    src="https://scontent.fccs11-2.fna.fbcdn.net/v/t51.82787-15/523364984_17847760164526720_6719431624113204233_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=7d201b&_nc_ohc=Jwva6KWDPW0Q7kNvwGFzX-V&_nc_oc=Adks6t3CwfGCiReMXFxiO7DmfzuDxpQCrSamaSOASlHSpfksGrEROkUqslW28Ev62nM&_nc_zt=23&_nc_ht=scontent.fccs11-2.fna&edm=AGaHXAAEAAAA&_nc_gid=qJA6BaZAO1sj-VfYGhyzfw&oh=00_AfSt5x4zmozukhttFkm6CpLrbfiSwq2Q7YyRjY3el49HRw&oe=6889B457"
+                    alt="Foto de perfil"
+                    className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm">
+                      <span className="font-semibold">empr.esaprueba</span> {selectedPost.caption}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Hace 2 días</p>
+                  </div>
+                </div>
+                
+                {/* Comentarios */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h3 className="font-semibold text-sm mb-3">Comentarios</h3>
+                  
+                  <div className="max-h-40 overflow-y-auto pr-2">
+                    {selectedPost.comments && selectedPost.comments.data && selectedPost.comments.data.length > 0 ? (
+                      selectedPost.comments.data.map((comment: any, index: number) => (
+                        <div key={index} className="mb-3 p-2 bg-gray-50 rounded">
+                          <p className="text-sm">{comment.text}</p>
+                          <p className="text-xs text-gray-500 mt-1 text-right">
+                            {comment.timestamp ? new Date(comment.timestamp).toLocaleDateString() : 'Fecha desconocida'}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No hay comentarios en esta publicación.</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Estadísticas */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h3 className="font-semibold text-sm mb-3">Estadísticas</h3>
+                  
+                  {selectedPost.insights && selectedPost.insights.data && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedPost.insights.data.map((insight: any, index: number) => (
+                        <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500">{insight.title}</p>
+                          <p className="text-lg font-semibold">
+                            {insight.values && insight.values[0] ? insight.values[0].value : 0}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Iconos de interacción */}
+              <div className="border-t border-gray-200 p-4">
+                <div className="flex items-center">
+                  <div className="flex space-x-4">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      <span className="ml-1 text-sm">{selectedPost.like_count}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      <span className="ml-1 text-sm">{selectedPost.comments_count}</span>
+                    </div>
+                  </div>
+                  <div className="ml-auto flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span className="ml-1 text-sm">{getSavedCount(selectedPost)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
