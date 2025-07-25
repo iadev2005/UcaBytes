@@ -14,6 +14,21 @@ type StepId = 'template' | 'info' | 'editor';
 
 type BusinessInfo = Pick<BusinessPage, 'url' | 'rif' | 'businessName'> & { fontFamily: 'syne' | 'arial' | 'georgia' | 'mono' };
 
+function removeUndefined(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined);
+  } else if (obj && typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        cleaned[key] = removeUndefined(obj[key]);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 export default function WebsiteBuilder() {
   const [currentStep, setCurrentStep] = useState<StepId>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<WebTemplate | null>(null);
@@ -57,13 +72,20 @@ export default function WebsiteBuilder() {
     const publishedPage = {
       ...page,
       status: 'published' as const,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    console.log('Publicando página:', publishedPage);
+    // Serializar fechas a string ISO para Firestore
+    const serializablePage = {
+      ...publishedPage,
+      createdAt: (publishedPage.createdAt instanceof Date) ? publishedPage.createdAt.toISOString() : publishedPage.createdAt,
+      updatedAt: (publishedPage.updatedAt instanceof Date) ? publishedPage.updatedAt.toISOString() : publishedPage.updatedAt,
+    };
+    // Limpiar undefined recursivamente
+    const cleanedPage = removeUndefined(serializablePage);
+    console.log('Publicando página:', cleanedPage);
     setCurrentPage(publishedPage);
-    // Guardar en Firestore bajo la colección 'sites' y el ID igual a la url
     if (publishedPage.url) {
-      await setDoc(doc(db, 'sites', publishedPage.url), publishedPage);
+      await setDoc(doc(db, 'sites', publishedPage.url), cleanedPage);
       setPublishedLink(`/site/${publishedPage.url}`);
     }
   };
