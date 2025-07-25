@@ -185,9 +185,9 @@ export default function Dashboard() {
   })() : [];
 
   return (
-    <div className="min-h-screen p-8 bg-[var(--color-background)]">
-      <h1 className="text-2xl font-bold text-[var(--color-primary-700)] mb-6 text-left">Vista General</h1>
-      <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8">
+    <div className="min-h-screen p-10 h-screen bg-[var(--color-background)] w-full overflow-y-auto">
+      <h1 className="text-2xl font-bold text-[var(--color-primary-700)] text-left p-6">Vista General</h1>
+      <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
         {/* Primera fila: Histograma y Crecimiento */}
         <div className="w-full flex flex-col md:flex-row gap-8 justify-center items-stretch">
           {/* Gráfico de barras */}

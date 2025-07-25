@@ -1905,7 +1905,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
     <div 
       ref={editorRef} 
       className={cn(
-        "h-screen flex",
+        "min-h-screen flex flex-col",
         isFullscreen && "bg-gray-100"
       )}
     >
@@ -1947,7 +1947,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
       </ResizablePanel>
 
       {/* Panel central - Vista previa */}
-      <div className="flex-1 bg-gray-100 overflow-y-auto p-8">
+      <div className="flex-1 bg-gray-100 p-8 mb-12">
         <div
           className={cn(
             "mx-auto bg-white shadow-lg transition-all",

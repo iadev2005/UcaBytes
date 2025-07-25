@@ -152,7 +152,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] flex flex-row items-start p-8 gap-8">
+    <div className="min-h-screen bg-[var(--color-background)] flex flex-row items-start p-8 gap-8 h-screen w-full overflow-y-auto">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] p-0">
         <div className="px-6 pt-6 pb-3 border-b">
           <h2 className="text-xl font-semibold text-[var(--color-primary-700)] text-center mx-auto">Últimos posts</h2>

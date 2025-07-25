@@ -23,7 +23,7 @@ export default function Marketing() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] p-8">
+    <div className="min-h-screen bg-[var(--color-background)] p-8 h-screen w-full overflow-y-auto">
       <div className="max-w-7xl mx-auto">
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-bold text-[var(--color-primary-700)] mb-4 mt-8">

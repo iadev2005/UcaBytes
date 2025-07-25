@@ -100,7 +100,7 @@ export default function CentralOperations() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-10 px-2 md:px-8">
+    <div className="w-full mx-auto px-20 py-10 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
       {/* Tabs */}
       <div className="flex mb-8 w-full max-w-lg mx-auto">
         <div className="flex w-full rounded-2xl border-2 border-[var(--color-primary-600)] bg-white overflow-hidden">

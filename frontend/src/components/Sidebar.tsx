@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, AutomationIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon } from '../icons';
 import { motion } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate} from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -28,16 +29,15 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
     <>
       <div className="flex-1 flex flex-col pt-12">
         <nav className="flex flex-col gap-2">
-          <SidebarLink to="/" icon={HomeIcon} label="Home" active={location.pathname === '/'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/dashboard'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/marketing'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/products-services'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/central-operations'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/automations" icon={AutomationIcon} label="Automatizaciones" active={location.pathname === '/automations'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./home" icon={HomeIcon} label="Home" active={location.pathname === '/'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/dashboard'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/marketing'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/products-services'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/central-operations'} isCollapsed={isCollapsed} />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">
-          <SidebarLink to="/settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} isCollapsed={isCollapsed} />
+          <SidebarLink to="./settings" icon={ConfigurationIcon} label="Configuración" active={location.pathname === '/settings'} isCollapsed={isCollapsed} />
         </nav>
       </div>
       <div className="mb-8 px-6">
