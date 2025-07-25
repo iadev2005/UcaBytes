@@ -268,9 +268,24 @@ export default function Dashboard() {
     const unspecified = currentFollowers - (female + male);
     
     return [
-      { name: 'Femenino', value: female, key: 'F' },
-      { name: 'Masculino', value: male, key: 'M' },
-      { name: 'No especificado', value: unspecified, key: 'U' }
+      { 
+        name: 'Femenino', 
+        value: female, 
+        key: 'F',
+        percentage: currentFollowers > 0 ? ((female / currentFollowers) * 100).toFixed(1) : '0.0'
+      },
+      { 
+        name: 'Masculino', 
+        value: male, 
+        key: 'M',
+        percentage: currentFollowers > 0 ? ((male / currentFollowers) * 100).toFixed(1) : '0.0'
+      },
+      { 
+        name: 'No especificado', 
+        value: unspecified, 
+        key: 'U',
+        percentage: currentFollowers > 0 ? ((unspecified / currentFollowers) * 100).toFixed(1) : '0.0'
+      }
     ].filter(item => item.value > 0);
   })() : [];
 
@@ -499,7 +514,10 @@ export default function Dashboard() {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value) => [`${value} seguidores`, 'Cantidad']}
+                      formatter={(value, name, entry) => [
+                        `${value} seguidores (${entry.payload.percentage}%)`, 
+                        'Cantidad'
+                      ]}
                     />
                     <Legend 
                       verticalAlign="middle"

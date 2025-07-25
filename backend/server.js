@@ -264,11 +264,40 @@ app.post('/api/instagram/suggestions', async (req, res) => {
     const postsPath = path.join(__dirname, 'python', 'instagram_posts.json');
     const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
     const detailsPath = path.join(__dirname, 'python', 'instagram_details.json');
+    const demographicsPath = path.join(__dirname, 'python', 'demographics_history.json');
+    const followerInsightsPath = path.join(__dirname, 'python', 'follower_insights.json');
+    
     const posts = fs.existsSync(postsPath) ? JSON.parse(fs.readFileSync(postsPath, 'utf8')) : [];
     const scheduled = fs.existsSync(scheduledPath) ? JSON.parse(fs.readFileSync(scheduledPath, 'utf8')) : [];
     const details = fs.existsSync(detailsPath) ? JSON.parse(fs.readFileSync(detailsPath, 'utf8')) : {};
-    // Construir prompt
-    const prompt = `Eres un experto en marketing digital para Instagram. Analiza los siguientes datos generales de la cuenta, publicaciones actuales y programadas, junto con sus estadísticas. Responde de forma muy concisa y puntualiza las sugerencias en una lista breve de acciones concretas para mejorar el engagement del negocio.\n\nDatos generales de la cuenta:\n${JSON.stringify(details, null, 2)}\n\nPublicaciones actuales:\n${JSON.stringify(posts, null, 2)}\n\nPublicaciones programadas:\n${JSON.stringify(scheduled, null, 2)}\n\nSugerencias (lista breve y concreta):`;
+    const demographics = fs.existsSync(demographicsPath) ? JSON.parse(fs.readFileSync(demographicsPath, 'utf8')) : {};
+    const followerInsights = fs.existsSync(followerInsightsPath) ? JSON.parse(fs.readFileSync(followerInsightsPath, 'utf8')) : {};
+    
+    // Construir prompt mejorado con análisis de patrones y demografía
+    const prompt = `Eres un experto en marketing digital para Instagram. Analiza los siguientes datos de la cuenta incluyendo demografía, insights de seguidores, publicaciones y estadísticas. 
+
+DATOS A ANALIZAR:
+1. Información general de la cuenta: ${JSON.stringify(details, null, 2)}
+2. Historial de demografía: ${JSON.stringify(demographics, null, 2)}
+3. Insights de seguidores: ${JSON.stringify(followerInsights, null, 2)}
+4. Publicaciones actuales: ${JSON.stringify(posts, null, 2)}
+5. Publicaciones programadas: ${JSON.stringify(scheduled, null, 2)}
+
+ANÁLISIS REQUERIDO:
+- Identifica patrones de crecimiento de seguidores (días/fechas con mayor crecimiento)
+- Analiza la demografía actual (género, edad, ubicación) 
+- Detecta correlaciones entre publicaciones y crecimiento de audiencia
+- Evalúa la consistencia del contenido y frecuencia de publicación
+
+GENERA ESTRATEGIAS ESPECÍFICAS que incluyan:
+1. Horarios óptimos de publicación basados en los datos de crecimiento
+2. Tipo de contenido recomendado según la demografía de la audiencia
+3. Estrategias para aprovechar los días de mayor crecimiento detectados
+4. Recomendaciones para segmentar contenido por demografía
+5. Acciones concretas para mejorar engagement y alcance
+
+Responde de forma concisa y estructurada con sugerencias accionables:`;
+    
     // Llamar al endpoint de IA ya existente
     const iaRes = await axios.post('http://localhost:3001/api/ia-chat', {
       question: prompt,
