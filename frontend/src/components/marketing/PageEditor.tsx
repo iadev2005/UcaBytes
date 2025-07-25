@@ -1993,6 +1993,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
                   selectedSectionId={selectedSectionId === section.id ? section.id : undefined}
                   onSubElementDoubleClick={(sectionId, key) => { setSelectedSectionId(sectionId); setSelectedSubElement({ sectionId, key }); }}
                   selectedSubElement={selectedSubElement}
+                  isEditor={true}
                 />
               </div>
             ))}

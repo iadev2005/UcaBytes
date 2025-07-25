@@ -33,7 +33,7 @@ function PublicSite() {
     }
   }, [siteId]);
   if (!page) return <div className="min-h-screen flex items-center justify-center text-gray-500">Sitio no encontrado</div>;
-  return <PagePreview page={page} />;
+  return <PagePreview page={page} isEditor={false} />;
 }
 
 function LayoutWithChat() {

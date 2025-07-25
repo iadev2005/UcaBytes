@@ -27,9 +27,10 @@ type PagePreviewProps = {
   selectedSectionId?: string;
   onSubElementDoubleClick?: (sectionId: string, key: SubElementKey) => void;
   selectedSubElement?: { sectionId: string, key: SubElementKey } | null;
+  isEditor?: boolean;
 };
 
-const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement }: PagePreviewProps) => {
+const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDoubleClick, selectedSubElement, isEditor = false }: PagePreviewProps) => {
   // Función simple para aplicar estilos
   const applyStyles = (styles?: StyleConfig): React.CSSProperties => {
     if (!styles) return {};
@@ -584,21 +585,31 @@ const PagePreview = ({ page, onSectionSelect, selectedSectionId, onSubElementDou
         'mx-auto bg-white shadow-lg transition-all',
         'max-w-6xl'
       )}
+      style={{
+        fontFamily:
+          page.content.theme.fontFamily === 'syne'
+            ? 'var(--font-syne)'
+            : page.content.theme.fontFamily === 'arial'
+            ? 'Arial, Helvetica, system-ui, sans-serif'
+            : page.content.theme.fontFamily === 'georgia'
+            ? 'Georgia, Times New Roman, serif'
+            : 'Courier New, Consolas, monospace',
+      }}
     >
       {page.content.sections
         .sort((a, b) => a.order - b.order)
         .map(section => (
           <div
             key={section.id}
-            onClick={onSectionSelect ? (e) => { e.stopPropagation(); onSectionSelect(section.id); } : undefined}
+            {...(isEditor && onSectionSelect ? { onClick: (e) => { e.stopPropagation(); onSectionSelect(section.id); } } : {})}
             className={cn(
-              'cursor-pointer group',
+              isEditor && 'cursor-pointer group',
               selectedSectionId === section.id && 'ring-4 ring-primary/60 z-10 relative'
             )}
             style={{ position: 'relative' }}
           >
             {renderSection(section)}
-            {selectedSectionId === section.id && (
+            {selectedSectionId === section.id && isEditor && (
               <div className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded shadow">
                 Seleccionado
               </div>

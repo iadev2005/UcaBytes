@@ -9,6 +9,11 @@ import { db } from '../../firebase';
 
 type StepId = 'template' | 'info' | 'editor';
 
+// Cambiar el tipo de info para incluir fontFamily
+// y actualizar el tipo de theme.fontFamily en BusinessPage
+
+type BusinessInfo = Pick<BusinessPage, 'url' | 'rif' | 'businessName'> & { fontFamily: 'syne' | 'arial' | 'georgia' | 'mono' };
+
 export default function WebsiteBuilder() {
   const [currentStep, setCurrentStep] = useState<StepId>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<WebTemplate | null>(null);
@@ -20,7 +25,7 @@ export default function WebsiteBuilder() {
     setCurrentStep('info');
   };
 
-  const handleBusinessInfo = (info: Pick<BusinessPage, 'url' | 'rif' | 'businessName'>) => {
+  const handleBusinessInfo = (info: BusinessInfo) => {
     if (!selectedTemplate) return;
 
     const newPage: BusinessPage = {
@@ -28,7 +33,10 @@ export default function WebsiteBuilder() {
       templateId: selectedTemplate.id,
       content: {
         sections: selectedTemplate.defaultSections,
-        theme: selectedTemplate.defaultTheme
+        theme: {
+          ...selectedTemplate.defaultTheme,
+          fontFamily: info.fontFamily,
+        },
       },
       status: 'draft',
       createdAt: new Date(),

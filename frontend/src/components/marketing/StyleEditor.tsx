@@ -9,14 +9,30 @@ type StyleEditorProps = {
 };
 
 const COLORS = [
-  { name: 'Gris', value: '#1F2937' },
+  { name: 'Negro', value: '#111111' },
+  { name: 'Gris oscuro', value: '#1F2937' },
+  { name: 'Gris', value: '#6B7280' },
+  { name: 'Gris claro', value: '#D1D5DB' },
+  { name: 'Blanco', value: '#FFFFFF' },
+  { name: 'Blanco humo', value: '#F3F4F6' },
   { name: 'Rojo', value: '#EF4444' },
+  { name: 'Rojo claro', value: '#FCA5A5' },
   { name: 'Rosa', value: '#EC4899' },
+  { name: 'Rosa pastel', value: '#FBCFE8' },
   { name: 'Morado', value: '#8B5CF6' },
+  { name: 'Morado claro', value: '#DDD6FE' },
   { name: 'Azul', value: '#3B82F6' },
+  { name: 'Azul claro', value: '#93C5FD' },
+  { name: 'Cian', value: '#06B6D4' },
+  { name: 'Cian claro', value: '#A5F3FC' },
   { name: 'Verde', value: '#10B981' },
+  { name: 'Verde claro', value: '#6EE7B7' },
   { name: 'Amarillo', value: '#F59E0B' },
-  { name: 'Naranja', value: '#F97316' }
+  { name: 'Amarillo claro', value: '#FEF08A' },
+  { name: 'Naranja', value: '#F97316' },
+  { name: 'Naranja claro', value: '#FDBA74' },
+  { name: 'Marrón', value: '#B45309' },
+  { name: 'Marrón claro', value: '#FDE68A' },
 ];
 
 export default function StyleEditor({ value, onChange, className }: StyleEditorProps) {

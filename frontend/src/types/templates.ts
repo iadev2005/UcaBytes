@@ -100,7 +100,7 @@ export type PageSection = {
 export type ThemeConfig = {
   primaryColor: string;
   secondaryColor: string;
-  fontFamily: 'sans' | 'serif' | 'mono';
+  fontFamily: 'syne' | 'arial' | 'georgia' | 'mono';
   headerStyle: 'standard' | 'minimal';
   footerStyle: 'standard' | 'detailed';
 };

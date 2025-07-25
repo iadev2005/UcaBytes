@@ -3,14 +3,22 @@ import type { BusinessPage } from '../../types/templates';
 import { cn } from '../../lib/utils';
 
 type BusinessInfoFormProps = {
-  onSubmit: (info: Pick<BusinessPage, 'url' | 'rif' | 'businessName'>) => void;
+  onSubmit: (info: { url: string; rif: string; businessName: string; fontFamily: 'sans' | 'serif' | 'mono' }) => void;
 };
+
+const FONT_OPTIONS = [
+  { value: 'syne', label: 'Syne (Sans, por defecto)', style: { fontFamily: 'var(--font-syne)' }, preview: 'Ejemplo de texto con Syne' },
+  { value: 'arial', label: 'Arial / Helvetica / system-ui', style: { fontFamily: 'Arial, Helvetica, system-ui, sans-serif' }, preview: 'Ejemplo de texto con Arial' },
+  { value: 'georgia', label: 'Georgia / Times New Roman', style: { fontFamily: 'Georgia, Times New Roman, serif' }, preview: 'Ejemplo de texto con Georgia' },
+  { value: 'mono', label: 'Courier New / Consolas', style: { fontFamily: 'Courier New, Consolas, monospace' }, preview: 'Ejemplo de texto con Courier New' },
+];
 
 const BusinessInfoForm = ({ onSubmit }: BusinessInfoFormProps) => {
   const [formData, setFormData] = useState({
     url: '',
     rif: '',
-    businessName: ''
+    businessName: '',
+    fontFamily: 'syne',
   });
 
   const [errors, setErrors] = useState({
@@ -49,11 +57,14 @@ const BusinessInfoForm = ({ onSubmit }: BusinessInfoFormProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      onSubmit({
+        ...formData,
+        fontFamily: formData.fontFamily as 'syne' | 'arial' | 'georgia' | 'mono',
+      });
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -150,6 +161,46 @@ const BusinessInfoForm = ({ onSubmit }: BusinessInfoFormProps) => {
           <p className="mt-1 text-sm text-gray-500">
             La URL será: https://{formData.url || 'mi-tienda'}.tudominio.com
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2" htmlFor="fontFamily">
+            Fuente principal del sitio
+          </label>
+          <select
+            id="fontFamily"
+            name="fontFamily"
+            value={formData.fontFamily}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border rounded-md"
+          >
+            {FONT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value} style={opt.style}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {/* Reemplazar la grilla de previews por un solo elemento que cambia según la selección */}
+          <div className="mt-4">
+            <div
+              style={{
+                ...FONT_OPTIONS.find(opt => opt.value === formData.fontFamily)?.style,
+                fontSize: 20,
+                padding: '18px 20px',
+                borderRadius: 8,
+                border: '2px solid var(--color-primary-200)',
+                background: 'var(--color-primary-50)',
+                minHeight: 80,
+                transition: 'font-family 0.2s',
+                boxShadow: '0 2px 8px rgba(62,146,238,0.07)'
+              }}
+              className="mb-2"
+            >
+              <div style={{ fontWeight: 700, fontSize: 26, marginBottom: 6 }}>Título de ejemplo</div>
+              <div style={{ fontWeight: 400, fontSize: 18 }}>Este es un texto de ejemplo para que veas cómo se verá tu sitio con la fuente seleccionada.</div>
+            </div>
+          </div>
+          {/* Elimina la grilla de previews por fuente individual */}
         </div>
 
         <button
