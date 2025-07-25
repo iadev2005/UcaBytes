@@ -36,48 +36,48 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
       <div className="flex-1 flex flex-col pt-12">
         <nav className="flex flex-col gap-2">
           <SidebarLink 
-            to="/" 
+            to="/app" 
             icon={HomeIcon} 
             label="Inicio" 
-            active={location.pathname === '/'} 
+            active={location.pathname === '/app'} 
             isCollapsed={isCollapsed}
           />
           <SidebarLink 
-            to="/dashboard" 
+            to="/app/dashboard" 
             icon={DashboardIcon} 
             label="Dashboard" 
-            active={location.pathname === '/dashboard'} 
+            active={location.pathname === '/app/dashboard'} 
             isCollapsed={isCollapsed}
           />
           <SidebarLink 
-            to="/marketing" 
+            to="/app/marketing" 
             icon={MegaphoneIcon} 
             label="Marketing" 
-            active={location.pathname === '/marketing'} 
+            active={location.pathname === '/app/marketing'} 
             isCollapsed={isCollapsed}
           />
           <SidebarLink 
-            to="/products-services" 
+            to="/app/products-services" 
             icon={ServicesIcon} 
             label="Productos y Servicios" 
-            active={location.pathname === '/products-services'} 
+            active={location.pathname === '/app/products-services'} 
             isCollapsed={isCollapsed}
           />
           <SidebarLink 
-            to="/central-operations" 
+            to="/app/central-operations" 
             icon={OperationsIcon} 
             label="Operaciones Centrales" 
-            active={location.pathname === '/central-operations'} 
+            active={location.pathname === '/app/central-operations'} 
             isCollapsed={isCollapsed}
           />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">
           <SidebarLink 
-            to="/settings" 
+            to="/app/settings" 
             icon={ConfigurationIcon} 
             label="Configuración" 
-            active={location.pathname === '/settings'} 
+            active={location.pathname === '/app/settings'} 
             isCollapsed={isCollapsed}
           />
         </nav>

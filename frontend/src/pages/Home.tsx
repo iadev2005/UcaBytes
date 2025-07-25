@@ -190,6 +190,28 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [tipsUtiles.length]);
 
+  // To-Do List sincronizada con task planner
+  const [plannerTasks, setPlannerTasks] = useState<any[]>([]);
+  useEffect(() => {
+    const updateTasks = () => {
+      const stored = localStorage.getItem('task_planner');
+      if (stored) {
+        try {
+          setPlannerTasks(JSON.parse(stored));
+        } catch {
+          setPlannerTasks([]);
+        }
+      } else {
+        setPlannerTasks([]);
+      }
+    };
+    updateTasks();
+    window.addEventListener('storage', updateTasks);
+    return () => window.removeEventListener('storage', updateTasks);
+  }, []);
+  const prioridades = ['Alta', 'Media', 'Baja'];
+  const plannerTasksByPriority = (prio: string) => plannerTasks.filter(t => t.prioridad === prio).slice(0, 2);
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-8 items-center relative overflow-hidden">
       {/* Fondo decorativo */}
@@ -310,31 +332,24 @@ export default function Home() {
             <div className="bg-white rounded-3xl shadow-2xl p-6 border border-gray-200 w-full animate-fade-in-up">
               <h2 className="text-2xl font-bold mb-2">To-Do List:</h2>
               <hr className="border-t border-gray-300 mb-4" />
-              <div className="mb-2">
-                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-1">Prioridad Alta</h3>
-                <ul className="text-base space-y-1 mb-3">
-                  <li className="border-b border-dotted border-[var(--color-secondary-200)] pb-1 mb-1">Enviar facturas pendientes</li>
-                  <li className="border-b border-dotted border-[var(--color-secondary-200)] pb-1 mb-1">Responder correos urgentes</li>
-                  <li className="border-b border-dotted border-[var(--color-secondary-200)] pb-1 mb-1">Actualizar reporte de ventas</li>
-                </ul>
-                <hr className="border-t border-gray-200 my-2" />
-              </div>
-              <div className="mb-2">
-                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-1">Metas y Seguimiento</h3>
-                <ul className="text-base space-y-1 mb-3">
-                  <li className="border-b border-dotted border-[var(--color-primary-200)] pb-1 mb-1">Revisar metas del trimestre</li>
-                  <li className="border-b border-dotted border-[var(--color-primary-200)] pb-1 mb-1">Preparar presentación para junta</li>
-                  <li className="border-b border-dotted border-[var(--color-primary-200)] pb-1 mb-1">Contactar nuevos clientes potenciales</li>
-                </ul>
-                <hr className="border-t border-gray-200 my-2" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-1">Operaciones</h3>
-                <ul className="text-base space-y-1">
-                  <li className="border-b border-dotted border-gray-300 pb-1 mb-1">Revisar inventario semanal</li>
-                  <li className="border-b border-dotted border-gray-300 pb-1 mb-1">Capacitación del equipo</li>
-                </ul>
-              </div>
+              {prioridades.map(prio => {
+                const tasks = plannerTasksByPriority(prio);
+                return (
+                  <div key={prio} className="mb-2">
+                    <h3 className={`text-lg font-semibold mb-1 ${prio === 'Alta' ? 'text-[var(--color-secondary-700)]' : prio === 'Media' ? 'text-[var(--color-primary-700)]' : 'text-gray-700'}`}>{prio}</h3>
+                    <ul className="text-base space-y-1 mb-3">
+                      {tasks.length > 0 ? (
+                        tasks.map((t, idx) => (
+                          <li key={idx} className={`border-b pb-1 mb-1 ${prio === 'Alta' ? 'border-[var(--color-secondary-200)]' : prio === 'Media' ? 'border-[var(--color-primary-200)]' : 'border-gray-300'}`}>{t.texto}</li>
+                        ))
+                      ) : (
+                        <li className="text-gray-400 italic">Sin tareas de prioridad {prio.toLowerCase()}.</li>
+                      )}
+                    </ul>
+                    {tasks.length > 1 && <hr className="border-t border-gray-200 my-2" />}
+                  </div>
+                );
+              })}
             </div>
 
             {Array.from({ length: 0 }).map((_, idx) => (
