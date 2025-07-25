@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useEffect, useState } from 'react';
+import LoadingScreen from '../components/marketing/LoadingScreen';
 
 interface FollowerData {
   name: string;
@@ -33,77 +34,189 @@ export default function Dashboard() {
   const [followersData, setFollowersData] = useState<FollowerData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataUpdating, setDataUpdating] = useState(true);
   const [growthPercentage, setGrowthPercentage] = useState(0);
   const [firstDate, setFirstDate] = useState<string>('');
   const [demographics, setDemographics] = useState<DemographicsData | null>(null);
   const [currentFollowers, setCurrentFollowers] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const updateAndFetchData = async () => {
       try {
+        setDataUpdating(true);
+        setError(null);
+        
+        // Primero ejecutar los scripts para actualizar los datos
+        console.log('Ejecutando scripts de actualización...');
+        const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
+          method: 'POST',
+        });
+        
+        if (!updateResponse.ok) {
+          throw new Error('Error al actualizar los datos');
+        }
+        
+        console.log('Scripts ejecutados exitosamente, cargando datos...');
+        setDataUpdating(false);
         setLoading(true);
         
-        // Fetch followers data
-        const followersResponse = await fetch('http://localhost:3001/api/followers');
-        if (!followersResponse.ok) {
-          throw new Error(`Error HTTP: ${followersResponse.status}`);
-        }
-        const followersJson = await followersResponse.json();
+        // Ahora cargar los datos actualizados
+        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse] = await Promise.all([
+          fetch('http://localhost:3001/api/demographics'),
+          fetch('http://localhost:3001/api/follower-insights'),
+          fetch('http://localhost:3001/api/instagram-details')
+        ]);
         
-        // Get current followers count (last date)
-        const lastDate = Object.keys(followersJson).sort().pop();
-        if (lastDate) {
-          setCurrentFollowers(followersJson[lastDate]);
+        if (!followerInsightsResponse.ok) {
+          throw new Error(`Error HTTP en follower insights: ${followerInsightsResponse.status}`);
         }
         
-        // Transform followers data
-        const formattedData = Object.entries(followersJson).map(([date, followers]) => ({
-          name: new Date(new Date(date).setDate(new Date(date).getDate() + 1)).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-          seguidores: followers as number,
-          originalDate: date
-        }));
+        const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
+        const followerInsightsJson = await followerInsightsResponse.json();
+        const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
         
-        // Calculate growth percentage and first date
-        const sortedData = formattedData.sort((a, b) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
-        if (sortedData.length >= 2) {
-          const firstValue = sortedData[0].seguidores;
-          const lastValue = sortedData[sortedData.length - 1].seguidores;
-          const growth = lastValue - firstValue;
-          const growthPercent = firstValue === 0 ? 100 : (growth / firstValue) * 100;
-          setGrowthPercentage(Math.round(growthPercent));
-          
-          const firstDateObj = new Date(sortedData[0].originalDate || '');
-          firstDateObj.setDate(firstDateObj.getDate() + 1);
-          setFirstDate(firstDateObj.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
+        // Procesar datos de follower insights para el histograma (obligatorio)
+        let processedFollowersData = [];
+        if (followerInsightsJson && followerInsightsJson.data && followerInsightsJson.data[0] && followerInsightsJson.data[0].values) {
+          const values = followerInsightsJson.data[0].values;
+          processedFollowersData = values.map((item: { end_time: string; value: number }) => ({
+            name: new Date(item.end_time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
+            seguidores: item.value,
+            originalDate: item.end_time.split('T')[0]
           }));
+          
+          // Obtener el último valor para current followers
+          const lastValue = values[values.length - 1];
+          if (lastValue) {
+            setCurrentFollowers(lastValue.value);
+          }
+        } else {
+          throw new Error('No se pudieron obtener los datos de follower insights');
+        }
+        
+        // Calculate growth percentage comparing yesterday vs today
+        const sortedData = processedFollowersData.sort((a: FollowerData, b: FollowerData) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
+        
+        if (sortedData.length >= 2) {
+          // Buscar explícitamente las últimas dos fechas disponibles
+          const allDates = sortedData.map((item: FollowerData) => item.originalDate).filter((date: string | undefined) => date);
+          const uniqueDates = [...new Set(allDates)].sort();
+          
+
+          
+          if (uniqueDates.length >= 2) {
+            const todayDate = uniqueDates[uniqueDates.length - 1]; // Última fecha disponible
+            const yesterdayDate = uniqueDates[uniqueDates.length - 2]; // Penúltima fecha disponible
+            
+            const todayData = sortedData.find((item: FollowerData) => item.originalDate === todayDate);
+            const yesterdayData = sortedData.find((item: FollowerData) => item.originalDate === yesterdayDate);
+            
+            if (todayData && yesterdayData) {
+              const todayFollowers = todayData.seguidores;
+              const yesterdayFollowers = yesterdayData.seguidores;
+              
+              const growth = todayFollowers - yesterdayFollowers;
+              let growthPercent = 0;
+              
+              if (yesterdayFollowers === 0 && todayFollowers === 0) {
+                // Si ambos días son 0, no hay crecimiento
+                growthPercent = 0;
+              } else if (yesterdayFollowers === 0 && todayFollowers > 0) {
+                // Si ayer era 0 y hoy hay seguidores, es crecimiento infinito (mostrar 100%)
+                growthPercent = 100;
+              } else {
+                // Cálculo normal
+                growthPercent = (growth / yesterdayFollowers) * 100;
+              }
+              setGrowthPercentage(Math.round(growthPercent));
+              
+              // Mostrar la fecha de ayer (día de referencia)
+              // Agregar tiempo para evitar problemas de zona horaria
+              const yesterdayDateObj = new Date(yesterdayDate + 'T12:00:00');
+              setFirstDate(yesterdayDateObj.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+              }));
+            }
+          }
         }
 
-        setFollowersData(formattedData);
+        setFollowersData(processedFollowersData);
 
-        // Fetch demographics data
-        const demographicsResponse = await fetch('http://localhost:3001/api/demographics');
-        if (!demographicsResponse.ok) {
-          throw new Error('Error al cargar datos demográficos');
+        // Obtener el total real de seguidores desde instagram_details.json
+        let totalFollowersFromDetails = currentFollowers; // fallback al valor anterior
+        if (instagramDetailsJson && instagramDetailsJson.data && instagramDetailsJson.data[0]) {
+          const instagramData = instagramDetailsJson.data[0];
+          if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
+            totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
+            setCurrentFollowers(totalFollowersFromDetails);
+            console.log('Total real de seguidores desde Instagram Details:', totalFollowersFromDetails);
+          }
         }
-        const demographicsJson = await demographicsResponse.json();
-        const latestDate = Object.keys(demographicsJson).sort().pop();
-        if (latestDate) {
-          setDemographics(demographicsJson[latestDate]);
+
+        // Procesar datos demográficos del nuevo formato
+        if (demographicsJson) {
+          const processedDemographics = {
+            gender: {},
+            age: {},
+            city: {}
+          };
+          
+          // Extraer datos de género
+          if (demographicsJson.gender && demographicsJson.gender.data && demographicsJson.gender.data[0]) {
+            const genderData = demographicsJson.gender.data[0];
+            if (genderData.total_value && genderData.total_value.breakdowns && genderData.total_value.breakdowns[0]) {
+              const results = genderData.total_value.breakdowns[0].results;
+              const genderObj: Record<string, number> = {};
+              results.forEach((result: any) => {
+                genderObj[result.dimension_values[0]] = result.value;
+              });
+              processedDemographics.gender = genderObj;
+            }
+          }
+          
+          // Extraer datos de edad
+          if (demographicsJson.age && demographicsJson.age.data && demographicsJson.age.data[0]) {
+            const ageData = demographicsJson.age.data[0];
+            if (ageData.total_value && ageData.total_value.breakdowns && ageData.total_value.breakdowns[0]) {
+              const results = ageData.total_value.breakdowns[0].results;
+              const ageObj: Record<string, number> = {};
+              results.forEach((result: any) => {
+                ageObj[result.dimension_values[0]] = result.value;
+              });
+              processedDemographics.age = ageObj;
+            }
+          }
+          
+          // Extraer datos de ciudad
+          if (demographicsJson.city && demographicsJson.city.data && demographicsJson.city.data[0]) {
+            const cityData = demographicsJson.city.data[0];
+            if (cityData.total_value && cityData.total_value.breakdowns && cityData.total_value.breakdowns[0]) {
+              const results = cityData.total_value.breakdowns[0].results;
+              const cityObj: Record<string, number> = {};
+              results.forEach((result: any) => {
+                cityObj[result.dimension_values[0]] = result.value;
+              });
+              processedDemographics.city = cityObj;
+            }
+          }
+          
+          console.log('Datos demográficos procesados:', processedDemographics);
+          setDemographics(processedDemographics);
         }
 
         setError(null);
       } catch (error) {
         console.error('Error completo:', error);
-        setError('Error al cargar los datos');
+        setError('Error al cargar los datos del dashboard');
+        setDataUpdating(false);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    updateAndFetchData();
   }, []);
 
   const radialData = [
@@ -114,11 +227,11 @@ export default function Dashboard() {
     },
   ];
 
-  // Preparar datos para el gráfico de edad usando el número actual de seguidores
+  // Preparar datos para el gráfico de edad usando el total real de seguidores
   const ageData = demographics?.age ? (() => {
-    // Calcular el total de seguidores especificados por edad
+    // Calcular el total de seguidores especificados por edad (de demografía)
     const specifiedTotal = Object.values(demographics.age).reduce((sum, count) => sum + count, 0);
-    // Calcular los no especificados
+    // Calcular los no especificados (total real - especificados en demografía)
     const unspecified = currentFollowers - specifiedTotal;
 
     // Crear el array base con los rangos de edad
@@ -142,7 +255,10 @@ export default function Dashboard() {
       });
     }
 
-    return data.sort((a, b) => b.value - a.value);
+    const finalData = data.sort((a, b) => b.value - a.value);
+    console.log('Datos del gráfico de edad:', finalData);
+    console.log('Total de seguidores usado para porcentajes:', currentFollowers);
+    return finalData;
   })() : [];
 
   // Preparar datos para el gráfico de género
@@ -158,20 +274,38 @@ export default function Dashboard() {
     ].filter(item => item.value > 0);
   })() : [];
 
-  // Preparar datos para el gráfico de ciudades
+  // Preparar datos para el gráfico de ciudades (Top 5 + Otros + No especificados)
   const cityData = demographics?.city ? (() => {
     // Calcular el total de seguidores especificados por ciudad
     const specifiedTotal = Object.values(demographics.city).reduce((sum, count) => sum + count, 0);
     // Calcular los no especificados
     const unspecified = currentFollowers - specifiedTotal;
 
-    // Obtener las ciudades y ordenarlas por cantidad
-    const data = Object.entries(demographics.city)
+    // Obtener todas las ciudades y ordenarlas por cantidad
+    const allCities = Object.entries(demographics.city)
       .map(([city, count]) => ({
         name: city,
         value: count
       }))
       .sort((a, b) => b.value - a.value);
+
+    // Tomar las top 5 ciudades
+    const top5Cities = allCities.slice(0, 5);
+    
+    // Calcular el total de "Otros" (ciudades fuera del top 5)
+    const otherCities = allCities.slice(5);
+    const othersTotal = otherCities.reduce((sum, city) => sum + city.value, 0);
+
+    // Crear el array final
+    const data = [...top5Cities];
+
+    // Agregar "Otros" si hay ciudades fuera del top 5
+    if (othersTotal > 0) {
+      data.push({
+        name: 'Otros',
+        value: othersTotal
+      });
+    }
 
     // Agregar los no especificados si hay alguno
     if (unspecified > 0) {
@@ -183,6 +317,14 @@ export default function Dashboard() {
 
     return data;
   })() : [];
+
+  // Mostrar pantalla de carga mientras se actualizan los datos
+  if (dataUpdating) {
+    return <LoadingScreen 
+      message="Actualizando datos del dashboard..." 
+      subtitle="Obteniendo información actualizada de Instagram" 
+    />;
+  }
 
   return (
     <div className="min-h-screen p-10 h-screen bg-[var(--color-background)] w-full overflow-y-auto">
@@ -241,7 +383,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="mt-4 text-center text-xs text-gray-600">
-              <p>Crecimiento desde el primer registro:</p>
+              <p>Crecimiento desde ayer:</p>
               <p className="mt-1 font-semibold">{firstDate}</p>
             </div>
           </div>
@@ -280,11 +422,6 @@ export default function Dashboard() {
                     cy="55%"
                   >
                     <RadialBar
-                      label={{
-                        fill: '#666',
-                        position: 'insideStart',
-                        formatter: (label: any) => typeof label === 'number' ? `${label.toFixed(1)}%` : ''
-                      }}
                       background
                       dataKey="value"
                     />
@@ -301,13 +438,26 @@ export default function Dashboard() {
                         transform: 'translate(0, 0)',
                         lineHeight: '24px'
                       }}
+                      formatter={(value: string, entry: any) => {
+                        // Mostrar en la leyenda: "Rango - Cantidad"
+                        const data = entry.payload;
+                        return `${data.name} - ${data.count}`;
+                      }}
                     />
                     <Tooltip
-                      labelFormatter={(index) => {
-                        const count = ageData[index].count;
-                        return `${count} ${count === 1 ? 'seguidor' : 'seguidores'}`;
+                      formatter={(value: number, name: string, entry: any) => {
+                        const data = entry.payload;
+                        return [
+                          `${data.count} ${data.count === 1 ? 'seguidor' : 'seguidores'}`,
+                          `${value.toFixed(1)}% del total`
+                        ];
                       }}
-                      formatter={(value: number) => [`Porcentaje`, `${value.toFixed(1)}%`]}
+                      labelFormatter={(label: string, payload: any) => {
+                        if (payload && payload[0]) {
+                          return payload[0].payload.name;
+                        }
+                        return label;
+                      }}
                     />
                   </RadialBarChart>
                 </ResponsiveContainer>
@@ -336,11 +486,11 @@ export default function Dashboard() {
                   <PieChart>
                     <Pie
                       data={genderData}
-                      cx="50%"
+                      cx="40%"
                       cy="50%"
                       labelLine={false}
                       label={({ value }) => `${value}`}
-                      outerRadius={80}
+                      outerRadius={75}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -351,7 +501,16 @@ export default function Dashboard() {
                     <Tooltip 
                       formatter={(value) => [`${value} seguidores`, 'Cantidad']}
                     />
-                    <Legend />
+                    <Legend 
+                      verticalAlign="middle"
+                      align="right"
+                      layout="vertical"
+                      iconSize={12}
+                      wrapperStyle={{
+                        paddingLeft: '5px',
+                        lineHeight: '24px'
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -362,7 +521,7 @@ export default function Dashboard() {
           <div className="w-full md:w-1/2 flex flex-col">
             <div className="bg-white rounded-3xl p-4 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.12)] h-full">
               <span className="text-xs mb-2 text-gray-500 text-center w-full">
-                Procedencia de Seguidores
+                Seguidores por Ciudad (Top 5)
               </span>
               {loading ? (
                 <div className="flex-1 flex items-center justify-center">
@@ -393,7 +552,10 @@ export default function Dashboard() {
                         tick={{ fontSize: 12 }}
                       />
                       <Tooltip 
-                        formatter={(value) => [`${value} seguidores`, 'Cantidad']}
+                        formatter={(value: number) => {
+                          const percentage = currentFollowers > 0 ? ((value / currentFollowers) * 100).toFixed(1) : '0.0';
+                          return [`${value} seguidores (${percentage}%)`, 'Cantidad'];
+                        }}
                       />
                       <Bar 
                         dataKey="value" 

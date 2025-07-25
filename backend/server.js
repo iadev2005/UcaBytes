@@ -14,6 +14,72 @@ app.use(cors());
 
 app.use(express.json());
 
+// Endpoint para ejecutar scripts de actualización de datos
+app.post('/api/update-dashboard-data', (req, res) => {
+  console.log('Iniciando actualización de datos del dashboard...');
+  
+  const demographicsScript = path.join(__dirname, 'python', 'track_demographics.py');
+  const followerInsightsScript = path.join(__dirname, 'python', 'save_follower_insights.py');
+  const instagramDetailsScript = path.join(__dirname, 'python', 'save_instagram_details.py');
+  
+  let demographicsCompleted = false;
+  let followerInsightsCompleted = false;
+  let instagramDetailsCompleted = false;
+  let errors = [];
+  
+  function checkCompletion() {
+    if (demographicsCompleted && followerInsightsCompleted && instagramDetailsCompleted) {
+      if (errors.length > 0) {
+        console.error('Errores durante la actualización:', errors);
+        res.status(500).json({ 
+          success: false, 
+          error: 'Error en la actualización de datos', 
+          details: errors 
+        });
+      } else {
+        console.log('Actualización de datos completada exitosamente');
+        res.json({ success: true, message: 'Datos actualizados correctamente' });
+      }
+    }
+  }
+  
+  // Ejecutar script de demografía
+  execFile('python', [demographicsScript], { cwd: path.dirname(demographicsScript) }, (error, stdout, stderr) => {
+    demographicsCompleted = true;
+    if (error) {
+      console.error('Error ejecutando track_demographics.py:', error, stderr);
+      errors.push(`Error en demografía: ${error.message}`);
+    } else {
+      console.log('track_demographics.py completado exitosamente');
+    }
+    checkCompletion();
+  });
+  
+  // Ejecutar script de follower insights
+  execFile('python', [followerInsightsScript], { cwd: path.dirname(followerInsightsScript) }, (error, stdout, stderr) => {
+    followerInsightsCompleted = true;
+    if (error) {
+      console.error('Error ejecutando save_follower_insights.py:', error, stderr);
+      errors.push(`Error en follower insights: ${error.message}`);
+    } else {
+      console.log('save_follower_insights.py completado exitosamente');
+    }
+    checkCompletion();
+  });
+  
+  // Ejecutar script de detalles de Instagram
+  execFile('python', [instagramDetailsScript], { cwd: path.dirname(instagramDetailsScript) }, (error, stdout, stderr) => {
+    instagramDetailsCompleted = true;
+    if (error) {
+      console.error('Error ejecutando save_instagram_details.py:', error, stderr);
+      errors.push(`Error en detalles de Instagram: ${error.message}`);
+    } else {
+      console.log('save_instagram_details.py completado exitosamente');
+    }
+    checkCompletion();
+  });
+});
+
 // Endpoint para obtener el histórico de seguidores
 app.get('/api/followers', (req, res) => {
   const filePath = path.join(__dirname, 'python', 'followers_history.json');
@@ -45,6 +111,40 @@ app.get('/api/demographics', (req, res) => {
   } catch (error) {
     console.error('Error al leer demografías:', error);
     res.status(500).json({ error: 'Error al leer los datos demográficos' });
+  }
+});
+
+// Endpoint para obtener follower insights
+app.get('/api/follower-insights', (req, res) => {
+  const filePath = path.join(__dirname, 'python', 'follower_insights.json');
+  
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Archivo de follower insights no encontrado' });
+    }
+    
+    const data = fs.readFileSync(filePath, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    console.error('Error al leer follower insights:', error);
+    res.status(500).json({ error: 'Error al leer los datos de follower insights' });
+  }
+});
+
+// Endpoint para obtener detalles de Instagram
+app.get('/api/instagram-details', (req, res) => {
+  const filePath = path.join(__dirname, 'python', 'instagram_details.json');
+  
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Archivo de detalles de Instagram no encontrado' });
+    }
+    
+    const data = fs.readFileSync(filePath, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    console.error('Error al leer detalles de Instagram:', error);
+    res.status(500).json({ error: 'Error al leer los detalles de Instagram' });
   }
 });
 

@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 import time
 
-TOKEN = "EAAKJrM0WC6IBPBebpZAYYI0xolEilmzvbRStQtDWZCH1Fdp6e7pYTplxhuzSGoywKfmWjgVz3dQAMcvLbQ2Lfef79Q7iiG2ibmcxHZCkFX3bCQSkubw65ZC2jCIwYywZCcYrjhTUIQlqEJIMFpfMnSDpN0hXkJRA4Cp5F09zboWUNRzBAe6URjNH7ZAmKrHRZAWCaG83gmlbJZCyZCESmjiqst4MAf4Jisz37Tp1UaKmP2oUDzhsZD"
+TOKEN = "EAAKJrM0WC6IBPBEPqVaGq4CoNECug9JBmO6CNynDeqBoezusI650izEniEznRgRxzeJsmCYduEYeq3i0RnjftEXA1M9BMNR3VyCvWZCDgRJoZANMDEnQpytQraRIUR7d61SZCpIl3pHopw5rGYYMDVd4ZC6KTMfNZBZBaEpbTonNLcwLrAAzmDBxEPOPlkydV89Wb87zzPARcKDA4n8AW9VoVMSCBFtTajr18YP8cZD"
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -25,7 +25,7 @@ def make_api_request(endpoint, params=None, method="GET"):
         resp.raise_for_status()
         return resp.json()
     except requests.exceptions.RequestException as e:
-        print("❌  Error llamando a la API:", e)
+        print("Error llamando a la API:", e)
         return None
 
 def get_facebook_pages():
@@ -127,7 +127,7 @@ def schedule_instagram_post(instagram_id):
         })
         save_scheduled_posts(scheduled_posts)
         
-        print(f"\n✅ Publicación programada para: {fecha}")
+        print(f"\nPublicacion programada para: {fecha}")
         print("La publicación se realizará automáticamente a la hora programada.")
         print("Puede cerrar este programa. El servicio post_scheduler.py se encargará de la publicación.")
         return container_response
@@ -186,10 +186,10 @@ def show_post_list_and_select(instagram_id):
 
 def print_json(data):
     if data:
-        print("✅  Respuesta en JSON ↓")
+        print("Respuesta en JSON:")
         print(json.dumps(data, indent=2, ensure_ascii=False))
     else:
-        print("❌  No se obtuvieron datos")
+        print("No se obtuvieron datos")
 
 def extract_instagram_id():
     data = get_instagram_business_account()

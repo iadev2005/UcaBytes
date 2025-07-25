@@ -1,6 +1,14 @@
 import React from 'react';
 
-export default function LoadingScreen() {
+interface LoadingScreenProps {
+  message?: string;
+  subtitle?: string;
+}
+
+export default function LoadingScreen({ 
+  message = "Cargando publicaciones de Instagram...", 
+  subtitle = "Esto puede tardar unos segundos" 
+}: LoadingScreenProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full max-w-2xl mx-auto">
       <div className="mb-6">
@@ -9,8 +17,8 @@ export default function LoadingScreen() {
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
         </svg>
       </div>
-      <div className="text-2xl font-bold text-[var(--color-primary-700)] mb-2 text-center">Cargando publicaciones de Instagram...</div>
-      <div className="text-base text-gray-500 text-center">Esto puede tardar unos segundos</div>
+      <div className="text-2xl font-bold text-[var(--color-primary-700)] mb-2 text-center">{message}</div>
+      <div className="text-base text-gray-500 text-center">{subtitle}</div>
     </div>
   );
 } 

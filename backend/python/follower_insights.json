@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "name": "follower_count",
+      "period": "day",
+      "values": [
+        {
+          "value": 1,
+          "end_time": "2025-07-22T07:00:00+0000"
+        },
+        {
+          "value": 105,
+          "end_time": "2025-07-23T07:00:00+0000"
+        },
+        {
+          "value": 0,
+          "end_time": "2025-07-24T07:00:00+0000"
+        },
+        {
+          "value": 0,
+          "end_time": "2025-07-25T07:00:00+0000"
+        }
+      ],
+      "title": "Número de seguidores",
+      "description": "Número total de cuentas únicas que siguen este perfil",
+      "id": "17841475801593188/insights/follower_count/day"
+    }
+  ],
+  "paging": {
+    "previous": "https://graph.facebook.com/v23.0/17841475801593188/insights?access_token=EAAKJrM0WC6IBPDlGU6q6ZAkw5fuK65YfYZCnYVXCCFwXD6unkYkzvYWCrKgEs6QvSnIvgFo6dR8sziqh9Hwop7mX1TB5toRuDOlNfZCCxGZAFHRarD2rbqpNGmxkQMna27cHwv4zphpqD3zcIMiGrtCrGACylUqZCGo0Vf1cbkmodUPJqjN6KzG6Srz7EgSw089FQZAYgQBmAZBEZCY6pMoEwjwNwCDVbZB6JLbqKxDAZD&since=1750550399&until=1753142399&metric=follower_count&period=day"
+  }
+}

@@ -1,13 +1,392 @@
 {
-  "2025-07-24": {
-    "gender": {
-      "F": 1
-    },
-    "age": {
-      "25-34": 1
-    },
-    "city": {
-      "Ciudad Guayana, Bolívar (state)": 1
-    }
+  "gender": {
+    "data": [
+      {
+        "name": "follower_demographics",
+        "period": "lifetime",
+        "title": "Datos demográficos de los seguidores",
+        "description": "Características demográficas de los seguidores, incluida la distribución por país, ciudad y sexo.",
+        "total_value": {
+          "breakdowns": [
+            {
+              "dimension_keys": [
+                "gender"
+              ],
+              "results": [
+                {
+                  "dimension_values": [
+                    "F"
+                  ],
+                  "value": 13
+                },
+                {
+                  "dimension_values": [
+                    "M"
+                  ],
+                  "value": 33
+                },
+                {
+                  "dimension_values": [
+                    "U"
+                  ],
+                  "value": 56
+                }
+              ]
+            }
+          ]
+        },
+        "id": "17841475801593188/insights/follower_demographics/lifetime"
+      }
+    ]
+  },
+  "age": {
+    "data": [
+      {
+        "name": "follower_demographics",
+        "period": "lifetime",
+        "title": "Datos demográficos de los seguidores",
+        "description": "Características demográficas de los seguidores, incluida la distribución por país, ciudad y sexo.",
+        "total_value": {
+          "breakdowns": [
+            {
+              "dimension_keys": [
+                "age"
+              ],
+              "results": [
+                {
+                  "dimension_values": [
+                    "13-17"
+                  ],
+                  "value": 16
+                },
+                {
+                  "dimension_values": [
+                    "18-24"
+                  ],
+                  "value": 39
+                },
+                {
+                  "dimension_values": [
+                    "25-34"
+                  ],
+                  "value": 35
+                },
+                {
+                  "dimension_values": [
+                    "35-44"
+                  ],
+                  "value": 6
+                },
+                {
+                  "dimension_values": [
+                    "45-54"
+                  ],
+                  "value": 5
+                },
+                {
+                  "dimension_values": [
+                    "55-64"
+                  ],
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "id": "17841475801593188/insights/follower_demographics/lifetime"
+      }
+    ]
+  },
+  "city": {
+    "data": [
+      {
+        "name": "follower_demographics",
+        "period": "lifetime",
+        "title": "Datos demográficos de los seguidores",
+        "description": "Características demográficas de los seguidores, incluida la distribución por país, ciudad y sexo.",
+        "total_value": {
+          "breakdowns": [
+            {
+              "dimension_keys": [
+                "city"
+              ],
+              "results": [
+                {
+                  "dimension_values": [
+                    "Monte Alto, São Paulo (state)"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Ciudad Guayana, Bolívar (state)"
+                  ],
+                  "value": 7
+                },
+                {
+                  "dimension_values": [
+                    "Peshawar, Khyber Pakhtunkhwa"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Diu, Dadra and Nagar Haveli"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Dhaka, Dhaka Division"
+                  ],
+                  "value": 3
+                },
+                {
+                  "dimension_values": [
+                    "Casablanca, Grand Casablanca"
+                  ],
+                  "value": 3
+                },
+                {
+                  "dimension_values": [
+                    "São Paulo, São Paulo (state)"
+                  ],
+                  "value": 6
+                },
+                {
+                  "dimension_values": [
+                    "Salé, Rabat-Salé-Zemmour-Zaer"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Burnaby, British Columbia"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Antipolo, Calabarzon"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Campo Grande, Mato Grosso do Sul"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Nilambur, Kerala"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Neuquén, Neuquén"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Karachi, Sindh"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Phnom Penh, Phnom Penh"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Jakarta, Jakarta"
+                  ],
+                  "value": 4
+                },
+                {
+                  "dimension_values": [
+                    "Danao City, Central Visayas"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Kalyan, Maharashtra"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Zharkent, Almaty Region"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Tangerang, Banten"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Imphal, Manipur"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Stockholm, Stockholm County"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "São Bernardo do Campo, São Paulo (state)"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Lahore, Punjab"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Cox's Bazar, Chittagong Division"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Lima, Lima Region"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Hanumangarh, Rajasthan"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Gauhati, Assam"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Vadodara, Gujarat"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Pimpri, Maharashtra"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Abuja, Federal Capital Territory"
+                  ],
+                  "value": 3
+                },
+                {
+                  "dimension_values": [
+                    "Bangkok, Bangkok"
+                  ],
+                  "value": 3
+                },
+                {
+                  "dimension_values": [
+                    "Mohammedia, Grand Casablanca"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Dompu, West Nusa Tenggara"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Bareilly, Uttar Pradesh"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Mumbai, Maharashtra"
+                  ],
+                  "value": 4
+                },
+                {
+                  "dimension_values": [
+                    "Mahendragarh, Haryana"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Shirpur, Maharashtra"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Sirsa, Haryana"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Santo André, São Paulo (state)"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Kaduna, Kaduna State"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Decatur, Alabama"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Caloocan, Metro Manila"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Kankanadi, Karnataka"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Zestafoni, Imereti"
+                  ],
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "id": "17841475801593188/insights/follower_demographics/lifetime"
+      }
+    ]
   }
 }
