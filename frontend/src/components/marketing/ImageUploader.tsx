@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { cn } from '../../lib/utils';
+import { storage } from '../../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface ImageUploaderProps {
   value: string;
@@ -40,11 +42,18 @@ export default function ImageUploader({ value, onChange, className, placeholder 
     }
   };
 
-  const handleFile = (file: File) => {
-    // Por ahora, solo creamos una URL local
-    // TODO: Implementar carga al servidor
-    const url = URL.createObjectURL(file);
-    onChange(url);
+  const handleFile = async (file: File) => {
+    // Subir a Firebase Storage y obtener URL pública
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const storageRef = ref(storage, `imagenes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      onChange(url);
+    } catch (err) {
+      alert('Error al subir la imagen. Intenta de nuevo.');
+      console.error(err);
+    }
   };
 
   const handleUrlSubmit = (e: React.FormEvent<HTMLFormElement>) => {
