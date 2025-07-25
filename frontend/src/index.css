@@ -91,7 +91,7 @@ body {
 }
 
 html, body {
-  overflow: hidden !important;
+ overflow: hidden !important;
 }
 
 @keyframes fade-in-up {
