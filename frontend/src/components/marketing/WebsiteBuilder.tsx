@@ -176,9 +176,9 @@ export default function WebsiteBuilder() {
       {publishedLink && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-white shadow-lg rounded-lg px-6 py-4 z-50 border border-primary flex flex-col items-center gap-2">
           <div className="font-semibold text-primary">¡Tu sitio está publicado!</div>
-          <a href={publishedLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{window.location.origin + publishedLink}</a>
+          <a href={publishedLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all cursor-pointer">{window.location.origin + publishedLink}</a>
           <button
-            className="mt-2 px-4 py-1 bg-primary text-white rounded"
+            className="mt-2 px-4 py-1 bg-primary text-white rounded cursor-pointer"
             onClick={() => navigator.clipboard.writeText(window.location.origin + publishedLink)}
           >
             Copiar enlace

@@ -83,7 +83,7 @@ export default function StyleEditor({ value, onChange, className }: StyleEditorP
                   key={color.value}
                   onClick={() => updateStyle({ textColor: color.value })}
                   className={cn(
-                    "w-8 h-8 rounded-full border-2 transition-all",
+                    "w-8 h-8 rounded-full border-2 transition-all cursor-pointer",
                     value.textColor === color.value ? "border-primary scale-110" : "border-transparent hover:scale-105"
                   )}
                   style={{ backgroundColor: color.value }}
@@ -134,7 +134,7 @@ export default function StyleEditor({ value, onChange, className }: StyleEditorP
                   key={align}
                   onClick={() => updateStyle({ textAlign: align })}
                   className={cn(
-                    "p-2 rounded text-center",
+                    "p-2 rounded text-center cursor-pointer",
                     value.textAlign === align ? "bg-white shadow" : "hover:bg-white/50"
                   )}
                 >
@@ -160,7 +160,7 @@ export default function StyleEditor({ value, onChange, className }: StyleEditorP
                   key={color.value}
                   onClick={() => updateStyle({ backgroundColor: color.value })}
                   className={cn(
-                    "w-8 h-8 rounded-full border-2 transition-all",
+                    "w-8 h-8 rounded-full border-2 transition-all cursor-pointer",
                     value.backgroundColor === color.value ? "border-primary scale-110" : "border-transparent hover:scale-105"
                   )}
                   style={{ backgroundColor: color.value }}
@@ -170,7 +170,7 @@ export default function StyleEditor({ value, onChange, className }: StyleEditorP
               <button
                 onClick={() => updateStyle({ backgroundColor: 'transparent' })}
                 className={cn(
-                  "w-8 h-8 rounded-full border-2 border-dashed transition-all",
+                  "w-8 h-8 rounded-full border-2 border-dashed transition-all cursor-pointer",
                   value.backgroundColor === 'transparent' ? "border-primary scale-110" : "border-gray-300 hover:scale-105"
                 )}
                 title="Transparente"

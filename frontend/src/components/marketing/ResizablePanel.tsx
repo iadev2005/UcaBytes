@@ -103,7 +103,7 @@ export default function ResizablePanel({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="p-1 hover:bg-gray-200 rounded"
+            className="p-1 hover:bg-gray-200 rounded cursor-pointer"
             title={isMinimized ? "Expandir" : "Minimizar"}
           >
             {isMinimized ? '□' : '−'}
@@ -111,7 +111,7 @@ export default function ResizablePanel({
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-200 rounded"
+              className="p-1 hover:bg-gray-200 rounded cursor-pointer"
               title="Cerrar"
             >
               ×

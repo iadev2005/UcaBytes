@@ -54,13 +54,13 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
       <div className="flex justify-between items-center mb-2">
         <button
           onClick={prevMonth}
-          className="px-2 font-bold text-lg text-[var(--color-primary-400)]"
+          className="px-2 font-bold text-lg text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 0 && year === today.getFullYear()}
         >&lt;</button>
         <h3 className={`font-bold transition-all duration-200 ${monthNames[month].length > 7 ? "text-base" : "text-md"}`}>{monthNames[month]} {year}</h3>
         <button
           onClick={nextMonth}
-          className="px-2 font-bold text-lg text-[var(--color-primary-400)]"
+          className="px-2 font-bold text-lg text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 11 && year === today.getFullYear() + 1}
         >&gt;</button>
       </div>
@@ -250,13 +250,13 @@ export default function Home() {
                     onDragEnd={dragIndex === i ? handleDragEnd : undefined}
                     style={{ cursor: dragIndex === i ? 'grab' : 'default' }}
                   >
-                    <button className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-sm flex items-center justify-center hover:scale-105 transition-transform shadow-md"
+                    <button className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-sm flex items-center justify-center hover:scale-105 transition-transform shadow-md cursor-pointer"
                       onClick={() => handleAccesoClick(acceso)}
                     >
                       <span className="block text-center leading-tight break-words">{acceso}</span>
                     </button>
                     <button
-                      className="absolute top-3 right-0 p-0 transition-colors"
+                      className="absolute top-3 right-0 p-0 transition-colors cursor-pointer"
                       onClick={() => setOpenKebab(openKebab === i ? null : i)}
                       tabIndex={0}
                     >
@@ -265,13 +265,13 @@ export default function Home() {
                     {openKebab === i && (
                       <div className="absolute right-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-28 flex flex-col">
                         <button
-                          className="px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-t-lg"
+                          className="px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer"
                           onClick={() => eliminarAcceso(i)}
                         >
                           Eliminar
                         </button>
                         <button
-                          className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg"
+                          className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer"
                           onClick={() => activarArrastrar(i)}
                         >
                           Arrastrar
@@ -283,7 +283,7 @@ export default function Home() {
                 {accesos.length < 4 && (
                   <button
                     onClick={() => setModalOpen(true)}
-                    className="w-28 h-28 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-3xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center"
+                    className="w-28 h-28 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-3xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                     title="Agregar acceso rápido"
                   >
                     +
