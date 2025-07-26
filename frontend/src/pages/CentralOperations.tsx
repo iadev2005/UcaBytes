@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 
 const mockEmpleados = [
-  { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, pagado: false }
+  { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, foto: '', pagado: false }
 ];
 const categorias = ['Todos', 'Administrativo', 'Ventas', 'Soporte'];
 const prioridades = ['Alta', 'Media', 'Baja'];
@@ -205,7 +205,7 @@ export default function CentralOperations() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [empleados, setEmpleados] = useState(mockEmpleados.map(e => ({ ...e, pagado: false })));
   const [modalOpen, setModalOpen] = useState(false);
-  const [nuevoEmpleado, setNuevoEmpleado] = useState({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', pagado: false });
+  const [nuevoEmpleado, setNuevoEmpleado] = useState({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
 
   // Sales state
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -252,6 +252,13 @@ export default function CentralOperations() {
   useEffect(() => {
     localStorage.setItem('task_planner', JSON.stringify(tareas));
   }, [tareas]);
+
+  useEffect(() => {
+    const tareasGuardadas = localStorage.getItem('task_planner');
+    if (tareasGuardadas) {
+      setTareas(JSON.parse(tareasGuardadas));
+    }
+  }, []);
 
   useEffect(() => {
     const ventasGuardadas = localStorage.getItem('ventas');
@@ -343,10 +350,11 @@ export default function CentralOperations() {
         puesto: nuevoEmpleado.puesto,
         categoria: nuevoEmpleado.categoria,
         salario: parseFloat(nuevoEmpleado.salario),
+        foto: nuevoEmpleado.foto,
         pagado: false
       }
     ]);
-    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', pagado: false });
+    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
     setModalOpen(false);
   };
   const togglePagado = (idx: number) => {
@@ -644,20 +652,23 @@ export default function CentralOperations() {
     </div>
       {/* Barra de acciones */}
       {tab === 'empleados' && (
-        <div className="flex items-center justify-between mb-6">
-          <button
-            className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors"
-            onClick={() => setModalOpen(true)}
-          >
-            Agregar empleado
-          </button>
-          <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-            value={cat}
-            onChange={e => setCat(e.target.value)}
-          >
-            {categorias.map(c => <option key={c}>{c}</option>)}
-          </select>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Empleados</h2>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+              onClick={() => setModalOpen(true)}
+            >
+              Agregar empleado
+            </button>
+            <select
+              className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] w-full sm:w-auto"
+              value={cat}
+              onChange={e => setCat(e.target.value)}
+            >
+              {categorias.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
       )}
 
@@ -690,10 +701,28 @@ export default function CentralOperations() {
         <div className="flex flex-col gap-4">
           {empleadosFiltrados.map((emp, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between border border-gray-200 gap-2 md:gap-0">
-              <div className="flex-1">
-                <span className="font-bold text-lg text-[var(--color-primary-700)]">{emp.nombre}</span>
-                <span className="ml-4 text-gray-500">{emp.puesto}</span>
-                <span className="ml-4 text-xs text-gray-400">{emp.categoria}</span>
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                  {emp.foto ? (
+                    <img 
+                      src={emp.foto} 
+                      alt={`Foto de ${emp.nombre}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full flex items-center justify-center text-gray-500 text-sm font-semibold ${emp.foto ? 'hidden' : ''}`}>
+                    {emp.nombre.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-bold text-lg text-[var(--color-primary-700)]">{emp.nombre}</span>
+                  <span className="ml-4 text-gray-500">{emp.puesto}</span>
+                  <span className="ml-4 text-xs text-gray-400">{emp.categoria}</span>
+                </div>
               </div>
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
                 <span className="text-sm text-gray-700">Salario: <span className="font-semibold">${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></span>
@@ -861,72 +890,102 @@ export default function CentralOperations() {
 
       {/* Tareas (task planner) */}
       {tab === 'tareas' && (
-        <div className="max-w-2xl mx-auto">
-          <form onSubmit={agregarTarea} className="flex flex-col md:flex-row gap-3 mb-6 items-center">
-            <input
-              type="text"
-              value={nuevaTarea}
-              onChange={e => setNuevaTarea(e.target.value)}
-              placeholder="Nueva tarea..."
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-            />
-            <select
-              value={prioridad}
-              onChange={e => setPrioridad(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-            >
-              {prioridades.map(p => <option key={p}>{p}</option>)}
-            </select>
-            <button type="submit" className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors">
-              Agregar tarea
-            </button>
-          </form>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow p-6 mb-6">
+            <h2 className="text-xl font-bold text-[var(--color-primary-700)] mb-4">Gestión de Tareas</h2>
+            <form onSubmit={agregarTarea} className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva tarea</label>
+                <input
+                  type="text"
+                  value={nuevaTarea}
+                  onChange={e => setNuevaTarea(e.target.value)}
+                  placeholder="Escribe una nueva tarea..."
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                <select
+                  value={prioridad}
+                  onChange={e => setPrioridad(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                >
+                  {prioridades.map(p => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <button 
+                type="submit" 
+                className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+              >
+                Agregar tarea
+              </button>
+            </form>
+          </div>
           {/* Lista de tareas agrupadas por prioridad */}
-          {prioridades.map(prio => (
-            <div key={prio} className="mb-6">
-              <h3 className={`text-lg font-bold mb-2 ${prio === 'Alta' ? 'text-[var(--color-secondary-600)]' : prio === 'Media' ? 'text-[var(--color-primary-600)]' : 'text-gray-500'}`}>{prio}</h3>
-              <ul className="flex flex-col gap-4">
-                {tareas.filter(t => t.prioridad === prio).length === 0 && (
-                  <li className="text-gray-400 italic">No hay tareas de prioridad {prio.toLowerCase()}.</li>
-                )}
-                {tareas.filter(t => t.prioridad === prio).map((t, idx) => {
-                   const globalIdx = tareas.findIndex(tt => tt === t);
-                   return (
-                     <li
-                       key={globalIdx}
-                       className={`flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-2 shadow ${dragIdx === globalIdx ? 'ring-2 ring-[var(--color-primary-400)] z-10' : ''} ${dragOverIdx === globalIdx && dragIdx !== null && dragIdx !== globalIdx ? 'ring-2 ring-[var(--color-secondary-400)]' : ''}`}
-                       draggable={true}
-                       onDragStart={() => handleDragStart(globalIdx)}
-                       onDragOver={e => { e.preventDefault(); handleDragOver(globalIdx); }}
-                       onDrop={() => handleDrop(globalIdx)}
-                       onDragEnd={handleDragEnd}
-                       style={{ cursor: 'grab' }}
-                     >
-                       <input type="checkbox" checked={t.completada} onChange={() => toggleCompletada(globalIdx)} className="accent-[var(--color-primary-400)] w-5 h-5" />
-                       {editIdx === globalIdx ? (
-                         <input
-                           className="flex-1 border-b border-[var(--color-primary-400)] outline-none px-1 py-0.5"
-                           value={editTexto}
-                           onChange={e => setEditTexto(e.target.value)}
-                           onBlur={() => saveEdit(globalIdx)}
-                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(globalIdx); if (e.key === 'Escape') cancelEdit(); }}
-                           autoFocus
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {prioridades.map(prio => (
+              <div key={prio} className="bg-white rounded-xl shadow p-4">
+                <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${prio === 'Alta' ? 'text-[var(--color-secondary-600)]' : prio === 'Media' ? 'text-[var(--color-primary-600)]' : 'text-gray-500'}`}>
+                  <div className={`w-3 h-3 rounded-full ${prio === 'Alta' ? 'bg-[var(--color-secondary-600)]' : prio === 'Media' ? 'bg-[var(--color-primary-600)]' : 'bg-gray-500'}`}></div>
+                  {prio}
+                  <span className="text-sm font-normal text-gray-500">
+                    ({tareas.filter(t => t.prioridad === prio).length})
+                  </span>
+                </h3>
+                <ul className="flex flex-col gap-3">
+                  {tareas.filter(t => t.prioridad === prio).length === 0 && (
+                    <li className="text-gray-400 italic text-center py-4">No hay tareas de prioridad {prio.toLowerCase()}.</li>
+                  )}
+                  {tareas.filter(t => t.prioridad === prio).map((t, idx) => {
+                     const globalIdx = tareas.findIndex(tt => tt === t);
+                     return (
+                       <li
+                         key={globalIdx}
+                         className={`flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 shadow-sm ${dragIdx === globalIdx ? 'ring-2 ring-[var(--color-primary-400)] z-10' : ''} ${dragOverIdx === globalIdx && dragIdx !== null && dragIdx !== globalIdx ? 'ring-2 ring-[var(--color-secondary-400)]' : ''} ${t.completada ? 'opacity-75' : ''}`}
+                         draggable={true}
+                         onDragStart={() => handleDragStart(globalIdx)}
+                         onDragOver={e => { e.preventDefault(); handleDragOver(globalIdx); }}
+                         onDrop={() => handleDrop(globalIdx)}
+                         onDragEnd={handleDragEnd}
+                         style={{ cursor: 'grab' }}
+                       >
+                         <input 
+                           type="checkbox" 
+                           checked={t.completada} 
+                           onChange={() => toggleCompletada(globalIdx)} 
+                           className="accent-[var(--color-primary-400)] w-4 h-4" 
                          />
-                       ) : (
-                         <span
-                           className={`flex-1 ${t.completada ? 'line-through text-gray-400' : ''}`}
-                           onDoubleClick={() => startEdit(globalIdx, t.texto)}
+                         {editIdx === globalIdx ? (
+                           <input
+                             className="flex-1 border-b border-[var(--color-primary-400)] outline-none px-1 py-0.5 text-sm"
+                             value={editTexto}
+                             onChange={e => setEditTexto(e.target.value)}
+                             onBlur={() => saveEdit(globalIdx)}
+                             onKeyDown={e => { if (e.key === 'Enter') saveEdit(globalIdx); if (e.key === 'Escape') cancelEdit(); }}
+                             autoFocus
+                           />
+                         ) : (
+                           <span
+                             className={`flex-1 text-sm ${t.completada ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                             onDoubleClick={() => startEdit(globalIdx, t.texto)}
+                           >
+                             {t.texto}
+                           </span>
+                         )}
+                         <button 
+                           onClick={() => eliminarTarea(globalIdx)} 
+                           className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
                          >
-                           {t.texto}
-                         </span>
-                       )}
-                       <button onClick={() => eliminarTarea(globalIdx)} className="text-red-500 hover:text-red-700 text-sm font-semibold">Eliminar</button>
-                     </li>
-                   );
-                 })}
-              </ul>
-            </div>
-          ))}
+                           ×
+                         </button>
+                       </li>
+                     );
+                   })}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
         
       )}
@@ -1026,8 +1085,8 @@ export default function CentralOperations() {
         </div>
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Agregar empleado">
-        <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-72">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Agregar empleado" size="md">
+        <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-full">
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Nombre</span>
             <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
@@ -1047,13 +1106,65 @@ export default function CentralOperations() {
             <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
           </label>
           <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Foto del empleado</span>
+            <div className="flex gap-2">
+              <input 
+                type="url" 
+                value={nuevoEmpleado.foto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, foto: e.target.value })} 
+                placeholder="URL de la imagen o sube un archivo"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      setNuevoEmpleado({ ...nuevoEmpleado, foto: event.target?.result as string });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="hidden"
+                id="foto-empleado"
+              />
+              <label
+                htmlFor="foto-empleado"
+                className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Subir
+              </label>
+            </div>
+            {nuevoEmpleado.foto && (
+              <div className="mt-2">
+                <span className="text-sm text-gray-600">Vista previa:</span>
+                <div className="mt-1 w-16 h-16 rounded-full overflow-hidden bg-gray-200">
+                  <img 
+                    src={nuevoEmpleado.foto} 
+                    alt="Vista previa"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </label>
           <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors">Agregar</button>
         </form>
       </Modal>
 
       {/* Modal para nueva venta */}
-      <Modal open={modalVentaOpen} onClose={() => setModalVentaOpen(false)} title="Nueva Venta">
-        <form onSubmit={handleCrearVenta} className="flex flex-col gap-6 w-full max-w-6xl">
+      <Modal open={modalVentaOpen} onClose={() => setModalVentaOpen(false)} title="Nueva Venta" size="xl">
+        <form onSubmit={handleCrearVenta} className="flex flex-col gap-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Columna izquierda */}
             <div className="flex flex-col gap-6">
@@ -1148,35 +1259,37 @@ export default function CentralOperations() {
               {/* Agregar productos */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Productos</h3>
-                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <select
-                    value={productoSeleccionado}
-                    onChange={e => setProductoSeleccionado(e.target.value)}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-                  >
-                    <option value="">Seleccionar producto...</option>
-                    {productos.map(producto => (
-                      <option key={producto.id_producto} value={producto.id_producto}>
-                        {producto.nombre_producto} - ${parseFloat(producto.precio_producto).toLocaleString('es-MX')}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={cantidadProducto}
-                      onChange={e => setCantidadProducto(parseInt(e.target.value) || 1)}
-                      className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={agregarProductoAVenta}
-                      disabled={!productoSeleccionado}
-                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={productoSeleccionado}
+                      onChange={e => setProductoSeleccionado(e.target.value)}
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
                     >
-                      Agregar
-                    </button>
+                      <option value="">Seleccionar producto...</option>
+                      {productos.map(producto => (
+                        <option key={producto.id_producto} value={producto.id_producto}>
+                          {producto.nombre_producto} - ${parseFloat(producto.precio_producto).toLocaleString('es-MX')}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={cantidadProducto}
+                        onChange={e => setCantidadProducto(parseInt(e.target.value) || 1)}
+                        className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarProductoAVenta}
+                        disabled={!productoSeleccionado}
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        Agregar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1186,26 +1299,26 @@ export default function CentralOperations() {
                     <h4 className="font-semibold mb-2">Productos en la venta:</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {nuevaVenta.productos.map((producto) => (
-                        <div key={producto.id_producto} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <div key={producto.id_producto} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2 rounded gap-2">
                           <div className="flex-1 min-w-0">
                             <span className="font-medium text-sm sm:text-base truncate block">{producto.nombre_producto}</span>
                             <span className="text-xs sm:text-sm text-gray-500">${parseFloat(producto.precio_producto).toLocaleString('es-MX')} c/u</span>
                           </div>
-                          <div className="flex items-center gap-2 ml-2">
+                          <div className="flex items-center gap-2">
                             <input
                               type="number"
                               min="1"
                               value={producto.cantidad}
                               onChange={e => actualizarCantidadProducto(producto.id_producto, parseInt(e.target.value) || 1)}
-                              className="w-12 sm:w-16 rounded border border-gray-300 px-1 sm:px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
+                              className="w-16 sm:w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
                             />
-                            <span className="font-semibold min-w-[60px] sm:min-w-[80px] text-right text-xs sm:text-sm">
+                            <span className="font-semibold min-w-[70px] sm:min-w-[90px] text-right text-sm">
                               ${(producto.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                             </span>
                             <button
                               type="button"
                               onClick={() => removerProductoDeVenta(producto.id_producto)}
-                              className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
                             >
                               ×
                             </button>
@@ -1232,14 +1345,14 @@ export default function CentralOperations() {
             <button
               type="button"
               onClick={() => setModalVentaOpen(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1"
+              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={nuevaVenta.productos.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto"
             >
               Crear Venta
             </button>
@@ -1248,8 +1361,8 @@ export default function CentralOperations() {
       </Modal>
 
       {/* Modal para nuevo servicio */}
-      <Modal open={modalServicioOpen} onClose={() => setModalServicioOpen(false)} title="Nuevo Servicio">
-        <form onSubmit={handleCrearServicioVenta} className="flex flex-col gap-6 w-full max-w-6xl">
+      <Modal open={modalServicioOpen} onClose={() => setModalServicioOpen(false)} title="Nuevo Servicio" size="xl">
+        <form onSubmit={handleCrearServicioVenta} className="flex flex-col gap-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Columna izquierda */}
             <div className="flex flex-col gap-6">
@@ -1344,35 +1457,37 @@ export default function CentralOperations() {
               {/* Agregar servicios */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Servicios</h3>
-                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <select
-                    value={servicioSeleccionado}
-                    onChange={e => setServicioSeleccionado(e.target.value)}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-                  >
-                    <option value="">Seleccionar servicio...</option>
-                    {servicios.map(servicio => (
-                      <option key={servicio.nombre_servicio} value={servicio.nombre_servicio}>
-                        {servicio.nombre_servicio} - ${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={cantidadServicio}
-                      onChange={e => setCantidadServicio(parseInt(e.target.value) || 1)}
-                      className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={agregarServicioAVenta}
-                      disabled={!servicioSeleccionado}
-                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={servicioSeleccionado}
+                      onChange={e => setServicioSeleccionado(e.target.value)}
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
                     >
-                      Agregar
-                    </button>
+                      <option value="">Seleccionar servicio...</option>
+                      {servicios.map(servicio => (
+                        <option key={servicio.nombre_servicio} value={servicio.nombre_servicio}>
+                          {servicio.nombre_servicio} - ${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={cantidadServicio}
+                        onChange={e => setCantidadServicio(parseInt(e.target.value) || 1)}
+                        className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarServicioAVenta}
+                        disabled={!servicioSeleccionado}
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        Agregar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1382,26 +1497,26 @@ export default function CentralOperations() {
                     <h4 className="font-semibold mb-2">Servicios en la venta:</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {nuevaServicioVenta.servicios.map((servicio) => (
-                        <div key={servicio.nombre_servicio} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <div key={servicio.nombre_servicio} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2 rounded gap-2">
                           <div className="flex-1 min-w-0">
                             <span className="font-medium text-sm sm:text-base truncate block">{servicio.nombre_servicio}</span>
                             <span className="text-xs sm:text-sm text-gray-500">${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')} c/u</span>
                           </div>
-                          <div className="flex items-center gap-2 ml-2">
+                          <div className="flex items-center gap-2">
                             <input
                               type="number"
                               min="1"
                               value={servicio.cantidad}
                               onChange={e => actualizarCantidadServicio(servicio.nombre_servicio, parseInt(e.target.value) || 1)}
-                              className="w-12 sm:w-16 rounded border border-gray-300 px-1 sm:px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
+                              className="w-16 sm:w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
                             />
-                            <span className="font-semibold min-w-[60px] sm:min-w-[80px] text-right text-xs sm:text-sm">
+                            <span className="font-semibold min-w-[70px] sm:min-w-[90px] text-right text-sm">
                               ${(servicio.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                             </span>
                             <button
                               type="button"
                               onClick={() => removerServicioDeVenta(servicio.nombre_servicio)}
-                              className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
                             >
                               ×
                             </button>
@@ -1428,14 +1543,14 @@ export default function CentralOperations() {
             <button
               type="button"
               onClick={() => setModalServicioOpen(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1"
+              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={nuevaServicioVenta.servicios.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto"
             >
               Crear Servicio
             </button>
