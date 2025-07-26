@@ -19,6 +19,10 @@
         {
           "value": 0,
           "end_time": "2025-07-25T07:00:00+0000"
+        },
+        {
+          "value": 0,
+          "end_time": "2025-07-26T07:00:00+0000"
         }
       ],
       "title": "Número de seguidores",
@@ -27,6 +31,6 @@
     }
   ],
   "paging": {
-    "previous": "https://graph.facebook.com/v23.0/17841475801593188/insights?access_token=EAAKJrM0WC6IBPDlGU6q6ZAkw5fuK65YfYZCnYVXCCFwXD6unkYkzvYWCrKgEs6QvSnIvgFo6dR8sziqh9Hwop7mX1TB5toRuDOlNfZCCxGZAFHRarD2rbqpNGmxkQMna27cHwv4zphpqD3zcIMiGrtCrGACylUqZCGo0Vf1cbkmodUPJqjN6KzG6Srz7EgSw089FQZAYgQBmAZBEZCY6pMoEwjwNwCDVbZB6JLbqKxDAZD&since=1750550399&until=1753142399&metric=follower_count&period=day"
+    "previous": "https://graph.facebook.com/v23.0/17841475801593188/insights?access_token=EAAKJrM0WC6IBPDZARfB40mVCydyEj9uULvnInAL4potOvXZBvCYF51kEn4e8H7RlP8PqTggFJQZA8d2KrmZBWAbRm3ULAp6Ly4l7msqBSNB91ulOuV3keO2dDm0fxTVN0vW2GPiZCBhzspHf5Gwkbgv9JP9wdnDlFns3AxiNlK4hZB3mZBvfgFiZCItXLxNIFEv5y5FbVmjtPRSu7jbIpaP025r281pZBOGaHfTeO&since=1750550399&until=1753142399&metric=follower_count&period=day"
   }
 }

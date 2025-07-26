@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "total_stories": 1,
+    "extracted_at": "2025-07-26T03:49:00.585945",
+    "source": "Instagram Stories API"
+  },
+  "stories": [
+    {
+      "id": "18072411349990648",
+      "media_type": "IMAGE",
+      "media_url": "https://scontent.cdninstagram.com/v/t51.82787-15/523498139_17848523178526720_3477465671956019147_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ccb=1-7&_nc_sid=18de74&_nc_ohc=He_6vADyrdQQ7kNvwHrMnI9&_nc_oc=AdnIM_QSH3HZT-TllQpnScOJOCf_mkePHRNs0_MLDHf8O1U_4TdLqUxiJ4vA5zDaWMk&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&edm=AEQ6tj4EAAAA&_nc_gid=lUzxpIEq55S6t6U650WMyg&oh=00_AfT4ESnv9bIem-cLyhUw-kDbcjNzeAeJ8f9ZWY0fDiRFkQ&oe=688A40F8",
+      "thumbnail_url": null,
+      "timestamp": "2025-07-26T07:36:47+0000",
+      "permalink": "https://instagram.com/stories/empr.esaprueba/3685076682856275642",
+      "like_count": 0,
+      "is_shared_to_feed": null,
+      "username": "empr.esaprueba",
+      "caption": null,
+      "comments_count": 0,
+      "owner": {
+        "id": "17841475801593188"
+      },
+      "shortcode": "DMkBbf7uR66",
+      "processed_at": "2025-07-26T03:49:00.122883",
+      "insights": {
+        "status": "insufficient_data",
+        "message": "(#10) Not enough viewers for the media to show insights",
+        "error_code": 10
+      }
+    }
+  ]
+}
