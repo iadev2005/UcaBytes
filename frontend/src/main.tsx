@@ -29,14 +29,8 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
     const location = useLocation();
     const [session, setSession] = useState<unknown>(null); // Estado para la sesión de Supabase
     const [loading, setLoading] = useState(true); // Estado para controlar si estamos cargando la sesión
-    const Navigate = useNavigate();
 
     useEffect(() => {
-
-      if(!client.auth.getUser()){
-        Navigate('/Login');
-      }
-
 
       //Obtener la sesión inicial al cargar el componente
       const getInitialSession = async () => {
@@ -62,7 +56,7 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
       return () => {
         subscription.unsubscribe();
       };
-    }, [Navigate]); // El array de dependencias vacío asegura que se ejecute una sola vez al montar el componente.
+    }, []); // El array de dependencias vacío asegura que se ejecute una sola vez al montar el componente.
 
     // Si aún estamos cargando la sesión, muestra un indicador de carga.
     if (loading) {
