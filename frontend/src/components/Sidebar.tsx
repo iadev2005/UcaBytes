@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation, useNavigate} from 'react-router-dom';
 import { cn } from '../lib/utils';
 import logo from '../assets/logo/logo.svg';
+import { client } from '../supabase/client'; // Importa el cliente de Supabase
 
 interface SidebarProps {
   onCollapse: Dispatch<SetStateAction<boolean>>;
@@ -21,7 +22,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('auth');
+    client.auth.signOut()
     navigate('/');
   };
 
