@@ -406,7 +406,7 @@ export default function Home() {
               })}
             </div>
 
-            {Array.from({ length: 5 }).map((_, idx) => (
+            {Array.from({ length: 0 }).map((_, idx) => (
               <div key={idx} className="bg-white rounded-3xl shadow-2xl p-5 border border-gray-200 w-full animate-fade-in-up">
                 <h2 className="text-lg font-bold mb-2">Elemento extra {idx + 1}</h2>
                 <p className="text-sm">Este es un elemento adicional para probar el scroll en la columna derecha.</p>
