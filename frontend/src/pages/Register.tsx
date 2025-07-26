@@ -1,68 +1,199 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ReturnIcon } from '../icons/Return';
 import { client } from '../supabase/client'; // Adjust the import path as necessary
 import { AuthApiError } from '@supabase/supabase-js';
 
+interface ValidationErrors {
+    email?: string;
+    name?: string;
+    address?: string;
+    phone?: string;
+    password?: string;
+}
+
 export default function Register() {
 
-    const [email,setEmail] = useState('');
-    const [name,setName] = useState('');
-    const [addres,setAddres] = useState('');
-    const [phone,setPhone] = useState('');
-    const [password,setPassword] = useState('');
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
+    const [address, setAddress] = useState('');
+    const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
 
-    // --- Nuevos estados para el pop-up ---
+    // --- Estados para validación y feedback ---
+    const [errors, setErrors] = useState<ValidationErrors>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+
+    // --- Funciones de validación ---
+    const validateEmail = (email: string): string | undefined => {
+        if (!email) return 'El correo electrónico es requerido';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return 'Formato de correo electrónico inválido';
+        if (email.length > 254) return 'El correo electrónico es demasiado largo';
+        return undefined;
+    };
+
+    const validateName = (name: string): string | undefined => {
+        if (!name) return 'El nombre de la empresa es requerido';
+        if (name.length < 2) return 'El nombre debe tener al menos 2 caracteres';
+        if (name.length > 100) return 'El nombre es demasiado largo';
+        return undefined;
+    };
+
+    const validateAddress = (address: string): string | undefined => {
+        if (!address) return 'La dirección es requerida';
+        if (address.length < 5) return 'La dirección debe tener al menos 5 caracteres';
+        if (address.length > 200) return 'La dirección es demasiado larga';
+        return undefined;
+    };
+
+    const validatePhone = (phone: string): string | undefined => {
+        if (!phone) return 'El teléfono es requerido';
+        const phoneRegex = /^[\d\s\-\(\)\+]+$/;
+        if (!phoneRegex.test(phone)) return 'Formato de teléfono inválido';
+        if (phone.replace(/\D/g, '').length < 7) return 'El teléfono debe tener al menos 7 dígitos';
+        if (phone.replace(/\D/g, '').length > 15) return 'El teléfono es demasiado largo';
+        return undefined;
+    };
+
+    const validatePassword = (password: string): string | undefined => {
+        if (!password) return 'La contraseña es requerida';
+        if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+        if (password.length > 128) return 'La contraseña es demasiado larga';
+        if (!/(?=.*[a-z])/.test(password)) return 'La contraseña debe contener al menos una letra minúscula';
+        if (!/(?=.*[A-Z])/.test(password)) return 'La contraseña debe contener al menos una letra mayúscula';
+        if (!/(?=.*\d)/.test(password)) return 'La contraseña debe contener al menos un número';
+        return undefined;
+    };
+
+    // --- Validación en tiempo real ---
+    const handleFieldChange = (field: keyof ValidationErrors, value: string) => {
+        let error: string | undefined;
+
+        switch (field) {
+            case 'email':
+                setEmail(value);
+                error = validateEmail(value);
+                break;
+            case 'name':
+                setName(value);
+                error = validateName(value);
+                break;
+            case 'address':
+                setAddress(value);
+                error = validateAddress(value);
+                break;
+            case 'phone':
+                setPhone(value);
+                error = validatePhone(value);
+                break;
+            case 'password':
+                setPassword(value);
+                error = validatePassword(value);
+                break;
+        }
+
+        setErrors(prev => ({
+            ...prev,
+            [field]: error
+        }));
+    };
+
+    // --- Validación completa del formulario ---
+    const validateForm = (): boolean => {
+        const newErrors: ValidationErrors = {
+            email: validateEmail(email),
+            name: validateName(name),
+            address: validateAddress(address),
+            phone: validatePhone(phone),
+            password: validatePassword(password)
+        };
+
+        setErrors(newErrors);
+        return !Object.values(newErrors).some(error => error !== undefined);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        setShowPopup(false);   // Asegurar que el pop-up esté oculto al inicio
-        setPopupMessage('');   // Limpiar mensaje del pop-up
+        if (!validateForm()) {
+            setPopupMessage('Por favor, corrige los errores en el formulario.');
+            setShowPopup(true);
+            return;
+        }
 
+        setIsSubmitting(true);
+        setShowPopup(false);
+        setPopupMessage('');
 
-        //visualizamos los datos antes 
-       console.log({ email, name, addres, phone, password });
-
-       //creamos el nuevo usuario en supabse 
-       try{
+        try {
             const { data, error } = await client.auth.signUp({
                 email,
                 password
             });
-            console.log(data)
 
-            //si existe el error nos vamos a catch
             if (error) {
                 throw error;
             }
 
+            setPopupMessage('Usuario registrado correctamente. Revisa tu correo electrónico para confirmar tu cuenta.');
+            setShowPopup(true);
 
-            //si no hay error, creamos el perfil de la empresa
-            setPopupMessage('Usuario registrado correctamente.');
-            setShowPopup(true)
+            // Redirigir al dashboard después de 2 segundos
+            setTimeout(() => {
+                navigate('/app');
+            }, 2000);
 
-       }catch (error: unknown) {
-            //verificamos si el error es de tipo AuthApiError
+        } catch (error: unknown) {
+            let errorMessage = 'Error al registrar el usuario. Inténtalo de nuevo.';
+
             if (error instanceof AuthApiError) {
-                // Manejo de errores específicos de autenticación
-                if(error.message.includes('User already registered')){
-                    setPopupMessage('Este usuario ya se encuentra registrado');
-                    setShowPopup(true)
-                    return 
+                switch (error.message) {
+                    case 'User already registered':
+                        errorMessage = 'Este correo electrónico ya está registrado.';
+                        break;
+                    case 'Password should be at least 6 characters':
+                        errorMessage = 'La contraseña debe tener al menos 6 caracteres.';
+                        break;
+                    case 'Invalid email':
+                        errorMessage = 'El formato del correo electrónico es inválido.';
+                        break;
+                    case 'Email not confirmed':
+                        errorMessage = 'Por favor, confirma tu correo electrónico antes de continuar.';
+                        break;
+                    case 'Invalid login credentials':
+                        errorMessage = 'Credenciales de inicio de sesión inválidas.';
+                        break;
+                    default:
+                        if (error.message.includes('network')) {
+                            errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+                        } else if (error.message.includes('rate limit')) {
+                            errorMessage = 'Demasiados intentos. Inténtalo de nuevo en unos minutos.';
+                        } else {
+                            errorMessage = `Error: ${error.message}`;
+                        }
                 }
-                
-                return;
             }
 
-            console.log('Error creating user:', error);
-            return;
+            setPopupMessage(errorMessage);
+            setShowPopup(true);
+        } finally {
+            setIsSubmitting(false);
         }
-        
     };
 
+    const getFieldClassName = (fieldName: keyof ValidationErrors) => {
+        const baseClasses = "rounded-lg px-3 py-2 w-full border focus:outline-none focus:ring-2 focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200";
+        
+        if (errors[fieldName]) {
+            return `${baseClasses} border-red-500 focus:ring-red-500 bg-red-50`;
+        }
+        
+        return `${baseClasses} border-gray-300 focus:ring-[#0A2463]`;
+    };
 
     return (
       <div className="h-screen w-full bg-cover bg-center bg-no-repeat overflow-hidden" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')"}}>
@@ -82,57 +213,115 @@ export default function Register() {
                   <div className="flex flex-col gap-3 w-full">
                     <div className="flex flex-col w-full">
                         <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Correo de la Empresa:</label>
-                        <input type="email" 
-                        placeholder="Correo electrónico / Usuario" 
-                        required 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
+                        <input 
+                            type="email" 
+                            placeholder="Correo electrónico / Usuario" 
+                            required 
+                            value={email}
+                            onChange={(e) => handleFieldChange('email', e.target.value)}
+                            className={getFieldClassName('email')}
+                        />
+                        {errors.email && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.email}
+                            </p>
+                        )}
                     </div>
                     
                     <div className="flex flex-col w-full">
                         <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Nombre de la Empresa:</label>
-                        <input type="text" 
-                        placeholder="Nombre" 
-                        required 
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
+                        <input 
+                            type="text" 
+                            placeholder="Nombre" 
+                            required 
+                            value={name}
+                            onChange={(e) => handleFieldChange('name', e.target.value)}
+                            className={getFieldClassName('name')}
+                        />
+                        {errors.name && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.name}
+                            </p>
+                        )}
                     </div>
                     
                     <div className="flex flex-col w-full">
                         <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Dirección:</label>
-                        <input type="text" 
-                        placeholder="Dirección de la empresa" 
-                        required 
-                        value={addres}
-                        onChange={(e) => setAddres(e.target.value)}
-                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
+                        <input 
+                            type="text" 
+                            placeholder="Dirección de la empresa" 
+                            required 
+                            value={address}
+                            onChange={(e) => handleFieldChange('address', e.target.value)}
+                            className={getFieldClassName('address')}
+                        />
+                        {errors.address && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.address}
+                            </p>
+                        )}
                     </div>
                     
                     <div className="flex flex-col w-full">
                         <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Teléfono:</label>
-                        <input type="tel" 
-                        placeholder="xxx-xxxxxxx" 
-                        required 
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
+                        <input 
+                            type="tel" 
+                            placeholder="xxx-xxxxxxx" 
+                            required 
+                            value={phone}
+                            onChange={(e) => handleFieldChange('phone', e.target.value)}
+                            className={getFieldClassName('phone')}
+                        />
+                        {errors.phone && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.phone}
+                            </p>
+                        )}
                     </div>
                     
                     <div className="flex flex-col w-full">
                         <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Contraseña:</label>
-                        <input type="password" 
-                        placeholder="Contraseña" 
-                        required 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
+                        <input 
+                            type="password" 
+                            placeholder="Contraseña" 
+                            required 
+                            value={password}
+                            onChange={(e) => handleFieldChange('password', e.target.value)}
+                            className={getFieldClassName('password')}
+                        />
+                        {errors.password && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                {errors.password}
+                            </p>
+                        )}
                     </div>
                     
                     <div className="flex flex-col w-full mt-1">
-                      <button type="submit" className="bg-[#D8315B] rounded-xl text-[#fffaff] py-2.5 px-4 border-none cursor-pointer w-full text-[0.9rem] lg:text-[1rem] font-semibold hover:bg-[#b81e48] transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl">
-                        Registrarse
+                      <button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className={`rounded-xl text-[#fffaff] py-2.5 px-4 border-none cursor-pointer w-full text-[0.9rem] lg:text-[1rem] font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl ${
+                            isSubmitting 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-[#D8315B] hover:bg-[#b81e48]'
+                        }`}
+                      >
+                        {isSubmitting ? 'Registrando...' : 'Registrarse'}
                       </button>
                     </div>
                   </div>
@@ -149,14 +338,22 @@ export default function Register() {
             <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95">
                     <div className="p-5 text-center">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                            popupMessage.includes('correctamente') ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                            {popupMessage.includes('correctamente') ? (
+                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            ) : (
+                                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            )}
                         </div>
                         
                         <h3 className="text-lg font-bold text-[#0A2463] mb-2">
-                            {popupMessage.includes('correctamente') ? '¡Éxito!' : 'Aviso'}
+                            {popupMessage.includes('correctamente') ? '¡Éxito!' : 'Error'}
                         </h3>
                         
                         <p className="text-sm text-gray-700 mb-4 leading-relaxed">
@@ -171,7 +368,7 @@ export default function Register() {
                                 Cerrar
                             </button>
                             
-                            {popupMessage.includes('ya se encuentra registrado') && (
+                            {popupMessage.includes('ya está registrado') && (
                                 <Link
                                     to="/Login"
                                     onClick={() => setShowPopup(false)}
