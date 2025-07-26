@@ -1163,7 +1163,7 @@ export default function CentralOperations() {
       </Modal>
 
       {/* Modal para nueva venta */}
-      <Modal open={modalVentaOpen} onClose={() => setModalVentaOpen(false)} title="Nueva Venta" size="xl">
+      <Modal open={modalVentaOpen} onClose={() => setModalVentaOpen(false)} title="Nueva Venta" size="full">
         <form onSubmit={handleCrearVenta} className="flex flex-col gap-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Columna izquierda */}
@@ -1361,7 +1361,7 @@ export default function CentralOperations() {
       </Modal>
 
       {/* Modal para nuevo servicio */}
-      <Modal open={modalServicioOpen} onClose={() => setModalServicioOpen(false)} title="Nuevo Servicio" size="xl">
+      <Modal open={modalServicioOpen} onClose={() => setModalServicioOpen(false)} title="Nuevo Servicio" size="full">
         <form onSubmit={handleCrearServicioVenta} className="flex flex-col gap-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Columna izquierda */}
