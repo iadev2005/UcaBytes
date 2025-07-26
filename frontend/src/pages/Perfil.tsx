@@ -389,13 +389,13 @@ export default function Perfil() {
                                                 htmlFor="credit-card" 
                                                 className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                                                     formData.paymentMethods.creditCard 
-                                                        ? 'border-blue-500 bg-blue-50 shadow-sm' 
-                                                        : 'border-gray-200 bg-white hover:border-blue-300'
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] shadow-sm' 
+                                                        : 'border-gray-200 bg-white hover:border-[var(--color-secondary-300)]'
                                                 }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
                                                     formData.paymentMethods.creditCard 
-                                                        ? 'border-blue-500 bg-blue-500' 
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-500)]' 
                                                         : 'border-gray-300 bg-white'
                                                 }`}>
                                                     {formData.paymentMethods.creditCard && (
@@ -420,13 +420,13 @@ export default function Perfil() {
                                                 htmlFor="bank-transfer" 
                                                 className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                                                     formData.paymentMethods.bankTransfer 
-                                                        ? 'border-green-500 bg-green-50 shadow-sm' 
-                                                        : 'border-gray-200 bg-white hover:border-green-300'
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] shadow-sm' 
+                                                        : 'border-gray-200 bg-white hover:border-[var(--color-secondary-300)]'
                                                 }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
                                                     formData.paymentMethods.bankTransfer 
-                                                        ? 'border-green-500 bg-green-500' 
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-500)]' 
                                                         : 'border-gray-300 bg-white'
                                                 }`}>
                                                     {formData.paymentMethods.bankTransfer && (
@@ -451,13 +451,13 @@ export default function Perfil() {
                                                 htmlFor="mobile-payment" 
                                                 className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                                                     formData.paymentMethods.mobilePayment 
-                                                        ? 'border-purple-500 bg-purple-50 shadow-sm' 
-                                                        : 'border-gray-200 bg-white hover:border-purple-300'
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] shadow-sm' 
+                                                        : 'border-gray-200 bg-white hover:border-[var(--color-secondary-300)]'
                                                 }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
                                                     formData.paymentMethods.mobilePayment 
-                                                        ? 'border-purple-500 bg-purple-500' 
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-500)]' 
                                                         : 'border-gray-300 bg-white'
                                                 }`}>
                                                     {formData.paymentMethods.mobilePayment && (
@@ -482,13 +482,13 @@ export default function Perfil() {
                                                 htmlFor="paypal" 
                                                 className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                                                     formData.paymentMethods.paypal 
-                                                        ? 'border-orange-500 bg-orange-50 shadow-sm' 
-                                                        : 'border-gray-200 bg-white hover:border-orange-300'
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] shadow-sm' 
+                                                        : 'border-gray-200 bg-white hover:border-[var(--color-secondary-300)]'
                                                 }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
                                                     formData.paymentMethods.paypal 
-                                                        ? 'border-orange-500 bg-orange-500' 
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-500)]' 
                                                         : 'border-gray-300 bg-white'
                                                 }`}>
                                                     {formData.paymentMethods.paypal && (
@@ -513,13 +513,13 @@ export default function Perfil() {
                                                 htmlFor="cash" 
                                                 className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                                                     formData.paymentMethods.cash 
-                                                        ? 'border-yellow-500 bg-yellow-50 shadow-sm' 
-                                                        : 'border-gray-200 bg-white hover:border-yellow-300'
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] shadow-sm' 
+                                                        : 'border-gray-200 bg-white hover:border-[var(--color-secondary-300)]'
                                                 }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
                                                     formData.paymentMethods.cash 
-                                                        ? 'border-yellow-500 bg-yellow-500' 
+                                                        ? 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-500)]' 
                                                         : 'border-gray-300 bg-white'
                                                 }`}>
                                                     {formData.paymentMethods.cash && (
@@ -540,31 +540,31 @@ export default function Perfil() {
                                         {formData.paymentMethods.creditCard && (
                                             <span 
                                                 onClick={() => handlePaymentMethodClick('creditCard')}
-                                                className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium cursor-pointer hover:bg-blue-200 transition-colors"
+                                                className="px-4 py-2 bg-[var(--color-secondary-300)] text-[var(--color-secondary-700)] rounded-full text-sm font-medium cursor-pointer hover:bg-[var(--color-secondary-400)] hover:text-[var(--color-secondary-100)] transition-colors"
                                             >Tarjeta</span>
                                         )}
                                         {formData.paymentMethods.bankTransfer && (
                                             <span 
                                                 onClick={() => handlePaymentMethodClick('bankTransfer')}
-                                                className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium cursor-pointer hover:bg-green-200 transition-colors"
+                                                className="px-4 py-2 bg-[var(--color-secondary-300)] text-[var(--color-secondary-700)] rounded-full text-sm font-medium cursor-pointer hover:bg-[var(--color-secondary-400)] hover:text-[var(--color-secondary-100)] transition-colors"
                                             >Transferencia</span>
                                         )}
                                         {formData.paymentMethods.mobilePayment && (
                                             <span 
                                                 onClick={() => handlePaymentMethodClick('mobilePayment')}
-                                                className="px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-medium cursor-pointer hover:bg-purple-200 transition-colors"
+                                                className="px-4 py-2 bg-[var(--color-secondary-300)] text-[var(--color-secondary-700)] rounded-full text-sm font-medium cursor-pointer hover:bg-[var(--color-secondary-400)] hover:text-[var(--color-secondary-100)] transition-colors"
                                             >Pago móvil</span>
                                         )}
                                         {formData.paymentMethods.paypal && (
                                             <span 
                                                 onClick={() => handlePaymentMethodClick('paypal')}
-                                                className="px-4 py-2 bg-orange-100 text-orange-800 rounded-full text-sm font-medium cursor-pointer hover:bg-orange-200 transition-colors"
+                                                className="px-4 py-2 bg-[var(--color-secondary-300)] text-[var(--color-secondary-700)] rounded-full text-sm font-medium cursor-pointer hover:bg-[var(--color-secondary-400)] hover:text-[var(--color-secondary-100)] transition-colors"
                                             >PayPal</span>
                                         )}
                                         {formData.paymentMethods.cash && (
                                             <span 
                                                 onClick={() => handlePaymentMethodClick('cash')}
-                                                className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium cursor-pointer hover:bg-yellow-200 transition-colors"
+                                                className="px-4 py-2 bg-[var(--color-secondary-300)] text-[var(--color-secondary-700)] rounded-full text-sm font-medium cursor-pointer hover:bg-[var(--color-secondary-400)] hover:text-[var(--color-secondary-100)] transition-colors"
                                             >Efectivo</span>
                                         )}
                                     </div>
@@ -725,16 +725,6 @@ export default function Perfil() {
                                             onChange={(e) => handleNestedInputChange('contactInfo', 'businessPhone', e.target.value)}
                                             className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                                         />
-                                        <button
-                                            onClick={async () => {
-                                                const success = await copyToClipboard(formData.contactInfo.businessPhone);
-                                                showCopyNotification(success, '¡Teléfono copiado!');
-                                            }}
-                                            className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-                                            title="Copiar teléfono"
-                                        >
-                                            Copiar
-                                        </button>
                                     </div>
                                 </div>
                             </motion.div>
@@ -766,23 +756,26 @@ export default function Perfil() {
                 open={!!selectedPaymentMethod}
                 onClose={handleCloseModal}
                 title={paymentMethodData?.title}
+                size="lg"
             >
                 {paymentMethodData && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 max-w-4xl mx-auto">
                         
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             {paymentMethodData?.data.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-sm text-gray-600">{item.label}:</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono font-medium text-gray-800">{item.value}</span>
+                                <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg gap-2">
+                                    <span className="text-sm font-medium text-gray-600 min-w-[80px] flex-shrink-0">{item.label}:</span>
+                                    <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+                                        <span className="font-mono text-sm font-medium text-gray-800 break-words overflow-hidden" title={item.value as string}>
+                                            {item.value}
+                                        </span>
                                         {item.copy && (
                                             <button
                                                 onClick={async () => {
                                                     const success = await copyToClipboard(item.value as string);
                                                     showCopyNotification(success, `¡${item.label} copiado!`);
                                                 }}
-                                                className="text-xs text-blue-600 hover:text-blue-800 underline hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                                className="text-xs text-[var(--color-secondary-500)] hover:text-[var(--color-secondary-600)] underline hover:bg-[var(--color-secondary-50)] px-2 py-1 rounded transition-colors whitespace-nowrap flex-shrink-0"
                                             >
                                                 Copiar
                                             </button>
@@ -799,9 +792,9 @@ export default function Perfil() {
                                     const success = await copyToClipboard(bankData);
                                     showCopyNotification(success, '¡Datos bancarios copiados!');
                                 }}
-                                className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                                className="w-full mt-4 px-6 py-3 bg-[var(--color-secondary-500)] text-white rounded-lg hover:bg-[var(--color-secondary-600)] transition-colors text-base font-medium"
                             >
-                                Copiar datos completos
+                                Copiar datos bancarios completos
                             </button>
                         )}
                         
@@ -812,9 +805,9 @@ export default function Perfil() {
                                     const success = await copyToClipboard(mobileData);
                                     showCopyNotification(success, '¡Datos de pago móvil copiados!');
                                 }}
-                                className="w-full mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                className="w-full mt-4 px-6 py-3 bg-[var(--color-secondary-500)] text-white rounded-lg hover:bg-[var(--color-secondary-600)] transition-colors text-base font-medium"
                             >
-                                Copiar datos completos
+                                Copiar datos de pago móvil completos
                             </button>
                         )}
                     </div>
