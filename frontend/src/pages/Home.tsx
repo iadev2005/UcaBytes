@@ -49,22 +49,22 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl p-5 md:p-4 sm:p-3 w-full max-w-xs h-[320px] overflow-hidden flex flex-col">
-      <h2 className="text-base font-bold text-center">Mira tus eventos</h2>
+    <div className="bg-white rounded-3xl shadow-xl p-4 md:p-3 sm:p-2 w-full max-w-xs h-[280px] overflow-hidden flex flex-col">
+      <h2 className="text-sm font-bold text-center">Mira tus eventos</h2>
       <div className="flex justify-between items-center mb-2">
         <button
           onClick={prevMonth}
-          className="px-2 font-bold text-lg text-[var(--color-primary-400)] cursor-pointer"
+          className="px-2 font-bold text-base text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 0 && year === today.getFullYear()}
         >&lt;</button>
-        <h3 className={`font-bold transition-all duration-200 ${monthNames[month].length > 7 ? "text-base" : "text-md"}`}>{monthNames[month]} {year}</h3>
+        <h3 className={`font-bold transition-all duration-200 text-sm ${monthNames[month].length > 7 ? "text-sm" : "text-sm"}`}>{monthNames[month]} {year}</h3>
         <button
           onClick={nextMonth}
-          className="px-2 font-bold text-lg text-[var(--color-primary-400)] cursor-pointer"
+          className="px-2 font-bold text-base text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 11 && year === today.getFullYear() + 1}
         >&gt;</button>
       </div>
-      <div className="grid grid-cols-7 gap-[2px] text-center text-sm md:text-xs mb-1w-full">
+      <div className="grid grid-cols-7 gap-[1px] text-center text-xs mb-1 w-full">
         {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i}>{d}</div>)}
         {daysArray.map((day, i) => {
           const dateObj = day ? new Date(year, month, day) : null;
@@ -78,8 +78,8 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                     setSelected(day);
                     onDateClick(new Date(year, month, day));
                   }}
-                  className={`w-full aspect-square rounded-full text-sm md:text-xs  transition-all
-                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold  " : ""}
+                  className={`w-full aspect-square rounded-full text-xs transition-all
+                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold" : ""}
                     ${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() && day !== selected ? "bg-gray-200 font-bold" : ""}
                     hover:bg-[var(--color-secondary-100)] cursor-pointer
                   `}
@@ -275,28 +275,28 @@ export default function Home() {
       <h1 className="text-4xl md:text-3xl sm:text-2xl font-bold mb-8">¡Bienvenido al Panel de Control!</h1>
 
       <div className="grid [grid-template-columns:2fr_min-content_0.8fr] gap-8 w-full max-w-5xl flex-1 justify-start z-10">
-        <div className="flex flex-col gap-6 flex-1 justify-start h-[70vh]">
-          <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-4 sm:p-3 border border-[var(--color-primary-100)] animate-fade-in-up">
-            <div className="flex items-center gap-2 mb-3">
-              <DashboardIcon className="text-[var(--color-primary-400)] w-6 h-6" />
-              <h2 className="text-xl font-bold">Resumen de Ciclo o Progreso</h2>
+        <div className="flex flex-col gap-4 flex-1 justify-start h-[70vh]">
+          <div className="bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-2">
+              <DashboardIcon className="text-[var(--color-primary-400)] w-5 h-5" />
+              <h2 className="text-lg font-bold">Resumen de Ciclo o Progreso</h2>
             </div>
-            <div className="flex items-center justify-center h-20 text-base text-gray-400">
+            <div className="flex items-center justify-center h-16 text-sm text-gray-400">
               No hay datos para mostrar.
             </div>
           </div>
 
-          <div className="flex gap-6 w-full">
-            <div className="flex flex-col items-center gap-2 w-1/2 bg-white rounded-3xl shadow-2xl p-5 md:p-4 sm:p-3 border border-[var(--color-primary-100)] animate-fade-in-up">
-              <div className="flex items-center gap-2 mb-3 md:mb-5 sm:mb-6">
-                <AutomationIcon className="text-[var(--color-secondary-400)] w-6 h-6" />
-                <h2 className="text-xl font-bold">Acceso Rápido</h2>
+          <div className="flex gap-4 w-full">
+            <div className="flex flex-col items-center gap-2 w-1/2 bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
+              <div className="flex items-center gap-2 mb-2">
+                <AutomationIcon className="text-[var(--color-secondary-400)] w-5 h-5" />
+                <h2 className="text-lg font-bold">Acceso Rápido</h2>
               </div>
-              <div className="grid grid-cols-2 gap-3 w-full min-h-[200px] justify-items-center">
+              <div className="grid grid-cols-2 gap-2 w-full min-h-[160px] justify-items-center">
                 {accesos.map((acceso, i) => (
                   <div
                     key={i}
-                    className={`relative w-24 h-24 ${dragIndex === i ? 'z-20' : ''}`}
+                    className={`relative w-20 h-20 ${dragIndex === i ? 'z-20' : ''}`}
                     draggable={dragIndex === i}
                     onDragStart={dragIndex === i ? () => handleDragStart(i) : undefined}
                     onDragOver={dragIndex !== null && dragIndex !== i ? (e) => { e.preventDefault(); handleDragOver(i); } : undefined}
@@ -310,22 +310,22 @@ export default function Home() {
                       <span className="block text-center leading-tight break-words">{acceso}</span>
                     </button>
                     <button
-                      className="absolute top-3 right-0 p-0 transition-colors cursor-pointer"
+                      className="absolute top-2 right-0 p-0 transition-colors cursor-pointer"
                       onClick={() => setOpenKebab(openKebab === i ? null : i)}
                       tabIndex={0}
                     >
-                      <KebabIcon width={20} height={20} color="#fff" />
+                      <KebabIcon width={16} height={16} color="#fff" />
                     </button>
                     {openKebab === i && (
-                      <div className="absolute right-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-28 flex flex-col">
+                      <div className="absolute right-0 top-6 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-24 flex flex-col">
                         <button
-                          className="px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer"
+                          className="px-3 py-1.5 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer text-xs"
                           onClick={() => eliminarAcceso(i)}
                         >
                           Eliminar
                         </button>
                         <button
-                          className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer"
+                          className="px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer text-xs"
                           onClick={() => activarArrastrar(i)}
                         >
                           Arrastrar
@@ -337,7 +337,7 @@ export default function Home() {
                 {accesos.length < 4 && (
                   <button
                     onClick={() => setModalOpen(true)}
-                    className="w-24 h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
+                    className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                     title="Agregar acceso rápido"
                   >
                     +
@@ -412,6 +412,8 @@ export default function Home() {
                 <p className="text-sm">Este es un elemento adicional para probar el scroll en la columna derecha.</p>
               </div>
             ))}
+            {/* Espacio adicional al final para asegurar scroll completo */}
+            <div className="h-20 lg:h-24"></div>
           </div>
         </div>
       </div>
