@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
+import { copyToClipboard, showCopyNotification } from '../lib/utils';
 
 export default function Perfil() {
     const { companyData, updateCompanyData, isEditing, setIsEditing } = useCompany();
@@ -91,10 +92,8 @@ export default function Perfil() {
     };
 
     const handleSave = () => {
-        // Actualizar el contexto con los nuevos datos
+        // Actualizar el contexto solo con la descripción
         updateCompanyData({
-            name: formData.companyName,
-            type: formData.companyType,
             description: formData.description
         });
         console.log('Datos guardados:', formData);
@@ -231,85 +230,37 @@ export default function Perfil() {
                             transition={{ duration: 0.6, delay: 0.3 }}
                             className="flex-1 text-center lg:text-left min-w-0"
                         >
-                            {isEditing ? (
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600 text-center lg:text-left">
-                                            Nombre de la empresa
-                                        </label>
-                                    <input
-                                        type="text"
-                                        value={formData.companyName}
-                                        onChange={(e) => handleInputChange('companyName', e.target.value)}
-                                            className="w-full text-2xl lg:text-3xl font-bold text-gray-800 bg-transparent border-b-2 border-blue-300 focus:outline-none focus:border-blue-500 text-center lg:text-left px-2 py-1"
-                                            placeholder="Ingresa el nombre de tu empresa"
-                                    />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600 text-center lg:text-left">
-                                            Tipo de empresa
-                                        </label>
-                                    <input
-                                        type="text"
-                                        value={formData.companyType}
-                                        onChange={(e) => handleInputChange('companyType', e.target.value)}
-                                            className="w-full text-lg lg:text-xl text-gray-600 bg-transparent border-b-2 border-blue-300 focus:outline-none focus:border-blue-500 text-center lg:text-left px-2 py-1"
-                                            placeholder="Ej: Empresa de Tecnología, Restaurante, etc."
-                                    />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col justify-center h-full min-h-[200px] lg:min-h-[240px]">
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 leading-tight">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 leading-tight">
                                         {formData.companyName}
                                     </h1>
-                                            <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed font-medium">
+                                    <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed font-medium">
                                         {formData.companyType}
                                     </p>
-                                        </div>
-                                        
-                                        <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-gray-500">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span>Miembro desde Enero 2024</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="mt-8">
-                                        <button 
-                                            onClick={handleEditClick}
-                                            className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--color-secondary-400)] text-white rounded-full font-medium hover:bg-[var(--color-secondary-500)] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-base"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                            Editar Perfil
-                                        </button>
-                                    </div>
                                 </div>
-                            )}
-                            
-                            {isEditing && (
-                                <div className="mt-6 space-y-4">
-                                    <p className="text-sm text-gray-500">
-                                Miembro desde Enero 2024
-                            </p>
-                            
-                            {/* Edit Button */}
-                            <button 
-                                onClick={handleEditClick}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-secondary-400)] text-white rounded-full font-medium hover:bg-[var(--color-secondary-500)] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                        Cancelar
-                                    </button>
+                                
+                                <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-gray-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>Miembro desde Enero 2024</span>
                                 </div>
-                            )}
+                            </div>
+                            
+                            <div className="mt-8">
+                                <button 
+                                    onClick={handleEditClick}
+                                    className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--color-secondary-400)] text-white rounded-full font-medium hover:bg-[var(--color-secondary-500)] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-base"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Editar Información
+                                </button>
+                            </div>
+                            
+
                         </motion.div>
                         
                         {/* Profile Stats Section - Only visible on desktop and when not editing */}
@@ -767,12 +718,24 @@ export default function Perfil() {
                                 </h3>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de la empresa</label>
-                                    <input
-                                        type="text"
-                                        value={formData.contactInfo.businessPhone}
-                                        onChange={(e) => handleNestedInputChange('contactInfo', 'businessPhone', e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-                                    />
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={formData.contactInfo.businessPhone}
+                                            onChange={(e) => handleNestedInputChange('contactInfo', 'businessPhone', e.target.value)}
+                                            className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                const success = await copyToClipboard(formData.contactInfo.businessPhone);
+                                                showCopyNotification(success, '¡Teléfono copiado!');
+                                            }}
+                                            className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                                            title="Copiar teléfono"
+                                        >
+                                            Copiar
+                                        </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         </div>
@@ -815,10 +778,11 @@ export default function Perfil() {
                                         <span className="font-mono font-medium text-gray-800">{item.value}</span>
                                         {item.copy && (
                                             <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(item.value as string);
+                                                onClick={async () => {
+                                                    const success = await copyToClipboard(item.value as string);
+                                                    showCopyNotification(success, `¡${item.label} copiado!`);
                                                 }}
-                                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                                className="text-xs text-blue-600 hover:text-blue-800 underline hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                                             >
                                                 Copiar
                                             </button>
@@ -830,9 +794,10 @@ export default function Perfil() {
                         
                         {paymentMethodData?.color === 'green' && (
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     const bankData = `Banco: ${formData.bankInfo.bankName}\nTitular: ${formData.bankInfo.accountHolder}\nCuenta: ${formData.bankInfo.accountNumber}\nTipo: ${formData.bankInfo.accountType}`;
-                                    navigator.clipboard.writeText(bankData);
+                                    const success = await copyToClipboard(bankData);
+                                    showCopyNotification(success, '¡Datos bancarios copiados!');
                                 }}
                                 className="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                             >
@@ -842,9 +807,10 @@ export default function Perfil() {
                         
                         {paymentMethodData?.color === 'purple' && (
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     const mobileData = `Teléfono: ${formData.mobilePaymentInfo.phoneNumber}\nRIF: ${formData.mobilePaymentInfo.rif}\nBanco: ${formData.mobilePaymentInfo.bankName}`;
-                                    navigator.clipboard.writeText(mobileData);
+                                    const success = await copyToClipboard(mobileData);
+                                    showCopyNotification(success, '¡Datos de pago móvil copiados!');
                                 }}
                                 className="w-full mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
                             >

@@ -698,7 +698,7 @@ export default function CentralOperations() {
 
       {/* Lista de empleados */}
       {tab === 'empleados' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mb-15">
           {empleadosFiltrados.map((emp, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between border border-gray-200 gap-2 md:gap-0">
               <div className="flex items-center gap-4 flex-1">
@@ -796,7 +796,7 @@ export default function CentralOperations() {
 
       {/* Lista de ventas */}
       {tab === 'ventas' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mb-15">
           {ventas.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay ventas registradas</p>
@@ -925,7 +925,7 @@ export default function CentralOperations() {
           {/* Lista de tareas agrupadas por prioridad */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {prioridades.map(prio => (
-              <div key={prio} className="bg-white rounded-xl shadow p-4">
+              <div key={prio} className="bg-white rounded-xl shadow p-4 mb-15">
                 <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${prio === 'Alta' ? 'text-[var(--color-secondary-600)]' : prio === 'Media' ? 'text-[var(--color-primary-600)]' : 'text-gray-500'}`}>
                   <div className={`w-3 h-3 rounded-full ${prio === 'Alta' ? 'bg-[var(--color-secondary-600)]' : prio === 'Media' ? 'bg-[var(--color-primary-600)]' : 'bg-gray-500'}`}></div>
                   {prio}
@@ -993,7 +993,7 @@ export default function CentralOperations() {
 
       {/* Lista de servicios */}
       {tab === 'servicios' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mb-15">
           {ventasServicios.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay servicios registrados</p>
