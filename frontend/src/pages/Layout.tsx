@@ -43,7 +43,7 @@ export default function Layout() {
           }}
         >
           <TopInfo />
-          <main className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+          <main className="flex-1" style={{ minHeight: 0 }}>
             <Outlet />
           </main>
         </motion.div>

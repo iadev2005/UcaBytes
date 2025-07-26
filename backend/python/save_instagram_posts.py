@@ -2,6 +2,38 @@ import json
 import os
 from graphAPI import extract_instagram_id, get_instagram_posts, get_post_details
 
+def save_single_post(post_data):
+    """Guarda un solo post en el archivo de posts de Instagram"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, 'instagram_posts.json')
+    
+    # Leer posts existentes
+    existing_posts = []
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                existing_posts = json.load(f)
+        except:
+            existing_posts = []
+    
+    # Verificar si el post ya existe (por ID)
+    post_exists = False
+    for i, post in enumerate(existing_posts):
+        if post.get('id') == post_data['id']:
+            existing_posts[i] = post_data
+            post_exists = True
+            break
+    
+    # Si no existe, agregarlo al inicio
+    if not post_exists:
+        existing_posts.insert(0, post_data)
+    
+    # Guardar todos los posts
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(existing_posts, f, ensure_ascii=False, indent=2)
+    
+    print(f"Post guardado: {post_data['id']}")
+
 def save_all_instagram_posts():
     instagram_id, page_name = extract_instagram_id()
     if not instagram_id:

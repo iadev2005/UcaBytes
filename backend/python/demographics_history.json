@@ -17,19 +17,19 @@
                   "dimension_values": [
                     "F"
                   ],
-                  "value": 13
+                  "value": 18
                 },
                 {
                   "dimension_values": [
                     "M"
                   ],
-                  "value": 33
+                  "value": 63
                 },
                 {
                   "dimension_values": [
                     "U"
                   ],
-                  "value": 56
+                  "value": 76
                 }
               ]
             }
@@ -57,31 +57,31 @@
                   "dimension_values": [
                     "13-17"
                   ],
-                  "value": 16
+                  "value": 23
                 },
                 {
                   "dimension_values": [
                     "18-24"
                   ],
-                  "value": 39
+                  "value": 66
                 },
                 {
                   "dimension_values": [
                     "25-34"
                   ],
-                  "value": 35
+                  "value": 46
                 },
                 {
                   "dimension_values": [
                     "35-44"
                   ],
-                  "value": 6
+                  "value": 13
                 },
                 {
                   "dimension_values": [
                     "45-54"
                   ],
-                  "value": 5
+                  "value": 8
                 },
                 {
                   "dimension_values": [
@@ -113,7 +113,7 @@
               "results": [
                 {
                   "dimension_values": [
-                    "Monte Alto, São Paulo (state)"
+                    "Ha Long, Quảng Ninh Province"
                   ],
                   "value": 1
                 },
@@ -121,19 +121,7 @@
                   "dimension_values": [
                     "Ciudad Guayana, Bolívar (state)"
                   ],
-                  "value": 7
-                },
-                {
-                  "dimension_values": [
-                    "Peshawar, Khyber Pakhtunkhwa"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Diu, Dadra and Nagar Haveli"
-                  ],
-                  "value": 1
+                  "value": 8
                 },
                 {
                   "dimension_values": [
@@ -145,7 +133,7 @@
                   "dimension_values": [
                     "Casablanca, Grand Casablanca"
                   ],
-                  "value": 3
+                  "value": 4
                 },
                 {
                   "dimension_values": [
@@ -155,21 +143,27 @@
                 },
                 {
                   "dimension_values": [
-                    "Salé, Rabat-Salé-Zemmour-Zaer"
+                    "Narsingdi, Dhaka Division"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Burnaby, British Columbia"
+                    "Ibadan, Oyo State"
                   ],
-                  "value": 1
+                  "value": 2
                 },
                 {
                   "dimension_values": [
-                    "Antipolo, Calabarzon"
+                    "Kabuga, Kigali"
                   ],
-                  "value": 1
+                  "value": 4
+                },
+                {
+                  "dimension_values": [
+                    "Lagos, Lagos State"
+                  ],
+                  "value": 3
                 },
                 {
                   "dimension_values": [
@@ -179,13 +173,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Nilambur, Kerala"
+                    "Obigbo, Rivers State"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Neuquén, Neuquén"
+                    "Moscow, Moscow"
                   ],
                   "value": 1
                 },
@@ -197,49 +191,49 @@
                 },
                 {
                   "dimension_values": [
-                    "Phnom Penh, Phnom Penh"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
                     "Jakarta, Jakarta"
                   ],
-                  "value": 4
+                  "value": 3
                 },
                 {
                   "dimension_values": [
-                    "Danao City, Central Visayas"
+                    "Kalamáta, Peloponnese (region)"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Kalyan, Maharashtra"
+                    "El Mourouj, Ben Arous Governorate"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Indore, Madhya Pradesh"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Guna, Madhya Pradesh"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Zharkent, Almaty Region"
+                    "Delhi, Delhi"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Tangerang, Banten"
+                    "Kuala Lumpur, Kuala Lumpur"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Imphal, Manipur"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Stockholm, Stockholm County"
+                    "Ribeirão, Pernambuco"
                   ],
                   "value": 1
                 },
@@ -253,23 +247,23 @@
                   "dimension_values": [
                     "Lahore, Punjab"
                   ],
-                  "value": 2
+                  "value": 5
                 },
                 {
                   "dimension_values": [
-                    "Cox's Bazar, Chittagong Division"
+                    "Bulawayo, Bulawayo"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Lima, Lima Region"
+                    "Soweto, Gauteng"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Hanumangarh, Rajasthan"
+                    "Pindamonhangaba, São Paulo (state)"
                   ],
                   "value": 1
                 },
@@ -281,7 +275,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Vadodara, Gujarat"
+                    "Majenang, Central Java"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Malaba, Western Province"
                   ],
                   "value": 1
                 },
@@ -295,7 +295,13 @@
                   "dimension_values": [
                     "Abuja, Federal Capital Territory"
                   ],
-                  "value": 3
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Jatikuwung, Central Java"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -305,19 +311,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Mohammedia, Grand Casablanca"
+                    "Kigali, Kigali"
                   ],
-                  "value": 1
+                  "value": 3
                 },
                 {
                   "dimension_values": [
-                    "Dompu, West Nusa Tenggara"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Bareilly, Uttar Pradesh"
+                    "Bhavnagar, Gujarat"
                   ],
                   "value": 1
                 },
@@ -325,13 +325,7 @@
                   "dimension_values": [
                     "Mumbai, Maharashtra"
                   ],
-                  "value": 4
-                },
-                {
-                  "dimension_values": [
-                    "Mahendragarh, Haryana"
-                  ],
-                  "value": 1
+                  "value": 2
                 },
                 {
                   "dimension_values": [
@@ -342,6 +336,12 @@
                 {
                   "dimension_values": [
                     "Sirsa, Haryana"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Tinsukia, Assam"
                   ],
                   "value": 1
                 },
@@ -359,25 +359,25 @@
                 },
                 {
                   "dimension_values": [
-                    "Decatur, Alabama"
+                    "Taiz, Taiz Governorate"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Lonavala, Maharashtra"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Erode, Tamil Nadu"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
                     "Caloocan, Metro Manila"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Kankanadi, Karnataka"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Zestafoni, Imereti"
                   ],
                   "value": 1
                 }

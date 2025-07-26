@@ -78,6 +78,8 @@ app.post('/api/update-dashboard-data', (req, res) => {
     }
     checkCompletion();
   });
+  
+
 });
 
 // Endpoint para obtener el histórico de seguidores
@@ -221,6 +223,243 @@ app.post('/api/instagram/create-post', (req, res) => {
   });
 });
 
+// Endpoint para crear una publicación de video inmediata en Instagram
+app.post('/api/instagram/create-video', (req, res) => {
+  const { video_url, caption } = req.body;
+  if (!video_url || !caption) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+  const scriptPath = path.join(__dirname, 'python', 'create_instagram_video.py');
+  const args = ['--video_url', video_url, '--caption', caption];
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  let lastJsonOutput = null;
+  
+  py.stdout.on('data', (data) => { 
+    output += data.toString(); 
+    // Buscar el último JSON válido en la salida
+    const lines = output.split('\n');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('{') && line.endsWith('}')) {
+        try {
+          lastJsonOutput = JSON.parse(line);
+          break;
+        } catch (e) {
+          // Continuar buscando
+        }
+      }
+    }
+  });
+  
+  py.stderr.on('data', (data) => { 
+    output += data.toString(); 
+  });
+  
+  py.on('close', (code) => {
+    try {
+      // Usar el último JSON válido encontrado
+      if (lastJsonOutput) {
+        if (lastJsonOutput.success) {
+          res.json({ 
+            success: true, 
+            message: 'Publicación realizada con éxito',
+            post_id: lastJsonOutput.response.id,
+            caption: caption
+          });
+        } else {
+          res.status(500).json({ 
+            error: 'Error creando publicación', 
+            details: lastJsonOutput.error 
+          });
+        }
+      } else {
+        // Fallback: intentar parsear toda la salida
+        const json = JSON.parse(output);
+        res.json(json);
+      }
+    } catch (e) {
+      res.status(500).json({ error: 'Error ejecutando script', details: output });
+    }
+  });
+});
+
+// Endpoint para crear una historia de Instagram
+app.post('/api/instagram/create-story', (req, res) => {
+  console.log('[DEBUG] Endpoint create-story llamado con:', req.body);
+  const { media_url } = req.body;
+  if (!media_url) {
+    return res.status(400).json({ error: 'Falta la URL del medio' });
+  }
+  
+  const scriptPath = path.join(__dirname, 'python', 'create_instagram_story.py');
+  const args = ['--media_url', media_url];
+  console.log('[DEBUG] Ejecutando script con args:', args);
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  let lastJsonOutput = null;
+  
+  py.stdout.on('data', (data) => { 
+    const dataStr = data.toString();
+    output += dataStr; 
+    console.log('[DEBUG] Script output:', dataStr);
+    
+    // Buscar JSON entre marcadores específicos
+    const jsonStartIndex = output.indexOf('JSON_RESPONSE_START');
+    const jsonEndIndex = output.indexOf('JSON_RESPONSE_END');
+    
+    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+      const jsonContent = output.substring(jsonStartIndex + 'JSON_RESPONSE_START'.length, jsonEndIndex).trim();
+      try {
+        lastJsonOutput = JSON.parse(jsonContent);
+        console.log('[DEBUG] JSON encontrado entre marcadores:', lastJsonOutput);
+      } catch (e) {
+        console.log('[DEBUG] Error parseando JSON entre marcadores:', e.message);
+      }
+    } else {
+      // Fallback: buscar el último JSON válido en la salida
+      const lines = output.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            lastJsonOutput = JSON.parse(line);
+            console.log('[DEBUG] JSON encontrado en fallback:', lastJsonOutput);
+            break;
+          } catch (e) {
+            // Continuar buscando
+          }
+        }
+      }
+    }
+  });
+  
+  py.stderr.on('data', (data) => { 
+    const errorStr = data.toString();
+    output += errorStr; 
+    console.log('[DEBUG] Script error:', errorStr);
+  });
+  
+  py.on('close', (code) => {
+    console.log('[DEBUG] Script terminado con código:', code);
+    console.log('[DEBUG] Output completo:', output);
+    console.log('[DEBUG] lastJsonOutput:', lastJsonOutput);
+    
+    try {
+      // Usar el último JSON válido encontrado
+      if (lastJsonOutput) {
+        console.log('[DEBUG] Usando lastJsonOutput para respuesta');
+        if (lastJsonOutput.success) {
+          const response = { 
+            success: true, 
+            message: 'Historia publicada con éxito',
+            story_id: lastJsonOutput.response.id,
+            media_type: lastJsonOutput.media_type,
+            media_url: media_url
+          };
+          console.log('[DEBUG] Enviando respuesta exitosa:', response);
+          res.json(response);
+        } else {
+          console.log('[DEBUG] Enviando respuesta de error');
+          res.status(500).json({ 
+            error: 'Error creando historia', 
+            details: lastJsonOutput.error 
+          });
+        }
+      } else {
+        console.log('[DEBUG] No se encontró JSON válido, intentando parsear toda la salida');
+        // Fallback: intentar parsear toda la salida
+        const json = JSON.parse(output);
+        res.json(json);
+      }
+    } catch (e) {
+      console.log('[DEBUG] Error parseando respuesta:', e.message);
+      res.status(500).json({ error: 'Error ejecutando script', details: output });
+    }
+  });
+});
+
+// Endpoint para crear carrusel mixto (fotos y videos)
+app.post('/api/instagram/create-mixed-carousel', (req, res) => {
+  console.log('Servidor recibiendo:', req.body);
+  const { media_urls, caption } = req.body;
+  
+  if (!media_urls || !Array.isArray(media_urls) || media_urls.length < 2) {
+    return res.status(400).json({ error: 'Se requieren al menos 2 URLs de medios para crear un carrusel' });
+  }
+  
+  if (media_urls.length > 10) {
+    return res.status(400).json({ error: 'Máximo 10 medios permitidos' });
+  }
+  
+  if (!caption || caption.trim() === '') {
+    return res.status(400).json({ error: 'El caption es requerido' });
+  }
+  
+  const scriptPath = path.join(__dirname, 'python', 'create_instagram_mixed_carousel.py');
+  const args = ['--media_urls', ...media_urls, '--caption', caption];
+  console.log('Ejecutando script con args:', args);
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  let lastJsonOutput = null;
+  
+  py.stdout.on('data', (data) => { 
+    output += data.toString(); 
+    // Buscar el último JSON válido en la salida
+    const lines = output.split('\n');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('{') && line.endsWith('}')) {
+        try {
+          lastJsonOutput = JSON.parse(line);
+          break;
+        } catch (e) {
+          // Continuar buscando
+        }
+      }
+    }
+  });
+  
+  py.stderr.on('data', (data) => { 
+    output += data.toString(); 
+  });
+  
+  py.on('close', (code) => {
+    console.log('Script terminó con código:', code);
+    console.log('Output completo:', output);
+    console.log('Último JSON encontrado:', lastJsonOutput);
+    try {
+      // Usar el último JSON válido encontrado
+      if (lastJsonOutput) {
+        if (lastJsonOutput.success) {
+          res.json({ 
+            success: true, 
+            message: 'Publicación realizada con éxito',
+            post_id: lastJsonOutput.response.id,
+            caption: caption,
+            media_count: media_urls.length
+          });
+        } else {
+          res.status(500).json({ 
+            error: 'Error creando publicación', 
+            details: lastJsonOutput.error 
+          });
+        }
+      } else {
+        // Fallback: intentar parsear toda la salida
+        const json = JSON.parse(output);
+        res.json(json);
+      }
+    } catch (e) {
+      console.log('Error en catch:', e);
+      res.status(500).json({ error: 'Error ejecutando script', details: output });
+    }
+  });
+});
+
 app.post('/api/instagram/schedule-post', async (req, res) => {
   const { image_url, caption, date, time } = req.body;
   if (!image_url || !caption || !date || !time) {
@@ -259,6 +498,116 @@ app.post('/api/instagram/schedule-post', async (req, res) => {
   }
 });
 
+// Endpoint para crear carrusel de Instagram
+app.post('/api/instagram/create-carousel', (req, res) => {
+  const { image_urls, caption } = req.body;
+  
+  if (!image_urls || !Array.isArray(image_urls) || image_urls.length < 2) {
+    return res.status(400).json({ error: 'Se requieren al menos 2 URLs de imágenes para crear una publicación' });
+  }
+  
+  if (image_urls.length > 10) {
+    return res.status(400).json({ error: 'Máximo 10 imágenes permitidas' });
+  }
+  
+  if (!caption || caption.trim() === '') {
+    return res.status(400).json({ error: 'El caption es requerido' });
+  }
+  
+  const scriptPath = path.join(__dirname, 'python', 'create_instagram_carousel.py');
+  const args = ['--image_urls', ...image_urls, '--caption', caption];
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  py.stdout.on('data', (data) => { output += data.toString(); });
+  py.stderr.on('data', (data) => { output += data.toString(); });
+  py.on('close', (code) => {
+    try {
+      const json = JSON.parse(output);
+      if (json.success) {
+        res.json({ 
+          success: true, 
+          message: 'Publicación realizada con éxito',
+          post_id: json.response.id,
+          caption: caption,
+          image_count: image_urls.length
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Error creando publicación', 
+          details: json.error 
+        });
+      }
+    } catch (e) {
+      res.status(500).json({ error: 'Error ejecutando script', details: output });
+    }
+  });
+});
+
+// Endpoint para ejecutar el script de historias
+app.post('/api/instagram/update-stories', (req, res) => {
+  const scriptPath = path.join(__dirname, 'python', 'save_instagram_stories.py');
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath], { cwd: path.dirname(scriptPath) });
+  let output = '';
+  let errorOutput = '';
+  
+  py.stdout.on('data', (data) => {
+    output += data.toString();
+  });
+  
+  py.stderr.on('data', (data) => {
+    errorOutput += data.toString();
+  });
+  
+  py.on('close', (code) => {
+    if (code === 0) {
+      try {
+        // Leer el archivo de historias generado
+        const storiesPath = path.join(__dirname, 'python', 'instagram_stories.json');
+        if (fs.existsSync(storiesPath)) {
+          const storiesData = fs.readFileSync(storiesPath, 'utf8');
+          const stories = JSON.parse(storiesData);
+          
+          res.json({
+            success: true,
+            message: 'Historias actualizadas correctamente',
+            stories: stories.stories || [],
+            total: stories.metadata?.total_stories || 0
+          });
+        } else {
+          res.json({
+            success: true,
+            message: 'No se encontraron historias',
+            stories: [],
+            total: 0
+          });
+        }
+      } catch (e) {
+        res.status(500).json({ error: 'Error al leer las historias' });
+      }
+    } else {
+      res.status(500).json({ error: `Error ejecutando script: ${errorOutput}` });
+    }
+  });
+});
+
+// Endpoint para leer el archivo JSON de historias
+app.get('/api/instagram/stories', (req, res) => {
+  const storiesPath = path.join(__dirname, 'python', 'instagram_stories.json');
+  try {
+    if (!fs.existsSync(storiesPath)) {
+      return res.json({ stories: [], metadata: { total_stories: 0 } });
+    }
+    const storiesData = fs.readFileSync(storiesPath, 'utf8');
+    const stories = JSON.parse(storiesData);
+    res.json(stories);
+  } catch (error) {
+    console.error('Error al leer instagram_stories.json:', error);
+    res.status(500).json({ error: 'Error al leer las historias' });
+  }
+});
+
 app.post('/api/instagram/suggestions', async (req, res) => {
   try {
     const postsPath = path.join(__dirname, 'python', 'instagram_posts.json');
@@ -267,20 +616,45 @@ app.post('/api/instagram/suggestions', async (req, res) => {
     const demographicsPath = path.join(__dirname, 'python', 'demographics_history.json');
     const followerInsightsPath = path.join(__dirname, 'python', 'follower_insights.json');
     
-    const posts = fs.existsSync(postsPath) ? JSON.parse(fs.readFileSync(postsPath, 'utf8')) : [];
+    const allPosts = fs.existsSync(postsPath) ? JSON.parse(fs.readFileSync(postsPath, 'utf8')) : [];
     const scheduled = fs.existsSync(scheduledPath) ? JSON.parse(fs.readFileSync(scheduledPath, 'utf8')) : [];
     const details = fs.existsSync(detailsPath) ? JSON.parse(fs.readFileSync(detailsPath, 'utf8')) : {};
     const demographics = fs.existsSync(demographicsPath) ? JSON.parse(fs.readFileSync(demographicsPath, 'utf8')) : {};
     const followerInsights = fs.existsSync(followerInsightsPath) ? JSON.parse(fs.readFileSync(followerInsightsPath, 'utf8')) : {};
     
+    // Función para obtener muestra aleatoria de posts
+    const getRandomSample = (posts, sampleSize = 15) => {
+      if (posts.length <= sampleSize) {
+        return posts; // Si hay menos posts que el tamaño de muestra, devolver todos
+      }
+      
+      // Crear una copia del array para no modificar el original
+      const shuffled = [...posts];
+      
+      // Algoritmo Fisher-Yates para mezclar aleatoriamente
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      
+      // Tomar los primeros 'sampleSize' elementos
+      return shuffled.slice(0, sampleSize);
+    };
+    
+    // Obtener muestra aleatoria de posts (15-20 posts)
+    const sampleSize = Math.min(20, Math.max(15, Math.floor(allPosts.length * 0.3))); // Entre 15-20 posts o 30% del total
+    const posts = getRandomSample(allPosts, sampleSize);
+    
+    console.log(`Muestreo estadístico: ${allPosts.length} posts totales → ${posts.length} posts para IA`);
+    
     // Construir prompt mejorado con análisis de patrones y demografía
-    const prompt = `Eres un experto en marketing digital para Instagram. Analiza los siguientes datos de la cuenta incluyendo demografía, insights de seguidores, publicaciones y estadísticas. 
+    const prompt = `Eres un experto en marketing digital para Instagram. Analiza los siguientes datos de la cuenta incluyendo demografía, insights de seguidores, publicaciones y estadísticas (no recomiendes el uso de herramientas nativas de Instagram, tú eres la herramienta de análisis y recomendación). 
 
-DATOS A ANALIZAR:
+DATOS A ANALIZAR (muestra representativa de ${posts.length} posts de ${allPosts.length} totales):
 1. Información general de la cuenta: ${JSON.stringify(details, null, 2)}
 2. Historial de demografía: ${JSON.stringify(demographics, null, 2)}
 3. Insights de seguidores: ${JSON.stringify(followerInsights, null, 2)}
-4. Publicaciones actuales: ${JSON.stringify(posts, null, 2)}
+4. Publicaciones actuales (muestra aleatoria): ${JSON.stringify(posts, null, 2)}
 5. Publicaciones programadas: ${JSON.stringify(scheduled, null, 2)}
 
 ANÁLISIS REQUERIDO:

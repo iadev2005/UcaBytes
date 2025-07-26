@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 import time
 
-TOKEN = "EAAKJrM0WC6IBPBEPqVaGq4CoNECug9JBmO6CNynDeqBoezusI650izEniEznRgRxzeJsmCYduEYeq3i0RnjftEXA1M9BMNR3VyCvWZCDgRJoZANMDEnQpytQraRIUR7d61SZCpIl3pHopw5rGYYMDVd4ZC6KTMfNZBZBaEpbTonNLcwLrAAzmDBxEPOPlkydV89Wb87zzPARcKDA4n8AW9VoVMSCBFtTajr18YP8cZD"
+TOKEN = "EAAKJrM0WC6IBPDZARfB40mVCydyEj9uULvnInAL4potOvXZBvCYF51kEn4e8H7RlP8PqTggFJQZA8d2KrmZBWAbRm3ULAp6Ly4l7msqBSNB91ulOuV3keO2dDm0fxTVN0vW2GPiZCBhzspHf5Gwkbgv9JP9wdnDlFns3AxiNlK4hZB3mZBvfgFiZCItXLxNIFEv5y5FbVmjtPRSu7jbIpaP025r281pZBOGaHfTeO"
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -22,8 +22,21 @@ def make_api_request(endpoint, params=None, method="GET"):
         elif method == "POST":
             resp = requests.post(f"{BASE_URL}/{endpoint}", data=params, timeout=10)
         
-        resp.raise_for_status()
-        return resp.json()
+        # Intentar obtener la respuesta JSON incluso si hay error HTTP
+        try:
+            response_json = resp.json()
+        except:
+            response_json = None
+        
+        # Si hay error HTTP, devolver la respuesta JSON con el error
+        if resp.status_code >= 400:
+            if response_json:
+                return response_json
+            else:
+                print(f"Error HTTP {resp.status_code}: {resp.text}")
+                return None
+        
+        return response_json
     except requests.exceptions.RequestException as e:
         print("Error llamando a la API:", e)
         return None
@@ -40,9 +53,40 @@ def get_instagram_details(instagram_id):
     return make_api_request(f"me/accounts?fields=instagram_business_account{{{fields}}}")
 
 def get_instagram_posts(instagram_id):
-    """Obtiene todas las publicaciones de la cuenta de Instagram"""
-    endpoint = f"{instagram_id}/media?fields=id,caption,timestamp,media_type"
-    return make_api_request(endpoint)
+    """Obtiene todas las publicaciones de la cuenta de Instagram con paginación"""
+    all_posts = []
+    endpoint = f"{instagram_id}/media"
+    params = {
+        'fields': 'id,caption,timestamp,media_type',
+        'limit': 100  # Máximo permitido por la API
+    }
+    
+    print("Obteniendo posts con paginación...")
+    page_count = 0
+    
+    while True:
+        page_count += 1
+        print(f"Obteniendo página {page_count}...")
+        
+        response = make_api_request(endpoint, params)
+        
+        if not response or 'data' not in response:
+            print(f"Error en página {page_count} o no hay más datos")
+            break
+            
+        posts = response['data']
+        all_posts.extend(posts)
+        print(f"Página {page_count}: {len(posts)} posts obtenidos")
+        
+        # Verificar si hay más páginas
+        if 'paging' in response and 'cursors' in response['paging'] and 'after' in response['paging']['cursors']:
+            params['after'] = response['paging']['cursors']['after']
+        else:
+            print("No hay más páginas disponibles")
+            break
+    
+    print(f"Total de posts obtenidos: {len(all_posts)}")
+    return {'data': all_posts}
 
 def create_instagram_post(instagram_id):
     print("\n=== Crear nueva publicación en Instagram ===")
@@ -137,7 +181,7 @@ def schedule_instagram_post(instagram_id):
 
 def get_post_details(post_id):
     """Obtiene información detallada de una publicación específica"""
-    fields = "like_count,media_url,caption,comments_count,comments,media_type,insights.metric(impressions,reach,saved,total_interactions){title,values}"
+    fields = "like_count,media_url,caption,comments_count,comments,media_type,children{media_url,media_type},insights.metric(impressions,reach,saved,total_interactions){title,values}"
     endpoint = f"{post_id}?fields={fields}"
     return make_api_request(endpoint)
 
