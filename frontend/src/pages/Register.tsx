@@ -65,119 +65,126 @@ export default function Register() {
 
 
     return (
-      <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')", background:"cover" }}>
-        <div className="flex flex-col items-center justify-center absolute top-1/2 left-0/5 h-screen w-2/5 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
-            <div className="absolute top-6 left-6">
-                <Link to="/" className="text-[1.5rem] font-normal text-[#3e92ee]">
-                    <ReturnIcon className="w-12 h-12" />
+      <div className="h-screen w-full bg-cover bg-center bg-no-repeat overflow-hidden" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')"}}>
+        {/* Container principal con mejor posicionamiento para desktop */}
+        <div className="flex flex-col items-center justify-center h-screen w-full lg:w-1/2 lg:ml-0 lg:mr-auto bg-[#fffaff] lg:bg-white/95 lg:backdrop-blur-sm lg:shadow-2xl overflow-y-auto">
+            <div className="absolute top-3 left-3 z-10">
+                <Link to="/" className="text-[1rem] font-normal text-[#3e92ee] hover:text-[#2a7bd3] transition-colors">
+                    <ReturnIcon className="w-7 h-7 lg:w-8 lg:h-8" />
                 </Link>
             </div>
-            <h2 className="text-[3rem] font-bold text-[#0A2463] mb-24">Registrarse</h2>
-            <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
-              <div className="flex flex-col gap-4 w-full items-center">
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Correo de la Empresa: </p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
+            
+            {/* Contenido del formulario */}
+            <div className="w-full max-w-xs px-4 py-6 lg:py-4">
+                <h2 className="text-[1.8rem] lg:text-[2.2rem] font-bold text-[#0A2463] mb-6 lg:mb-4 text-center">Registrarse</h2>
+                
+                <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
+                  <div className="flex flex-col gap-3 w-full">
+                    <div className="flex flex-col w-full">
+                        <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Correo de la Empresa:</label>
                         <input type="email" 
                         placeholder="Correo electrónico / Usuario" 
                         required 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
                     </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Nombre de la Empresa: </p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
+                    
+                    <div className="flex flex-col w-full">
+                        <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Nombre de la Empresa:</label>
                         <input type="text" 
                         placeholder="Nombre" 
                         required 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
                     </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Direcion: </p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
+                    
+                    <div className="flex flex-col w-full">
+                        <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Dirección:</label>
                         <input type="text" 
-                        placeholder="Apellido" 
+                        placeholder="Dirección de la empresa" 
                         required 
                         value={addres}
                         onChange={(e) => setAddres(e.target.value)}
-                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
                     </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Telefono:</p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
+                    
+                    <div className="flex flex-col w-full">
+                        <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Teléfono:</label>
                         <input type="tel" 
                         placeholder="xxx-xxxxxxx" 
                         required 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
                     </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                    <div className="flex flex-row">
-                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Contraseña:</p>
-                    </div>
-                    <div className="flex flex-row w-full h-12">
+                    
+                    <div className="flex flex-col w-full">
+                        <label className="text-[0.9rem] lg:text-[1rem] font-medium text-[#0A2463] mb-1">Contraseña:</label>
                         <input type="password" 
                         placeholder="Contraseña" 
                         required 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                        className="rounded-lg px-3 py-2 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder:text-gray-500 text-[0.85rem] lg:text-[0.9rem] transition-all duration-200"/>
                     </div>
-                </div>
-                <div className="flex flex-col w-4/5">
-                  <button type="submit" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Resgistrarse</button>
-                </div>
-              </div>
-            </form>
-            <p className="mt-6 text-base text-[#0A2463] text-[1.5rem] font-normal">
-              ¿Ya tienes una cuenta? <Link to="/Login" className="text-[#D8315B] hover:underline text-[1.5rem] font-normal">Login</Link>
-            </p>
+                    
+                    <div className="flex flex-col w-full mt-1">
+                      <button type="submit" className="bg-[#D8315B] rounded-xl text-[#fffaff] py-2.5 px-4 border-none cursor-pointer w-full text-[0.9rem] lg:text-[1rem] font-semibold hover:bg-[#b81e48] transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl">
+                        Registrarse
+                      </button>
+                    </div>
+                  </div>
+                </form>
+                
+                <p className="mt-4 text-center text-[0.8rem] lg:text-[0.9rem] text-[#0A2463] font-medium">
+                  ¿Ya tienes una cuenta? <Link to="/Login" className="text-[#D8315B] hover:text-[#b81e48] hover:underline font-semibold transition-colors">Login</Link>
+                </p>
+            </div>
         </div>
 
-
-        {
-            showPopup && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center relative">
-                        <h3 className="text-2xl font-bold text-[#0A2463] mb-4">Aviso</h3>
-                        <p className="text-lg text-[#0A2463] mb-6">{popupMessage}</p>
-                        <button
-                            onClick={() => setShowPopup(false)}
-                            className="bg-[#D8315B] text-[#fffaff] py-2 px-6 rounded-lg hover:bg-[#b81e48] transition-colors text-[1.2rem]"
-                        >
-                            Cerrar
-                        </button>
-                        {/* Puedes añadir un botón para redirigir al login si es el caso */}
-                        {popupMessage.includes('ya se encuentra registrada') && (
+        {/* Modal mejorado con backdrop blur */}
+        {showPopup && (
+            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95">
+                    <div className="p-5 text-center">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        
+                        <h3 className="text-lg font-bold text-[#0A2463] mb-2">
+                            {popupMessage.includes('correctamente') ? '¡Éxito!' : 'Aviso'}
+                        </h3>
+                        
+                        <p className="text-sm text-gray-700 mb-4 leading-relaxed">
+                            {popupMessage}
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2 justify-center">
                             <button
-                                onClick={() => {
-                                    setShowPopup(false); // Redirige al login
-                                }}
-                                className="ml-4 bg-[#3e92ee] text-[#fffaff] py-2 px-6 rounded-lg hover:bg-[#2a7bd3] transition-colors text-[1.2rem]"
+                                onClick={() => setShowPopup(false)}
+                                className="bg-[#D8315B] text-white py-2 px-5 rounded-xl hover:bg-[#b81e48] transition-all duration-200 font-semibold text-[0.85rem] transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                             >
-                                Ir a Iniciar Sesión
+                                Cerrar
                             </button>
-                        )}
+                            
+                            {popupMessage.includes('ya se encuentra registrado') && (
+                                <Link
+                                    to="/Login"
+                                    onClick={() => setShowPopup(false)}
+                                    className="bg-[#3e92ee] text-white py-2 px-5 rounded-xl hover:bg-[#2a7bd3] transition-all duration-200 font-semibold text-[0.85rem] transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                                >
+                                    Ir a Iniciar Sesión
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
-            )
-        }
+            </div>
+        )}
       </div>
     );
   } 
