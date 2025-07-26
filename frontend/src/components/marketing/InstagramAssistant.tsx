@@ -698,14 +698,15 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] flex flex-row items-start p-8 gap-8 h-screen w-full overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] p-0">
-        <div className="px-6 pt-6 pb-3 border-b">
-          <h2 className="text-xl font-semibold text-[var(--color-primary-700)] text-center mx-auto">
+    <div className="h-screen bg-[var(--color-background)] flex flex-row p-4 lg:p-6 gap-4 lg:gap-6 overflow-hidden">
+      {/* Panel izquierdo - Posts/Historias */}
+      <div className="w-full max-w-md lg:max-w-lg bg-white rounded-2xl lg:rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] flex flex-col">
+        <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-2 lg:pb-3 border-b flex-shrink-0">
+          <h2 className="text-lg lg:text-xl font-semibold text-[var(--color-primary-700)] text-center mx-auto">
             {viewMode === 'stories' ? 'Últimas historias' : 'Últimos posts'}
           </h2>
         </div>
-        <div className="flex flex-col gap-6 px-6 pb-6 pt-3 h-[80vh] overflow-y-auto custom-scrollbar">
+        <div className="flex flex-col gap-4 lg:gap-6 px-4 lg:px-6 pb-4 lg:pb-6 pt-2 lg:pt-3 flex-1 overflow-y-auto custom-scrollbar">
           {viewMode === 'stories' ? (
             <>
               {loadingStories && <div className="text-center text-gray-500">Cargando historias...</div>}
@@ -913,27 +914,28 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
           )}
         </div>
       </div>
-      <div className="flex flex-col min-w-[480px] pt-6 ml-12">
-        <div className={`flex flex-col gap-4${isSidebarCollapsed ? ' ml-27' : ''}`}>
-          {/* Botones principales */}
-          <div className="flex flex-row gap-4">
-            <div className="flex flex-col min-w-[160px]">
-              <button className="bg-[var(--color-secondary-600)] text-white rounded-lg px-4 py-2 text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" onClick={() => { setShowAddPost(true); setShowScheduled(false); setShowSuggestions(false); }}>Agregar post</button>
+      {/* Panel derecho - Controles y formularios */}
+      <div className="flex flex-col min-w-[400px] lg:min-w-[480px] flex-1">
+        {/* Botones principales - Fijos en la parte superior */}
+        <div className={`flex flex-col gap-3 lg:gap-4 flex-shrink-0${isSidebarCollapsed ? ' ml-27' : ''}`}>
+          <div className="flex flex-row gap-2 lg:gap-4 flex-wrap">
+            <div className="flex flex-col min-w-[140px] lg:min-w-[160px]">
+              <button className="bg-[var(--color-secondary-600)] text-white rounded-lg px-3 lg:px-4 py-2 text-sm lg:text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" onClick={() => { setShowAddPost(true); setShowScheduled(false); setShowSuggestions(false); }}>Agregar post</button>
             </div>
-            <div className="flex flex-col min-w-[160px]">
-              <button className="bg-[var(--color-secondary-600)] text-white rounded-lg px-4 py-2 text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" onClick={() => { setShowSuggestions(true); setShowAddPost(false); setShowScheduled(false); handleShowSuggestions(); }}>Sugerencias (IA)</button>
+            <div className="flex flex-col min-w-[140px] lg:min-w-[160px]">
+              <button className="bg-[var(--color-secondary-600)] text-white rounded-lg px-3 lg:px-4 py-2 text-sm lg:text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" onClick={() => { setShowSuggestions(true); setShowAddPost(false); setShowScheduled(false); handleShowSuggestions(); }}>Sugerencias (IA)</button>
             </div>
-            <div className="flex flex-col min-w-[160px]">
-              <button onClick={() => { setShowScheduled(true); setShowAddPost(false); setShowSuggestions(false); handleShowScheduled(); }} className="bg-[var(--color-secondary-600)] text-white rounded-lg px-4 py-2 text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer">Ver programación</button>
+            <div className="flex flex-col min-w-[140px] lg:min-w-[160px]">
+              <button onClick={() => { setShowScheduled(true); setShowAddPost(false); setShowSuggestions(false); handleShowScheduled(); }} className="bg-[var(--color-secondary-600)] text-white rounded-lg px-3 lg:px-4 py-2 text-sm lg:text-base font-medium shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer">Ver programación</button>
             </div>
           </div>
           
           {/* Subbotones centrados */}
           {(showAddPost || viewMode === 'stories') && (
             <div className="flex justify-center">
-              <div className="flex flex-row gap-4">
+              <div className="flex flex-row gap-2 lg:gap-4">
                 <button 
-                  className={`rounded-lg px-4 py-2 text-sm font-medium shadow transition-colors cursor-pointer ${
+                  className={`rounded-lg px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium shadow transition-colors cursor-pointer ${
                     viewMode === 'posts' 
                       ? 'bg-[var(--color-primary-700)] text-white' 
                       : 'bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)]'
@@ -943,7 +945,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                   Fotos/Reels
                 </button>
                 <button 
-                  className={`rounded-lg px-4 py-2 text-sm font-medium shadow transition-colors cursor-pointer ${
+                  className={`rounded-lg px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium shadow transition-colors cursor-pointer ${
                     viewMode === 'stories' 
                       ? 'bg-[var(--color-primary-700)] text-white' 
                       : 'bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)]'
@@ -956,26 +958,27 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
             </div>
           )}
         </div>
-        {/* Bloque debajo de los botones: inputs o lista */}
-        <div className="mt-8">
+        
+        {/* Área de contenido - Con scroll */}
+        <div className="flex-1 overflow-y-auto mt-4 lg:mt-6">
           {/* Sugerencias IA */}
           {showSuggestions && !showAddPost && !showScheduled && (
-            <div className={`mb-8 p-6 bg-gray-50 border border-gray-200 rounded-xl h-[73vh] flex items-center justify-center max-w-[650px] w-full${isSidebarCollapsed ? ' ml-8' : ''}`}>
+            <div className={`mb-4 lg:mb-8 p-4 lg:p-6 bg-gray-50 border border-gray-200 rounded-xl max-w-[600px] lg:max-w-[650px] w-full${isSidebarCollapsed ? ' ml-8' : ''}`}>
               {loadingSuggestions ? (
                 <div className="text-gray-500 w-full text-center">Cargando sugerencias...</div>
               ) : suggestions ? (
-                <div className="whitespace-pre-line text-gray-700 text-sm w-full h-full overflow-y-auto text-left px-2 min-h-[1.5em]">{cleanSuggestions(suggestions)}</div>
+                <div className="whitespace-pre-line text-gray-700 text-xs lg:text-sm w-full text-left px-2 min-h-[1.5em]">{cleanSuggestions(suggestions)}</div>
               ) : null}
             </div>
           )}
           {showAddPost && !showScheduled && !showSuggestions ? (
-            <form className={`flex flex-col gap-4 w-full${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { e.preventDefault(); handlePublish(); }}>
+            <form className={`flex flex-col gap-3 lg:gap-4 w-full max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { e.preventDefault(); handlePublish(); }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">
                   Medios {imageUrls.length > 1 ? '(Carrusel)' : ''}
                 </label>
                 <div
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-3 py-6 text-center cursor-pointer hover:border-[var(--color-primary-700)] transition-colors mb-2 bg-gray-50"
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-2 lg:px-3 py-4 lg:py-6 text-center cursor-pointer hover:border-[var(--color-primary-700)] transition-colors mb-2 bg-gray-50"
                   onDrop={handleImageDrop}
                   onDragOver={e => e.preventDefault()}
                 >
@@ -1008,7 +1011,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                       ))}
                     </div>
                   ) : (
-                    <span className="text-gray-400">Arrastra una imagen/video aquí o ingresa las URLs abajo</span>
+                    <span className="text-gray-400 text-xs lg:text-sm">Arrastra una imagen/video aquí o ingresa las URLs abajo</span>
                   )}
                 </div>
                 
@@ -1017,7 +1020,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                   <div key={index} className="flex gap-2 mb-2">
                     <input
                       type="text"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]"
+                      className="flex-1 border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]"
                       placeholder={`URL de imagen/video ${index + 1}...`}
                       value={url}
                       onChange={(e) => handleImageUrlChange(index, e.target.value)}
@@ -1026,7 +1029,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                       <button
                         type="button"
                         onClick={() => removeImageUrl(index)}
-                        className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                        className="px-2 lg:px-3 py-1.5 lg:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer text-xs lg:text-sm"
                       >
                         ×
                       </button>
@@ -1038,9 +1041,9 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                 <button
                   type="button"
                   onClick={addImageUrl}
-                  className="w-full mt-2 bg-gray-100 text-gray-600 rounded-lg px-3 py-2 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full mt-2 bg-gray-100 text-gray-600 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer text-xs lg:text-sm"
                 >
-                  <span className="text-xl font-bold">+</span>
+                  <span className="text-lg lg:text-xl font-bold">+</span>
                   Agregar otra imagen/video
                 </button>
                 
@@ -1071,10 +1074,10 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Caption</label>
+                <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">Caption</label>
                 <textarea
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)] resize-none"
-                  rows={3}
+                  className="w-full border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)] resize-none"
+                  rows={2}
                   placeholder="Escribe el caption..."
                   value={caption}
                   onChange={e => setCaption(e.target.value)}
@@ -1082,20 +1085,20 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de publicación (opcional)</label>
-                  <input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={date} onChange={e => setDate(e.target.value)} />
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">Fecha de publicación (opcional)</label>
+                  <input type="date" className="w-full border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hora (opcional)</label>
-                  <input type="time" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={time} onChange={e => setTime(e.target.value)} />
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">Hora (opcional)</label>
+                  <input type="time" className="w-full border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={time} onChange={e => setTime(e.target.value)} />
                 </div>
               </div>
               <div className="text-xs text-gray-500 mt-2 text-center">Si no se especifica fecha y hora, la publicación se realizará inmediatamente.</div>
-              <div className="flex gap-2 mt-4 justify-center">
-                <button type="submit" className="bg-[var(--color-secondary-600)] text-white rounded-lg px-4 py-2 font-semibold shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" disabled={publishing}>{publishing ? 'Publicando...' : 'Publicar'}</button>
+              <div className="flex gap-2 mt-3 lg:mt-4 justify-center">
+                <button type="submit" className="bg-[var(--color-secondary-600)] text-white rounded-lg px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" disabled={publishing}>{publishing ? 'Publicando...' : 'Publicar'}</button>
                 <button
                   type="button"
-                  className="bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-semibold shadow hover:bg-gray-300 transition-colors cursor-pointer"
+                  className="bg-gray-200 text-gray-700 rounded-lg px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-semibold shadow hover:bg-gray-300 transition-colors cursor-pointer"
                   onClick={() => {
                     setImageUrls(['']);
                     setImagePreviews([]);
@@ -1109,10 +1112,12 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                   Cancelar
                 </button>
               </div>
-              {publishMsg && <div className={`text-center text-sm mt-4 ${publishMsg.includes('éxito') ? 'text-green-600' : 'text-red-600'}`}>{publishMsg}</div>}
+              {publishMsg && <div className={`text-center text-xs lg:text-sm mt-3 lg:mt-4 ${publishMsg.includes('éxito') ? 'text-green-600' : 'text-red-600'}`}>{publishMsg}</div>}
+              {/* Espacio adicional para asegurar que los botones sean visibles */}
+              <div className="h-20 lg:h-24"></div>
             </form>
-          ) : showStoryForm && !showScheduled && !showSuggestions ? (
-            <form className={`flex flex-col gap-4 w-full${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { 
+                      ) : showStoryForm && !showScheduled && !showSuggestions ? (
+            <form className={`flex flex-col gap-4 w-full max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { 
               console.log('[DEBUG] Formulario de historia enviado');
               e.preventDefault(); 
               handlePublishStory(); 
@@ -1173,14 +1178,16 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                 </button>
               </div>
               {storyPublishMsg && <div className={`text-center text-sm mt-4 ${storyPublishMsg.includes('éxito') ? 'text-green-600' : 'text-red-600'}`}>{storyPublishMsg}</div>}
+              {/* Espacio adicional para asegurar que los botones sean visibles */}
+              <div className="h-20 lg:h-24"></div>
             </form>
-          ) : showScheduled && !showAddPost && !showSuggestions ? (
+                      ) : showScheduled && !showAddPost && !showSuggestions ? (
             loadingScheduled ? (
-              <div className={`text-gray-500${isSidebarCollapsed ? ' ml-16' : ''}`}>Cargando...</div>
+              <div className={`text-gray-500 max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-16' : ''}`}>Cargando...</div>
             ) : scheduledPosts.length === 0 ? (
-              <div className={`text-gray-500${isSidebarCollapsed ? ' ml-16' : ''}`}>No hay publicaciones programadas.</div>
+              <div className={`text-gray-500 max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-16' : ''}`}>No hay publicaciones programadas.</div>
             ) : (
-              <div className={isSidebarCollapsed ? 'ml-16' : ''}>
+              <div className={`max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-16' : ''}`}>
                 {scheduledPosts.map((post, idx) => (
                   <div key={idx} className="mb-6 group relative">
                     <button
@@ -1197,6 +1204,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
               </div>
             )
           ) : null}
+          {/* Espacio adicional al final para asegurar scroll completo */}
+          <div className="h-16 lg:h-20"></div>
         </div>
       </div>
       <style>{`
