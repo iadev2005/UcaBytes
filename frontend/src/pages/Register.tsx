@@ -1,107 +1,183 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ReturnIcon } from '../icons/Return';
+import { client } from '../supabase/client'; // Adjust the import path as necessary
+import { AuthApiError } from '@supabase/supabase-js';
 
 export default function Register() {
+
+    const [email,setEmail] = useState('');
+    const [name,setName] = useState('');
+    const [addres,setAddres] = useState('');
+    const [phone,setPhone] = useState('');
+    const [password,setPassword] = useState('');
+
+    // --- Nuevos estados para el pop-up ---
+    const [showPopup, setShowPopup] = useState(false);
+    const [popupMessage, setPopupMessage] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        setShowPopup(false);   // Asegurar que el pop-up esté oculto al inicio
+        setPopupMessage('');   // Limpiar mensaje del pop-up
+
+
+        //visualizamos los datos antes 
+       console.log({ email, name, addres, phone, password });
+
+       //creamos el nuevo usuario en supabse 
+       try{
+            const { data, error } = await client.auth.signUp({
+                email,
+                password
+            });
+            console.log(data)
+
+            //si existe el error nos vamos a catch
+            if (error) {
+                throw error;
+            }
+
+
+            //si no hay error, creamos el perfil de la empresa
+            setPopupMessage('Usuario registrado correctamente.');
+            setShowPopup(true)
+
+       }catch (error: unknown) {
+            //verificamos si el error es de tipo AuthApiError
+            if (error instanceof AuthApiError) {
+                // Manejo de errores específicos de autenticación
+                if(error.message.includes('User already registered')){
+                    setPopupMessage('Este usuario ya se encuentra registrado');
+                    setShowPopup(true)
+                    return 
+                }
+                
+                return;
+            }
+
+            console.log('Error creating user:', error);
+            return;
+        }
+        
+    };
+
+
     return (
-      <div className="min-h-screen flex flex-col lg:flex-row">
-        {/* Left side - Registration form */}
-        <div className="w-full lg:w-2/5 bg-white flex flex-col justify-center px-6 sm:px-8 lg:px-10 py-8 lg:py-0 relative">
-          {/* Back button */}
-          <div className="absolute top-4 lg:top-6 left-4 lg:left-6">
-            <Link to="/Login-register" className="text-[var(--color-primary-600)] hover:text-[#2b7de0] transition-colors">
-              <ReturnIcon className="w-6 h-6 lg:w-8 lg:h-8" />
-            </Link>
-          </div>
-          
-          {/* Registration form container */}
-          <div className="w-full max-w-sm sm:max-w-md mx-auto">
-            {/* Title */}
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0A2463] text-center mb-6 sm:mb-8 lg:mb-10">Registrarse</h2>
-            
-            {/* Form */}
-            <form className="w-full space-y-6 sm:space-y-8">
-              {/* Campo por confirmar field */}
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
-                  Campo por confirmar:
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="Campo por confirmar" 
-                  required 
-                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
-                />
-              </div>
-              
-              {/* Email field */}
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
-                  E-mail:
-                </label>
-                <input 
-                  type="email" 
-                  placeholder="Ingresa tu correo electrónico" 
-                  required 
-                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
-                />
-              </div>
-              
-              {/* Password field */}
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
-                  Contraseña:
-                </label>
-                <input 
-                  type="password" 
-                  placeholder="Ingresa tu contraseña" 
-                  required 
-                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
-                />
-              </div>
-              
-              {/* Confirm Password field */}
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-sm sm:text-base font-medium text-[#0A2463]">
-                  Confirmar Contraseña:
-                </label>
-                <input 
-                  type="password" 
-                  placeholder="Confirma tu contraseña" 
-                  required 
-                  className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
-                />
-              </div>
-              
-              {/* Register button */}
-              <div className="flex justify-center">
-                <button 
-                  type="submit" 
-                  className="w-48 md:w-56 lg:w-64 bg-[#D8315B] text-white py-2 md:py-3 lg:py-3 rounded-xl text-base md:text-lg lg:text-xl font-medium hover:bg-[#b81e48] transition-all duration-500 cursor-pointer shadow-lg hover:shadow-2xl transform hover:scale-110 hover:-translate-y-1 active:scale-95"
-                >
-                  Registrarse
-                </button>
+      <div className="bg-cover bg-center min-h-screen min-w-full" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')", background:"cover" }}>
+        <div className="flex flex-col items-center justify-center absolute top-1/2 left-0/5 h-screen w-2/5 bg-[#fffaff]" style={{transform: 'translate(0%, -50%)'}}>
+            <div className="absolute top-6 left-6">
+                <Link to="/" className="text-[1.5rem] font-normal text-[#3e92ee]">
+                    <ReturnIcon className="w-12 h-12" />
+                </Link>
+            </div>
+            <h2 className="text-[3rem] font-bold text-[#0A2463] mb-24">Registrarse</h2>
+            <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
+              <div className="flex flex-col gap-4 w-full items-center">
+                <div className="flex flex-col w-4/5">
+                    <div className="flex flex-row">
+                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Correo de la Empresa: </p>
+                    </div>
+                    <div className="flex flex-row w-full h-12">
+                        <input type="email" 
+                        placeholder="Correo electrónico / Usuario" 
+                        required 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                    </div>
+                </div>
+                <div className="flex flex-col w-4/5">
+                    <div className="flex flex-row">
+                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Nombre de la Empresa: </p>
+                    </div>
+                    <div className="flex flex-row w-full h-12">
+                        <input type="text" 
+                        placeholder="Nombre" 
+                        required 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                    </div>
+                </div>
+                <div className="flex flex-col w-4/5">
+                    <div className="flex flex-row">
+                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Direcion: </p>
+                    </div>
+                    <div className="flex flex-row w-full h-12">
+                        <input type="text" 
+                        placeholder="Apellido" 
+                        required 
+                        value={addres}
+                        onChange={(e) => setAddres(e.target.value)}
+                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                    </div>
+                </div>
+                <div className="flex flex-col w-4/5">
+                    <div className="flex flex-row">
+                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Telefono:</p>
+                    </div>
+                    <div className="flex flex-row w-full h-12">
+                        <input type="tel" 
+                        placeholder="xxx-xxxxxxx" 
+                        required 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                    </div>
+                </div>
+                <div className="flex flex-col w-4/5">
+                    <div className="flex flex-row">
+                        <p className="text-[1.5rem] font-normal text-[#0A2463]">Contraseña:</p>
+                    </div>
+                    <div className="flex flex-row w-full h-12">
+                        <input type="password" 
+                        placeholder="Contraseña" 
+                        required 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="rounded-lg px-5 py-4 w-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0A2463] placeholder:text-[1.5rem] placeholder:font-normal"/>
+                    </div>
+                </div>
+                <div className="flex flex-col w-4/5">
+                  <button type="submit" className="bg-[#D8315B] rounded-2xl text-[#fffaff] py-4 px-5 border-none cursor-pointer w-full text-[1.5rem] font-normal hover:bg-[#b81e48] transition-colors">Resgistrarse</button>
+                </div>
               </div>
             </form>
-            
-            {/* Links */}
-            <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4 text-center">
-              <p className="text-sm sm:text-base text-gray-500">
-                ¿Ya tienes una cuenta?{' '}
-                <Link 
-                  to="/Login" 
-                  className="text-[#D8315B] hover:underline cursor-pointer"
-                >
-                  Login
-                </Link>
-              </p>
-            </div>
-          </div>
+            <p className="mt-6 text-base text-[#0A2463] text-[1.5rem] font-normal">
+              ¿Ya tienes una cuenta? <Link to="/Login" className="text-[#D8315B] hover:underline text-[1.5rem] font-normal">Login</Link>
+            </p>
         </div>
-        
-        {/* Right side - Corporate image */}
-        <div className="w-full lg:w-3/5 h-64 lg:h-auto bg-cover bg-center" style={{backgroundImage: "url('/images/EquipoTrabajo02.webp')"}}>
-          {/* Corporate image takes full height and width of right side */}
-        </div>
+
+
+        {
+            showPopup && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center relative">
+                        <h3 className="text-2xl font-bold text-[#0A2463] mb-4">Aviso</h3>
+                        <p className="text-lg text-[#0A2463] mb-6">{popupMessage}</p>
+                        <button
+                            onClick={() => setShowPopup(false)}
+                            className="bg-[#D8315B] text-[#fffaff] py-2 px-6 rounded-lg hover:bg-[#b81e48] transition-colors text-[1.2rem]"
+                        >
+                            Cerrar
+                        </button>
+                        {/* Puedes añadir un botón para redirigir al login si es el caso */}
+                        {popupMessage.includes('ya se encuentra registrada') && (
+                            <button
+                                onClick={() => {
+                                    setShowPopup(false); // Redirige al login
+                                }}
+                                className="ml-4 bg-[#3e92ee] text-[#fffaff] py-2 px-6 rounded-lg hover:bg-[#2a7bd3] transition-colors text-[1.2rem]"
+                            >
+                                Ir a Iniciar Sesión
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )
+        }
       </div>
     );
-} 
+  } 
