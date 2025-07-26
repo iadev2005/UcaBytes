@@ -47,9 +47,9 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
         <nav className="flex flex-col gap-2">
           <SidebarLink to="/app" icon={HomeIcon} label="Home" active={location.pathname === '/app'} isCollapsed={isCollapsed} />
           <SidebarLink to="/app/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/app/dashboard'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/app/marketing'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/app/products-services'} isCollapsed={isCollapsed} />
-          <SidebarLink to="./central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/app/central-operations'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app/marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/app/marketing'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app/products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/app/products-services'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app/central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/app/central-operations'} isCollapsed={isCollapsed} />
         </nav>
         <div className="flex-1" />
         <nav className="flex flex-col gap-2 mb-8">

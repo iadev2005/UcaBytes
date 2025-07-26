@@ -19,6 +19,7 @@ import Register from './pages/Register';
 import LoginRegister from './pages/Login-register';
 import ChatButton from './components/ChatButton';
 import Home from './pages/Home.tsx';
+import Perfil from './pages/Perfil.tsx';
 import React from 'react';
 
 // Mock de autenticación: revisa si hay 'auth' en localStorage
@@ -75,6 +76,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="design-system" element={<DesignSystem />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="marketing" element={<Marketing />} />
+          <Route path="perfil" element={<Perfil />} />
           <Route path="products-services" element={<ProductsServices />} />
           <Route path="central-operations" element={<CentralOperations />} />
           <Route path="settings" element={<Settings />} />

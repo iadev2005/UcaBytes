@@ -38,7 +38,7 @@ export default function TopInfo() {
         <span className="text-lg text-[var(--color-primary-400)]">{fullDate}</span>
       </div>
       {/* Derecha: Empresa y avatar */}
-      <Link to="/profile" className="flex items-center gap-4 cursor-pointer group px-3 py-1 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors" style={{ textDecoration: 'none' }}>
+      <Link to="/app/perfil" className="flex items-center gap-4 cursor-pointer group px-3 py-1 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors" style={{ textDecoration: 'none' }}>
         <span className="font-semibold text-xl text-[var(--color-primary-700)] leading-tight whitespace-nowrap">
           {company}
         </span>
