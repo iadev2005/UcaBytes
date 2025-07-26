@@ -49,22 +49,22 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl p-3 lg:p-4 w-full max-w-[280px] lg:max-w-xs h-[280px] lg:h-[320px] overflow-hidden flex flex-col">
-      <h2 className="text-sm lg:text-base font-bold text-center">Mira tus eventos</h2>
+    <div className="bg-white rounded-3xl shadow-xl p-4 md:p-3 sm:p-2 w-full max-w-xs h-[280px] overflow-hidden flex flex-col">
+      <h2 className="text-sm font-bold text-center">Mira tus eventos</h2>
       <div className="flex justify-between items-center mb-2">
         <button
           onClick={prevMonth}
-          className="px-2 font-bold text-base lg:text-lg text-[var(--color-primary-400)] cursor-pointer"
+          className="px-2 font-bold text-base text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 0 && year === today.getFullYear()}
         >&lt;</button>
-        <h3 className={`font-bold transition-all duration-200 ${monthNames[month].length > 7 ? "text-sm lg:text-base" : "text-xs lg:text-md"}`}>{monthNames[month]} {year}</h3>
+        <h3 className={`font-bold transition-all duration-200 text-sm ${monthNames[month].length > 7 ? "text-sm" : "text-sm"}`}>{monthNames[month]} {year}</h3>
         <button
           onClick={nextMonth}
-          className="px-2 font-bold text-base lg:text-lg text-[var(--color-primary-400)] cursor-pointer"
+          className="px-2 font-bold text-base text-[var(--color-primary-400)] cursor-pointer"
           disabled={month === 11 && year === today.getFullYear() + 1}
         >&gt;</button>
       </div>
-      <div className="grid grid-cols-7 gap-[1px] lg:gap-[2px] text-center text-xs lg:text-sm mb-1 w-full">
+      <div className="grid grid-cols-7 gap-[1px] text-center text-xs mb-1 w-full">
         {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i}>{d}</div>)}
         {daysArray.map((day, i) => {
           const dateObj = day ? new Date(year, month, day) : null;
@@ -78,15 +78,15 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                     setSelected(day);
                     onDateClick(new Date(year, month, day));
                   }}
-                  className={`w-full aspect-square rounded-full text-xs lg:text-sm transition-all
-                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold  " : ""}
+                  className={`w-full aspect-square rounded-full text-xs transition-all
+                    ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold" : ""}
                     ${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() && day !== selected ? "bg-gray-200 font-bold" : ""}
                     hover:bg-[var(--color-secondary-100)] cursor-pointer
                   `}
                 >
                   {day}
                   {tieneEvento && (
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-1 lg:bottom-2 w-1 h-1 rounded-full bg-[var(--color-secondary-400)]"></span>
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-2 w-1 h-1 rounded-full bg-[var(--color-secondary-400)]"></span>
                   )}
                 </button>
               ) : (
@@ -271,36 +271,32 @@ export default function Home() {
   const plannerTasksByPriority = (prio: string) => plannerTasks.filter(t => t.prioridad === prio).slice(0, 2);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-4 lg:p-6 xl:p-8 items-center relative overflow-hidden">
-      {/* Fondo decorativo */}
-      <div className="pointer-events-none absolute -top-32 -left-32 w-[300px] h-[300px] lg:w-[400px] lg:h-[400px] bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] rounded-full opacity-60 blur-2xl z-0" />
-      <div className="pointer-events-none absolute bottom-0 right-0 w-[200px] h-[200px] lg:w-[300px] lg:h-[300px] bg-gradient-to-tr from-[var(--color-secondary-100)] to-[var(--color-primary-100)] rounded-full opacity-50 blur-2xl z-0" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 w-[400px] lg:w-[600px] h-24 lg:h-32 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] opacity-40 blur-3xl z-0" />
-      <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-4 lg:mb-6 xl:mb-8">¡Bienvenido al Panel de Control!</h1>
+    <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-8 items-center relative overflow-hidden">
+      <h1 className="text-4xl md:text-3xl sm:text-2xl font-bold mb-8">¡Bienvenido al Panel de Control!</h1>
 
-      <div className="grid grid-cols-1 lg:[grid-template-columns:2fr_min-content_0.8fr] gap-4 lg:gap-6 w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl flex-1 justify-start z-10">
-        <div className="flex flex-col gap-4 lg:gap-6 flex-1 justify-start h-[60vh] lg:h-[70vh]">
-          <div className="bg-white rounded-3xl shadow-2xl p-3 lg:p-4 border border-[var(--color-primary-100)] animate-fade-in-up">
-            <div className="flex items-center gap-2 mb-2 lg:mb-3">
-              <DashboardIcon className="text-[var(--color-primary-400)] w-5 h-5 lg:w-6 lg:h-6" />
-              <h2 className="text-lg lg:text-xl font-bold">Resumen de Ciclo o Progreso</h2>
+      <div className="grid [grid-template-columns:2fr_min-content_0.8fr] gap-8 w-full max-w-5xl flex-1 justify-start z-10">
+        <div className="flex flex-col gap-4 flex-1 justify-start h-[70vh]">
+          <div className="bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
+            <div className="flex items-center gap-2 mb-2">
+              <DashboardIcon className="text-[var(--color-primary-400)] w-5 h-5" />
+              <h2 className="text-lg font-bold">Resumen de Ciclo o Progreso</h2>
             </div>
-            <div className="flex items-center justify-center h-16 lg:h-20 text-sm lg:text-base text-gray-400">
+            <div className="flex items-center justify-center h-16 text-sm text-gray-400">
               No hay datos para mostrar.
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full">
-            <div className="flex flex-col items-center gap-2 w-full lg:w-1/2 bg-white rounded-3xl shadow-2xl p-3 lg:p-4 border border-[var(--color-primary-100)] animate-fade-in-up">
-              <div className="flex items-center gap-2 mb-2 lg:mb-3">
-                <AutomationIcon className="text-[var(--color-secondary-400)] w-5 h-5 lg:w-6 lg:h-6" />
-                <h2 className="text-lg lg:text-xl font-bold">Acceso Rápido</h2>
+          <div className="flex gap-4 w-full">
+            <div className="flex flex-col items-center gap-2 w-1/2 bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
+              <div className="flex items-center gap-2 mb-2">
+                <AutomationIcon className="text-[var(--color-secondary-400)] w-5 h-5" />
+                <h2 className="text-lg font-bold">Acceso Rápido</h2>
               </div>
-              <div className="grid grid-cols-2 gap-2 lg:gap-3 w-full min-h-[160px] lg:min-h-[200px] justify-items-center">
+              <div className="grid grid-cols-2 gap-2 w-full min-h-[160px] justify-items-center">
                 {accesos.map((acceso, i) => (
                   <div
                     key={i}
-                    className={`relative w-20 h-20 lg:w-24 lg:h-24 ${dragIndex === i ? 'z-20' : ''}`}
+                    className={`relative w-20 h-20 ${dragIndex === i ? 'z-20' : ''}`}
                     draggable={dragIndex === i}
                     onDragStart={dragIndex === i ? () => handleDragStart(i) : undefined}
                     onDragOver={dragIndex !== null && dragIndex !== i ? (e) => { e.preventDefault(); handleDragOver(i); } : undefined}
@@ -308,28 +304,28 @@ export default function Home() {
                     onDragEnd={dragIndex === i ? handleDragEnd : undefined}
                     style={{ cursor: dragIndex === i ? 'grab' : 'default' }}
                   >
-                    <button className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-xs lg:text-sm flex items-center justify-center hover:scale-105 transition-transform shadow-md cursor-pointer"
+                    <button className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-xs flex items-center justify-center hover:scale-105 transition-transform shadow-md cursor-pointer"
                       onClick={() => handleAccesoClick(acceso)}
                     >
                       <span className="block text-center leading-tight break-words">{acceso}</span>
                     </button>
                     <button
-                      className="absolute top-3 right-0 p-0 transition-colors cursor-pointer"
+                      className="absolute top-2 right-0 p-0 transition-colors cursor-pointer"
                       onClick={() => setOpenKebab(openKebab === i ? null : i)}
                       tabIndex={0}
                     >
-                      <KebabIcon width={20} height={20} color="#fff" />
+                      <KebabIcon width={16} height={16} color="#fff" />
                     </button>
                     {openKebab === i && (
-                      <div className="absolute right-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-28 flex flex-col">
+                      <div className="absolute right-0 top-6 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-24 flex flex-col">
                         <button
-                          className="px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer"
+                          className="px-3 py-1.5 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer text-xs"
                           onClick={() => eliminarAcceso(i)}
                         >
                           Eliminar
                         </button>
                         <button
-                          className="px-4 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer"
+                          className="px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer text-xs"
                           onClick={() => activarArrastrar(i)}
                         >
                           Arrastrar
@@ -341,7 +337,7 @@ export default function Home() {
                 {accesos.length < 4 && (
                   <button
                     onClick={() => setModalOpen(true)}
-                    className="w-20 h-20 lg:w-24 lg:h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-xl lg:text-2xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
+                    className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                     title="Agregar acceso rápido"
                   >
                     +
@@ -367,7 +363,7 @@ export default function Home() {
               </Modal>
             </div>
 
-            <div className="flex-1 flex justify-center lg:justify-end animate-fade-in-up">
+            <div className="flex-1 flex justify-end animate-fade-in-up">
               <Calendar onDateClick={(date: Date) => {
                 setSelectedDate(date);
                 setEventModalOpen(true);
@@ -376,26 +372,26 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row h-[40vh] lg:h-[70vh] col-span-2 overflow-hidden justify-center lg:justify-end">
-          <div className="hidden lg:block w-px bg-gray-300 h-full" />
-          <div className="flex flex-col gap-4 lg:gap-6 overflow-y-auto px-4 lg:pr-6 lg:pl-6 pb-3 items-center lg:items-end flex-1 h-full w-full">
-            <div className="bg-[var(--color-secondary-300)] rounded-3xl shadow-2xl p-3 lg:p-4 border border-[var(--color-secondary-100)] w-full max-w-md lg:max-w-none animate-fade-in-up">
+        <div className="flex flex-row h-[70vh] col-span-2 overflow-hidden justify-end">
+          <div className="w-px bg-gray-300 h-full" />
+          <div className="flex flex-col gap-6 overflow-y-auto pr-6 pb-3 items-end flex-1 h-full w-full pl-6">
+            <div className="bg-[var(--color-secondary-300)] rounded-3xl shadow-2xl p-5 border border-[var(--color-secondary-100)] w-full animate-fade-in-up">
               <div className="flex items-center gap-2 mb-2">
-                <MegaphoneIcon className="text-[var(--color-secondary-600)] w-4 h-4 lg:w-5 lg:h-5" />
-                <h2 className="text-lg lg:text-xl font-bold text-[var(--color-secondary-800)]">Tips Útiles</h2>
+                <MegaphoneIcon className="text-[var(--color-secondary-600)] w-5 h-5" />
+                <h2 className="text-xl font-bold text-[var(--color-secondary-800)]">Tips Útiles</h2>
               </div>
-              <p className="text-sm lg:text-base transition-all duration-500 min-h-[24px] lg:min-h-[28px]">{tipsUtiles[tipIndex]}</p>
+              <p className="text-base transition-all duration-500 min-h-[28px]">{tipsUtiles[tipIndex]}</p>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-2xl p-3 lg:p-4 border border-gray-200 w-full max-w-md lg:max-w-none animate-fade-in-up">
-              <h2 className="text-lg lg:text-xl font-bold mb-2">To-Do List:</h2>
+            <div className="bg-white rounded-3xl shadow-2xl p-5 border border-gray-200 w-full animate-fade-in-up">
+              <h2 className="text-xl font-bold mb-2">To-Do List:</h2>
               <hr className="border-t border-gray-300 mb-4" />
               {prioridades.map(prio => {
                 const tasks = plannerTasksByPriority(prio);
                 return (
                   <div key={prio} className="mb-2">
-                    <h3 className={`text-lg font-semibold mb-1 ${prio === 'Alta' ? 'text-[var(--color-secondary-700)]' : prio === 'Media' ? 'text-[var(--color-primary-700)]' : 'text-gray-700'}`}>{prio}</h3>
-                    <ul className="text-base space-y-1 mb-3">
+                    <h3 className={`text-base font-semibold mb-1 ${prio === 'Alta' ? 'text-[var(--color-secondary-700)]' : prio === 'Media' ? 'text-[var(--color-primary-700)]' : 'text-gray-700'}`}>{prio}</h3>
+                    <ul className="text-sm space-y-1 mb-3">
                       {tasks.length > 0 ? (
                         tasks.map((t, idx) => (
                           <li key={idx} className={`border-b pb-1 mb-1 ${prio === 'Alta' ? 'border-[var(--color-secondary-200)]' : prio === 'Media' ? 'border-[var(--color-primary-200)]' : 'border-gray-300'}`}>{t.texto}</li>
@@ -411,11 +407,13 @@ export default function Home() {
             </div>
 
             {Array.from({ length: 0 }).map((_, idx) => (
-              <div key={idx} className="bg-white rounded-3xl shadow-2xl p-3 lg:p-4 border border-gray-200 w-full max-w-md lg:max-w-none animate-fade-in-up">
-                <h2 className="text-base lg:text-lg font-bold mb-2">Elemento extra {idx + 1}</h2>
-                <p className="text-sm lg:text-base">Este es un elemento adicional para probar el scroll en la columna derecha.</p>
+              <div key={idx} className="bg-white rounded-3xl shadow-2xl p-5 border border-gray-200 w-full animate-fade-in-up">
+                <h2 className="text-lg font-bold mb-2">Elemento extra {idx + 1}</h2>
+                <p className="text-sm">Este es un elemento adicional para probar el scroll en la columna derecha.</p>
               </div>
             ))}
+            {/* Espacio adicional al final para asegurar scroll completo */}
+            <div className="h-20 lg:h-24"></div>
           </div>
         </div>
       </div>
