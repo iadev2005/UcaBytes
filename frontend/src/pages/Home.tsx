@@ -49,7 +49,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl p-5 md:p-4 sm:p-3 w-full max-w-xs h-[320px] lg:h-[300px] md:h-[270px] sm:h-[240px] overflow-hidden flex flex-col">
+    <div className="bg-white rounded-3xl shadow-xl p-5 md:p-4 sm:p-3 w-full max-w-xs h-[320px] overflow-hidden flex flex-col">
       <h2 className="text-base font-bold text-center">Mira tus eventos</h2>
       <div className="flex justify-between items-center mb-2">
         <button
@@ -64,7 +64,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
           disabled={month === 11 && year === today.getFullYear() + 1}
         >&gt;</button>
       </div>
-      <div className="grid grid-cols-7 gap-[2px] text-center text-sm mb-1 w-full">
+      <div className="grid grid-cols-7 gap-[2px] text-center text-sm md:text-xs mb-1w-full">
         {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i}>{d}</div>)}
         {daysArray.map((day, i) => {
           const dateObj = day ? new Date(year, month, day) : null;
@@ -78,7 +78,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                     setSelected(day);
                     onDateClick(new Date(year, month, day));
                   }}
-                  className={`w-full aspect-square rounded-full text-sm transition-all
+                  className={`w-full aspect-square rounded-full text-sm md:text-xs  transition-all
                     ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold  " : ""}
                     ${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() && day !== selected ? "bg-gray-200 font-bold" : ""}
                     hover:bg-[var(--color-secondary-100)] cursor-pointer
