@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
+import { cn } from '../lib/utils';
 
 interface FollowerData {
   name: string;
@@ -1034,22 +1035,32 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-10 h-screen bg-[var(--color-background)] w-full overflow-y-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-primary-700)]">Vista General</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">Tema:</span>
-                      <select
-              value={selectedTheme}
-              onChange={(e) => setSelectedTheme(e.target.value)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] bg-white"
-            >
-              <option value="marketing">Marketing</option>
-              <option value="ventas">Ventas</option>
-              <option value="servicios">Servicios</option>
-              <option value="recursos">Recursos Humanos</option>
-            </select>
-        </div>
-      </div>
+                  <div className="flex flex-col gap-6 mb-6">
+              <h1 className="text-2xl font-bold text-[var(--color-primary-700)]">Vista General</h1>
+              
+              {/* Botones de filtro */}
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {[
+                  { value: 'marketing', label: 'Marketing' },
+                  { value: 'ventas', label: 'Ventas' },
+                  { value: 'servicios', label: 'Servicios' },
+                  { value: 'recursos', label: 'Recursos Humanos' }
+                ].map((theme) => (
+                  <button
+                    key={theme.value}
+                    onClick={() => setSelectedTheme(theme.value)}
+                    className={cn(
+                      'px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap',
+                      selectedTheme === theme.value
+                        ? 'bg-[var(--color-primary-600)] text-white'
+                        : 'bg-gray-100 text-[var(--color-primary-700)] hover:bg-[var(--color-primary-100)] hover:text-[var(--color-primary-900)]'
+                    )}
+                  >
+                    {theme.label}
+                  </button>
+                ))}
+              </div>
+            </div>
       {renderThemeContent()}
     </div>
   );
