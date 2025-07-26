@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { NotificationIcon } from '../icons/Notification';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useCompany } from '../context/CompanyContext';
 
 export default function TopInfo() {
   const [date, setDate] = useState(new Date());
+  const { companyData } = useCompany();
 
   useEffect(() => {
     const timer = setInterval(() => setDate(new Date()), 1000);
@@ -18,9 +20,12 @@ export default function TopInfo() {
   const year = date.getFullYear();
   const fullDate = `${day}-${month}-${year}`;
 
-  // Datos de empresa (mock)
-  const company = 'Nombre Empresa';
-  const avatar = 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128';
+  const getAvatarSrc = () => {
+    if (companyData.profileImage) {
+      return companyData.profileImage;
+    }
+    return companyData.avatar;
+  };
 
   return (
     <motion.div
@@ -37,12 +42,17 @@ export default function TopInfo() {
         <span className="font-mono text-xl text-[var(--color-primary-700)]">{time}</span>
         <span className="text-lg text-[var(--color-primary-400)]">{fullDate}</span>
       </div>
+      
       {/* Derecha: Empresa y avatar */}
       <Link to="/app/perfil" className="flex items-center gap-4 cursor-pointer group px-3 py-1 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors" style={{ textDecoration: 'none' }}>
         <span className="font-semibold text-xl text-[var(--color-primary-700)] leading-tight whitespace-nowrap">
-          {company}
+          {companyData.name}
         </span>
-        <img src={avatar} alt="avatar" className="w-14 h-14 rounded-full object-cover border-2 border-[var(--color-primary-200)] group-hover:border-[var(--color-primary-400)] transition-colors" />
+        <img 
+          src={getAvatarSrc()} 
+          alt="avatar" 
+          className="w-14 h-14 rounded-full object-cover border-2 border-[var(--color-primary-200)] group-hover:border-[var(--color-primary-400)] transition-colors"
+        />
       </Link>
     </motion.div>
   );
