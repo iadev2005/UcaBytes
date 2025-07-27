@@ -1,25 +1,213 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import WebsiteBuilder from '../components/marketing/WebsiteBuilder';
 import InstagramAssistant from '../components/marketing/InstagramAssistant';
 import LoadingScreen from '../components/marketing/LoadingScreen';
+import TokenInputModal from '../components/marketing/TokenInputModal';
 import { SidebarCollapseContext } from './Layout';
 import { GlobeIcon } from '../icons';
 
 export default function Marketing() {
   const { isSidebarCollapsed } = useContext(SidebarCollapseContext);
+  const [searchParams] = useSearchParams();
   const [showBuilder, setShowBuilder] = useState(false);
   const [showInstagramAssistant, setShowInstagramAssistant] = useState(false);
   const [instagramPosts, setInstagramPosts] = useState(null);
   const [loadingInstagram, setLoadingInstagram] = useState(false);
+  
+  // Estados para el token
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [isTokenValid, setIsTokenValid] = useState(false);
+  const [currentToken, setCurrentToken] = useState<string>('');
+  const [validatingToken, setValidatingToken] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+
+  // Función para cargar token guardado
+  const loadSavedToken = async () => {
+    const savedToken = localStorage.getItem('instagram_token');
+    const tokenValid = localStorage.getItem('instagram_token_valid');
+    
+    if (savedToken && tokenValid === 'true') {
+      // Validar el token guardado para asegurar que sigue siendo válido
+      try {
+        const response = await fetch('http://localhost:3001/api/instagram/validate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: savedToken }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.valid) {
+          setCurrentToken(savedToken);
+          setIsTokenValid(true);
+          return true;
+        } else {
+          // Token ya no es válido, limpiarlo
+          clearInvalidToken();
+          return false;
+        }
+      } catch (error) {
+        // Error de conexión, limpiar token por seguridad
+        clearInvalidToken();
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // Función para guardar token válido
+  const saveValidToken = (token: string) => {
+    localStorage.setItem('instagram_token', token);
+    localStorage.setItem('instagram_token_valid', 'true');
+  };
+
+  // Función para limpiar token inválido
+  const clearInvalidToken = () => {
+    localStorage.removeItem('instagram_token');
+    localStorage.removeItem('instagram_token_valid');
+  };
+
+  // Funciones para manejar el token
+  const handleTokenSubmit = async (token: string) => {
+    setValidatingToken(true);
+    setTokenError(null);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/instagram/validate-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.valid) {
+        setCurrentToken(token);
+        setIsTokenValid(true);
+        saveValidToken(token); // Guardar token válido
+        setShowTokenModal(false);
+        setTokenError(null);
+        // Cargar posts después de validar el token
+        await loadInstagramPosts(token);
+      } else {
+        setTokenError(data.error || 'Token inválido');
+        clearInvalidToken(); // Limpiar token inválido
+      }
+    } catch (error) {
+      setTokenError('Error de conexión al validar el token');
+    } finally {
+      setValidatingToken(false);
+    }
+  };
+
+  const handleTokenModalClose = () => {
+    // Permitir cerrar el modal siempre
+    setShowTokenModal(false);
+    setTokenError(null);
+  };
+
+  // Función para cargar posts después de validar el token
+  const loadInstagramPosts = async (token: string) => {
+    console.log('[DEBUG] Marketing - Iniciando carga de posts con token:', token ? 'EXISTE' : 'NO_EXISTE');
+    setLoadingInstagram(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      console.log('[DEBUG] Marketing - Respuesta de fetch-posts:', data);
+      if (data.success) {
+        setInstagramPosts(data.posts);
+        setShowInstagramAssistant(true);
+        console.log('[DEBUG] Marketing - Posts cargados exitosamente, mostrando asistente');
+      } else {
+        console.error('Error al obtener publicaciones de Instagram:', data);
+      }
+    } catch (e) {
+      console.error('Error de red o backend al cargar posts:', e);
+    } finally {
+      setLoadingInstagram(false);
+    }
+  };
+
+  // Cargar token guardado al inicio
+  useEffect(() => {
+    const initializeToken = async () => {
+      await loadSavedToken();
+      setTokenLoaded(true);
+      setInitializing(false);
+    };
+    
+    initializeToken();
+  }, []);
+
+  // Manejar parámetros de URL para acceso rápido
+  useEffect(() => {
+    const urlAction = searchParams.get('action');
+    
+    if (urlAction === 'asistente-instagram') {
+      // Cargar automáticamente el asistente de Instagram
+      const loadInstagramAssistant = async () => {
+        setLoadingInstagram(true);
+        try {
+          // Usar el token guardado si está disponible
+          const tokenToUse = currentToken || localStorage.getItem('instagram_token');
+          
+          if (!tokenToUse) {
+            alert('Se requiere un token de Instagram válido');
+            setLoadingInstagram(false);
+            return;
+          }
+          
+          const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: tokenToUse })
+          });
+          const data = await res.json();
+          if (data.success) {
+            setInstagramPosts(data.posts);
+            setShowInstagramAssistant(true);
+          } else {
+            alert('Error al obtener publicaciones de Instagram');
+          }
+        } catch (e) {
+          alert('Error de red o backend');
+        }
+        setLoadingInstagram(false);
+      };
+      
+      loadInstagramAssistant();
+    }
+  }, [searchParams, currentToken]);
+
+
 
   if (loadingInstagram) {
-    return <LoadingScreen />;
+    return <LoadingScreen message="Cargando Asistente de Instagram..." subtitle="Obteniendo publicaciones y datos" />;
   }
   if (showBuilder) {
     return <WebsiteBuilder />;
   }
   if (showInstagramAssistant) {
-    return <InstagramAssistant posts={instagramPosts} isSidebarCollapsed={isSidebarCollapsed} />;
+    return <InstagramAssistant 
+      posts={instagramPosts} 
+      isSidebarCollapsed={isSidebarCollapsed}
+      token={currentToken}
+    />;
   }
 
   return (
@@ -49,23 +237,31 @@ export default function Marketing() {
 
           {/* Card InstagramAssistant */}
           <button
-            onClick={async () => {
-              setLoadingInstagram(true);
-              try {
-                const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                  setInstagramPosts(data.posts);
-                  setShowInstagramAssistant(true);
-                } else {
-                  alert('Error al obtener publicaciones de Instagram');
-                }
-              } catch (e) {
-                alert('Error de red o backend');
+            onClick={() => {
+              console.log('[DEBUG] Marketing - Botón clickeado');
+              console.log('[DEBUG] Marketing - isTokenValid:', isTokenValid);
+              console.log('[DEBUG] Marketing - currentToken:', currentToken ? 'EXISTE' : 'NO_EXISTE');
+              
+              // Verificar directamente en localStorage si hay un token válido
+              const savedToken = localStorage.getItem('instagram_token');
+              const tokenValid = localStorage.getItem('instagram_token_valid');
+              
+              console.log('[DEBUG] Marketing - Token en localStorage:', savedToken ? 'EXISTE' : 'NO_EXISTE');
+              console.log('[DEBUG] Marketing - Token válido en localStorage:', tokenValid);
+              
+              if (savedToken && tokenValid === 'true') {
+                console.log('[DEBUG] Marketing - Cargando asistente con token de localStorage');
+                // Si hay token válido en localStorage, cargar el asistente directamente
+                loadInstagramPosts(savedToken);
+              } else {
+                console.log('[DEBUG] Marketing - Mostrando modal para token');
+                setShowTokenModal(true);
               }
-              setLoadingInstagram(false);
             }}
-            className="bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200 rounded-3xl shadow-2xl p-10 text-left transition-all duration-300 hover:shadow-3xl hover:-translate-y-2 hover:scale-105 cursor-pointer group"
+            disabled={loadingInstagram}
+            className={`bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200 rounded-3xl shadow-2xl p-10 text-left transition-all duration-300 hover:shadow-3xl hover:-translate-y-2 hover:scale-105 cursor-pointer group ${
+              loadingInstagram ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             <div className="flex items-center justify-center mb-6">
               <div className="bg-[var(--color-primary-50)] rounded-full p-4 shadow group-hover:scale-110 transition-transform duration-300">
@@ -74,13 +270,29 @@ export default function Marketing() {
               </svg>
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary-700)] tracking-tight">Asistente de Instagram</h2>
-            <p className="text-gray-500 text-lg leading-relaxed">Gestiona tu presencia en Instagram de manera profesional. Visualiza y programa posts, recibe sugerencias con IA, y mantén un calendario de publicaciones optimizado.</p>
+            <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary-700)] tracking-tight">
+              {loadingInstagram ? 'Cargando Asistente...' : 'Asistente de Instagram'}
+            </h2>
+            <p className="text-gray-500 text-lg leading-relaxed">
+              {loadingInstagram 
+                ? 'Cargando tu asistente de Instagram...' 
+                : 'Gestiona tu presencia en Instagram de manera profesional. Visualiza y programa posts, recibe sugerencias con IA, y mantén un calendario de publicaciones optimizado.'
+              }
+            </p>
           </button>
           </div>
         </div>
       </div>
       {loadingInstagram && <LoadingScreen />}
+      
+      {/* Modal de Token - Solo mostrar si no hay token válido y no se está inicializando */}
+      <TokenInputModal
+        isOpen={showTokenModal && !isTokenValid && !initializing}
+        onSubmit={handleTokenSubmit}
+        onClose={handleTokenModalClose}
+        isLoading={validatingToken}
+        error={tokenError}
+      />
     </div>
   );
 }

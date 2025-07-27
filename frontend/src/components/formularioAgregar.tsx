@@ -16,7 +16,6 @@ interface ProductoForm {
 
 type Producto = {
   id_producto: string;
-  rif_pyme: string;
   nombre_producto: string;
   descripcion_producto: string;
   precio_producto: string;
@@ -174,10 +173,10 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold mb-2">{isEditMode ? 'Editar servicio' : 'Agregar servicio'}</h2>
       {error && <div className="text-red-500 text-sm">{error}</div>}
-      <input className="border rounded px-3 py-2" placeholder="Nombre del servicio" name="nombre_servicio" value={servicio.nombre_servicio} onChange={handleServicioChange} />
-      <textarea className="border rounded px-3 py-2" placeholder="Descripción del servicio" name="descripcion_servicio" value={servicio.descripcion_servicio} onChange={handleServicioChange} />
-      <input className="border rounded px-3 py-2" placeholder="Precio del servicio" name="precio_servicio" type="number" min="0" step="0.01" value={servicio.precio_servicio} onChange={handleServicioChange} />
-      <button type="submit" className="px-4 py-2 rounded bg-[#D8315B] hover:bg-[#b71e44] text-white">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
+      <input className="border rounded px-3 py-2 cursor-text" placeholder="Nombre del servicio" name="nombre_servicio" value={servicio.nombre_servicio} onChange={handleServicioChange} />
+      <textarea className="border rounded px-3 py-2 cursor-text" placeholder="Descripción del servicio" name="descripcion_servicio" value={servicio.descripcion_servicio} onChange={handleServicioChange} />
+      <input className="border rounded px-3 py-2 cursor-text" placeholder="Precio del servicio" name="precio_servicio" type="number" min="0" step="0.01" value={servicio.precio_servicio} onChange={handleServicioChange} />
+      <button type="submit" className="px-4 py-2 rounded bg-[#D8315B] hover:bg-[#b71e44] text-white cursor-pointer">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
     </form>
   );
 };

@@ -1,6 +1,7 @@
 import os
 import json
-from graphAPI import extract_instagram_id, get_follower_insights
+import sys
+from graphAPI import extract_instagram_id, get_follower_insights, set_token
 
 def save_follower_insights():
     """
@@ -36,4 +37,13 @@ def save_follower_insights():
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":
+    # Verificar que se proporcionó el token
+    if len(sys.argv) != 2:
+        print("Uso: python save_follower_insights.py <token>")
+        sys.exit(1)
+    
+    # Establecer el token
+    token = sys.argv[1]
+    set_token(token)
+    
     save_follower_insights()

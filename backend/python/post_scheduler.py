@@ -5,8 +5,23 @@ from datetime import datetime
 import time
 import logging
 import subprocess
+import sys
 
-TOKEN = "EAAKJrM0WC6IBPEoZAy428EsfZCQypR6QBffH7kdXLZCOW2ZATAmiXZAwYJKITSQe82361NIfdzw3xiCAR5P2MzBYaFuA3PZB7E7ARInzaNC8wm0hAFBxD5ojeEnPZByE04p7tF5AmEUcm2s970vlleoBkYSWJsHlb5l79lBvUSIpjb3s2pQmchgx9kdFndPdAZBKhb6lqLZA6d3uNp6Qv1aZARvnUgO3MrEOwvlz9e"
+# Variable global para almacenar el token
+CURRENT_TOKEN = None
+
+def set_token(token):
+    """Establece el token a usar para las llamadas a la API"""
+    global CURRENT_TOKEN
+    CURRENT_TOKEN = token
+
+def get_token():
+    """Obtiene el token actual"""
+    global CURRENT_TOKEN
+    if not CURRENT_TOKEN:
+        raise ValueError("No se ha establecido un token de Instagram. Use set_token() primero")
+    return CURRENT_TOKEN
+
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -24,7 +39,7 @@ logging.basicConfig(
 def make_api_request(endpoint, params=None, method="GET"):
     if params is None:
         params = {}
-    params['access_token'] = TOKEN
+    params['access_token'] = get_token()
     params['app_id'] = APP_ID
     
     try:
@@ -61,9 +76,14 @@ def publish_story(media_url):
     try:
         # Ejecutar el script de historias sin programación (publicación inmediata)
         script_path = os.path.join(os.path.dirname(__file__), "create_instagram_story_scheduled.py")
+        
+        # Obtener el token actual
+        token = get_token()
+        
         result = subprocess.run([
             "pythonw.exe", script_path, 
-            "--media_url", media_url
+            "--media_url", media_url,
+            token
         ], capture_output=True, text=True, cwd=os.path.dirname(__file__))
         
         if result.returncode == 0:
@@ -74,6 +94,28 @@ def publish_story(media_url):
             return False
     except Exception as e:
         logging.error(f"Error ejecutando script de historia: {e}")
+        return False
+
+def publish_story_by_id(instagram_id, creation_id):
+    """Publica una historia usando el creation_id existente"""
+    logging.info(f"Intentando publicar historia con creation_id: {creation_id}")
+    
+    try:
+        # Usar la API directamente para publicar la historia
+        publish_params = {
+            "creation_id": creation_id
+        }
+        publish_endpoint = f"{instagram_id}/media_publish"
+        response = make_api_request(publish_endpoint, publish_params, method="POST")
+        
+        if response and 'id' in response:
+            logging.info(f"Historia publicada exitosamente con ID: {response['id']}")
+            return True
+        else:
+            logging.error(f"Error al publicar historia con creation_id: {creation_id}")
+            return False
+    except Exception as e:
+        logging.error(f"Error publicando historia con creation_id: {e}")
         return False
 
 def load_scheduled_posts():
@@ -100,8 +142,8 @@ def check_and_publish():
             
             # Manejar diferentes tipos de contenido
             if post.get('is_story'):
-                # Es una historia
-                if publish_story(post['media_url']):
+                # Es una historia - usar el creation_id existente
+                if publish_story_by_id(post['instagram_id'], post['creation_id']):
                     logging.info(f"Historia procesada exitosamente: {post['media_url']}")
                 else:
                     logging.error(f"Error procesando historia: {post['media_url']}")
@@ -115,6 +157,15 @@ def check_and_publish():
         save_scheduled_posts(remaining_posts)
 
 if __name__ == "__main__":
+    # Verificar si se proporcionó un token como argumento
+    if len(sys.argv) < 2:
+        print("Uso: python post_scheduler.py <token>")
+        sys.exit(1)
+    
+    # Establecer el token
+    token = sys.argv[1]
+    set_token(token)
+    
     logging.info("Servicio de publicación programada iniciado")
     while True:
         try:

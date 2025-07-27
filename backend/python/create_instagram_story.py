@@ -10,7 +10,7 @@ import json
 import sys
 import os
 import time
-from graphAPI import extract_instagram_id, make_api_request
+from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def detect_media_type(media_url):
     """Detecta si es imagen o video basándose en la URL"""
@@ -74,9 +74,14 @@ def main():
     print("=== [DEBUG] Iniciando script para crear historia de Instagram ===")
     parser = argparse.ArgumentParser(description='Crear historia de Instagram')
     parser.add_argument('--media_url', required=True, help='URL del medio (imagen o video)')
+    parser.add_argument('token', help='Token de acceso de Instagram')
     args = parser.parse_args()
     print(f"[DEBUG] Argumentos recibidos: {args}")
     print(f"[DEBUG] URL del medio: {args.media_url}")
+    
+    # Establecer el token
+    set_token(args.token)
+    
     # Obtener Instagram ID
     instagram_id, page_name = extract_instagram_id()
     print(f"[DEBUG] Resultado de extract_instagram_id: instagram_id={instagram_id}, page_name={page_name}")

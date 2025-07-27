@@ -2,7 +2,7 @@ import argparse
 import sys
 import json
 import time
-from graphAPI import extract_instagram_id, make_api_request
+from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def detect_media_type(url):
     """Detecta si una URL es video o imagen"""
@@ -39,27 +39,51 @@ def publish_carousel(instagram_id, creation_ids):
     return make_api_request(endpoint, params, method="POST")
 
 def main():
+    print("[DEBUG] === Iniciando script de carrusel mixto ===")
     parser = argparse.ArgumentParser(description='Crear carrusel mixto en Instagram')
     parser.add_argument('--media_urls', required=True, nargs='+', help='URLs de imágenes y videos')
     parser.add_argument('--caption', required=True, help='Caption del carrusel')
     parser.add_argument('--scheduled_time', type=int, help='Timestamp para programación (opcional)')
+    parser.add_argument('token', help='Token de acceso de Instagram')
     
     args = parser.parse_args()
     
+    print(f"[DEBUG] Argumentos recibidos:")
+    print(f"[DEBUG] - media_urls: {args.media_urls}")
+    print(f"[DEBUG] - caption: {args.caption}")
+    print(f"[DEBUG] - scheduled_time: {args.scheduled_time}")
+    print(f"[DEBUG] - token: {'TOKEN_PROVIDED' if args.token else 'NO_TOKEN'}")
+    
+    # Establecer el token
+    print("[DEBUG] Estableciendo token...")
+    set_token(args.token)
+    print("[DEBUG] Token establecido correctamente")
+    
     # Validaciones
     if len(args.media_urls) < 2:
-        print(json.dumps({'success': False, 'error': 'Se requieren al menos 2 medios para crear un carrusel'}))
+        print("[ERROR] Se requieren al menos 2 medios para crear un carrusel")
+        result = {'success': False, 'error': 'Se requieren al menos 2 medios para crear un carrusel'}
+        print(json.dumps(result))
         sys.exit(1)
     
     if len(args.media_urls) > 10:
-        print(json.dumps({'success': False, 'error': 'Máximo 10 medios permitidos'}))
+        print("[ERROR] Máximo 10 medios permitidos")
+        result = {'success': False, 'error': 'Máximo 10 medios permitidos'}
+        print(json.dumps(result))
         sys.exit(1)
     
     # Obtener Instagram ID
+    print("[DEBUG] Extrayendo ID de Instagram...")
     instagram_id, page_name = extract_instagram_id()
+    print(f"[DEBUG] Resultado: instagram_id={instagram_id}, page_name={page_name}")
+    
     if not instagram_id:
-        print(json.dumps({'success': False, 'error': 'No se encontró una cuenta de Instagram Business asociada'}))
+        print("[ERROR] No se encontró una cuenta de Instagram Business asociada")
+        result = {'success': False, 'error': 'No se encontró una cuenta de Instagram Business asociada'}
+        print(json.dumps(result))
         sys.exit(1)
+    
+    print(f"[DEBUG] Usando cuenta: {page_name} (ID: {instagram_id})")
     
     try:
         # Paso 1: Crear contenedores para cada medio
@@ -156,27 +180,28 @@ def main():
             
             # Si se proporciona scheduled_time, no publicar inmediatamente
             if args.scheduled_time:
-                print(f"Carrusel programado para: {args.scheduled_time}")
-                print(json.dumps({'success': True, 'creation_id': carousel_id}))
-                return
+                print(f"[DEBUG] Carrusel programado para: {args.scheduled_time}")
+                result = {'success': True, 'creation_id': carousel_id}
+                print(json.dumps(result))
+                sys.exit(0)
             
             # Paso 3: Publicar el carrusel con reintentos si contiene videos
             has_videos = any(media_type == 'REELS' for media_type in media_types)
             
             if has_videos:
-                print("Carrusel contiene videos. Iniciando reintentos para publicación...")
+                print("[DEBUG] Carrusel contiene videos. Iniciando reintentos para publicación...")
                 max_attempts = 10
                 attempt = 1
                 
                 while attempt <= max_attempts:
-                    print(f"Intento {attempt} de {max_attempts} para publicar el carrusel...")
+                    print(f"[DEBUG] Intento {attempt} de {max_attempts} para publicar el carrusel...")
                     
                     publish_params = { 'creation_id': carousel_id }
                     publish_endpoint = f"{instagram_id}/media_publish"
                     publish_response = make_api_request(publish_endpoint, publish_params, method="POST")
                     
                     if publish_response and 'id' in publish_response:
-                        print(f"¡Carrusel publicado exitosamente con ID: {publish_response['id']}!")
+                        print(f"[DEBUG] ¡Carrusel publicado exitosamente con ID: {publish_response['id']}!")
                         
                         # Guardar los datos del post publicado
                         try:
@@ -196,29 +221,34 @@ def main():
                                 'comments_count': 0
                             }
                             save_single_post(post_data)
+                            print("[DEBUG] Post guardado en archivo local")
                         except Exception as e:
-                            print(f"Warning: No se pudo guardar el post: {e}")
+                            print(f"[WARNING] No se pudo guardar el post: {e}")
                         
-                        print(json.dumps({'success': True, 'response': publish_response}))
-                        return
+                        # Enviar respuesta de éxito
+                        result = {'success': True, 'response': publish_response}
+                        print(json.dumps(result))
+                        sys.exit(0)
                     else:
-                        print(f"Intento {attempt} falló. Esperando 10 segundos antes del siguiente intento...")
+                        print(f"[DEBUG] Intento {attempt} falló. Esperando 10 segundos antes del siguiente intento...")
                         if attempt < max_attempts:
                             time.sleep(10)
                         attempt += 1
                 
                 # Si llegamos aquí, todos los intentos fallaron
-                print(json.dumps({'success': False, 'error': f'No se pudo publicar el carrusel después de {max_attempts} intentos'}))
+                print(f"[ERROR] No se pudo publicar el carrusel después de {max_attempts} intentos")
+                result = {'success': False, 'error': f'No se pudo publicar el carrusel después de {max_attempts} intentos'}
+                print(json.dumps(result))
                 sys.exit(1)
             else:
                 # Solo imágenes, publicar directamente
-                print("Publicando carrusel de solo imágenes...")
+                print("[DEBUG] Publicando carrusel de solo imágenes...")
                 publish_params = { 'creation_id': carousel_id }
                 publish_endpoint = f"{instagram_id}/media_publish"
                 publish_response = make_api_request(publish_endpoint, publish_params, method="POST")
                 
                 if publish_response and 'id' in publish_response:
-                    print(f"¡Carrusel publicado exitosamente con ID: {publish_response['id']}!")
+                    print(f"[DEBUG] ¡Carrusel publicado exitosamente con ID: {publish_response['id']}!")
                     
                     # Guardar los datos del post publicado
                     try:
@@ -238,19 +268,29 @@ def main():
                             'comments_count': 0
                         }
                         save_single_post(post_data)
+                        print("[DEBUG] Post guardado en archivo local")
                     except Exception as e:
-                        print(f"Warning: No se pudo guardar el post: {e}")
+                        print(f"[WARNING] No se pudo guardar el post: {e}")
                     
-                    print(json.dumps({'success': True, 'response': publish_response}))
+                    # Enviar respuesta de éxito
+                    result = {'success': True, 'response': publish_response}
+                    print(json.dumps(result))
+                    sys.exit(0)
                 else:
-                    print(json.dumps({'success': False, 'error': 'Error publicando carrusel'}))
+                    print("[ERROR] Error publicando carrusel")
+                    result = {'success': False, 'error': 'Error publicando carrusel'}
+                    print(json.dumps(result))
                     sys.exit(1)
         else:
-            print(json.dumps({'success': False, 'error': 'No se pudo crear el carrusel principal'}))
+            print("[ERROR] No se pudo crear el carrusel principal")
+            result = {'success': False, 'error': 'No se pudo crear el carrusel principal'}
+            print(json.dumps(result))
             sys.exit(1)
             
     except Exception as e:
-        print(json.dumps({'success': False, 'error': f'Error inesperado: {str(e)}'}))
+        print(f"[ERROR] Error inesperado: {str(e)}")
+        result = {'success': False, 'error': f'Error inesperado: {str(e)}'}
+        print(json.dumps(result))
         sys.exit(1)
 
 if __name__ == "__main__":

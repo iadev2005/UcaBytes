@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface InstagramAssistantProps {
   posts: any[] | null;
   isSidebarCollapsed?: boolean;
+  token: string;
 }
 
 function formatDateDMYHM(timestamp: number) {
@@ -25,7 +26,9 @@ function getSavedCount(post: any): number {
     : 0;
 }
 
-export default function InstagramAssistant({ posts, isSidebarCollapsed }: InstagramAssistantProps) {
+export default function InstagramAssistant({ posts, isSidebarCollapsed, token }: InstagramAssistantProps) {
+
+  // Estados existentes
   const [showScheduled, setShowScheduled] = useState(false);
   const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
   const [loadingScheduled, setLoadingScheduled] = useState(false);
@@ -57,30 +60,35 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   const [publishingStory, setPublishingStory] = useState(false);
   const [storyPublishMsg, setStoryPublishMsg] = useState<string | null>(null);
   
+
+
   // Ejecutar script de historias cuando se carga el componente
   useEffect(() => {
     const updateStories = async () => {
       try {
-        console.log('Actualizando historias de Instagram al cargar el componente...');
+        console.log('Actualizando historias de Instagram...');
         const updateResponse = await fetch('http://localhost:3001/api/instagram/update-stories', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ token: token })
         });
         
         if (updateResponse.ok) {
-          console.log('Historias actualizadas exitosamente al cargar el componente');
+          console.log('Historias actualizadas exitosamente');
         } else {
-          console.error('Error al actualizar historias al cargar el componente');
+          console.error('Error al actualizar historias');
         }
       } catch (error) {
         console.error('Error ejecutando script de historias:', error);
       }
     };
     
-    updateStories();
-  }, []);
+    if (token) {
+      updateStories();
+    }
+  }, [token]);
   
   // Función para detectar si una URL es de video
   const isVideoUrl = (url: string): boolean => {
@@ -448,8 +456,11 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                      firstUrl.includes('reel');
       
       let endpoint = '';
+      console.log('[DEBUG] Token disponible:', token ? 'TOKEN_PROVIDED' : 'NO_TOKEN');
+      
       let body: any = {
         caption: caption.trim(),
+        token: token,
       };
       
       // Verificar si es carrusel (múltiples URLs)
@@ -514,7 +525,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
         }
       }
       
-      console.log('Frontend enviando:', { endpoint, body });
+      console.log('[DEBUG] Frontend enviando:', { endpoint, body });
       
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -522,7 +533,11 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
         body: JSON.stringify(body)
       });
       
+      console.log('[DEBUG] Response status:', res.status);
+      console.log('[DEBUG] Response ok:', res.ok);
+      
       const data = await res.json();
+      console.log('[DEBUG] Response data:', data);
       if (data.success) {
         // Determinar si es una publicación programada o inmediata
         const isScheduled = date && time;
@@ -579,6 +594,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ token: token })
       });
       
       if (response.ok) {
@@ -681,7 +697,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
       const mediaUrl = storyMediaUrl.trim() || storyPreview;
       let endpoint = 'http://localhost:3001/api/instagram/create-story';
       let requestBody: any = {
-        media_url: mediaUrl
+        media_url: mediaUrl,
+        token: token
       };
 
       // Manejar programación si se especificó fecha y hora
@@ -964,7 +981,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
           
           {/* Subbotones centrados */}
           {showAddPost && (
-            <div className="flex justify-center">
+            <div className={`flex${isSidebarCollapsed ? ' ml-36' : ' ml-36'}`}>
               <div className="flex flex-row gap-2 lg:gap-4">
                 <button 
                   className={`rounded-lg px-3 lg:px-4 py-2 text-xs lg:text-sm font-medium shadow transition-colors cursor-pointer ${
@@ -1461,10 +1478,37 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                     {selectedPost.comments && selectedPost.comments.data && selectedPost.comments.data.length > 0 ? (
                       selectedPost.comments.data.map((comment: any, index: number) => (
                         <div key={index} className="mb-3 p-2 bg-gray-50 rounded">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-semibold text-blue-600">@{comment.username}</p>
+                            <div className="flex items-center gap-2">
+                              {comment.like_count > 0 && (
+                                <span className="text-xs text-gray-500 flex items-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                  </svg>
+                                  {comment.like_count}
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-500">
+                                {comment.timestamp ? new Date(comment.timestamp).toLocaleDateString() : 'Fecha desconocida'}
+                              </span>
+                            </div>
+                          </div>
                           <p className="text-sm">{comment.text}</p>
-                          <p className="text-xs text-gray-500 mt-1 text-right">
-                            {comment.timestamp ? new Date(comment.timestamp).toLocaleDateString() : 'Fecha desconocida'}
-                          </p>
+                          
+                          {/* Mostrar respuestas si las hay */}
+                          {comment.replies && comment.replies.data && comment.replies.data.length > 0 && (
+                            <div className="mt-2 ml-4 border-l-2 border-gray-200 pl-3">
+                              {comment.replies.data.map((reply: any, replyIndex: number) => (
+                                <div key={replyIndex} className="mb-2 p-2 bg-white rounded border">
+                                  <p className="text-sm">{reply.text}</p>
+                                  <p className="text-xs text-gray-500 mt-1 text-right">
+                                    {reply.timestamp ? new Date(reply.timestamp).toLocaleDateString() : 'Fecha desconocida'}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
