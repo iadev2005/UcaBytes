@@ -169,6 +169,210 @@ export async function deleteProduct(id_producto: number) {
   }
 }
 
+// Crear una nueva venta con productos
+export async function createSale({
+  cliente,
+  productos,
+  metodoPago,
+  fechaVenta,
+  fechaPago,
+  total,
+  id_empresa
+}: {
+  cliente: {
+    nombre: string;
+    email: string;
+    telefono: string;
+    direccion: string;
+  };
+  productos: Array<{
+    id_producto: number;
+    cantidad: number;
+    precio: number;
+  }>;
+  metodoPago: string;
+  fechaVenta: string;
+  fechaPago?: string;
+  total: number;
+  id_empresa: number;
+}) {
+  try {
+    // 1. Crear o actualizar cliente
+    const ci_cliente = `CI-${Date.now()}`; // Generar CI temporal
+    const { error: clienteError } = await client
+      .from('clientes')
+      .upsert({
+        ci: ci_cliente,
+        nombre: cliente.nombre.split(' ')[0] || cliente.nombre,
+        apellido: cliente.nombre.split(' ').slice(1).join(' ') || cliente.nombre,
+        email: cliente.email,
+        telefono: cliente.telefono
+      });
+
+    if (clienteError) {
+      return { success: false, message: 'No se pudo crear/actualizar el cliente: ' + clienteError.message };
+    }
+
+    // 2. Relacionar cliente con empresa
+    const { error: clienteEmpresaError } = await client
+      .from('clientesempresa')
+      .upsert({
+        id_empresa,
+        ci_cliente
+      });
+
+    if (clienteEmpresaError) {
+      return { success: false, message: 'No se pudo relacionar el cliente con la empresa: ' + clienteEmpresaError.message };
+    }
+
+    // 3. Crear orden de venta
+    const referencia = `V-${Date.now()}`;
+    const { data: ordenVentaData, error: ordenVentaError } = await client
+      .from('ordenventa')
+      .insert({
+        descripcion: `Venta de ${productos.length} productos`,
+        fechaventa: fechaVenta,
+        referencia,
+        ci_cliente,
+        id_empresa
+      })
+      .select();
+
+    if (ordenVentaError || !ordenVentaData || ordenVentaData.length === 0) {
+      return { success: false, message: 'No se pudo crear la orden de venta: ' + (ordenVentaError?.message || 'Error desconocido') };
+    }
+
+    const ordenVenta = ordenVentaData[0];
+
+    // 4. Agregar productos a la orden de venta
+    const productosVenta = productos.map(producto => ({
+      nro_orden: ordenVenta.nro_orden,
+      id_producto: producto.id_producto,
+      precio: producto.precio,
+      cantidad: producto.cantidad
+    }));
+
+    const { error: productosError } = await client
+      .from('ordenventaproductos')
+      .insert(productosVenta);
+
+    if (productosError) {
+      return { success: false, message: 'No se pudo agregar los productos a la venta: ' + productosError.message };
+    }
+
+    // 5. Actualizar inventario (reducir stock)
+    for (const producto of productos) {
+      // Primero obtener la cantidad actual
+      const { data: inventarioActual } = await client
+        .from('inventario')
+        .select('cantidad_actual')
+        .eq('id_empresa', id_empresa)
+        .eq('id_producto', producto.id_producto)
+        .single();
+
+      if (inventarioActual) {
+        const nuevaCantidad = inventarioActual.cantidad_actual - producto.cantidad;
+        const { error: inventarioError } = await client
+          .from('inventario')
+          .update({ cantidad_actual: nuevaCantidad })
+          .eq('id_empresa', id_empresa)
+          .eq('id_producto', producto.id_producto);
+
+        if (inventarioError) {
+          console.error('Error actualizando inventario para producto:', producto.id_producto, inventarioError);
+        }
+      }
+    }
+
+    return { 
+      success: true, 
+      message: '¡Venta creada con éxito!', 
+      venta: {
+        ...ordenVenta,
+        cliente,
+        productos,
+        total
+      }
+    };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'No se pudo crear la venta.' };
+  }
+}
+
+// Obtener ventas de una empresa
+export async function getSalesByCompany(id_empresa: number) {
+  try {
+    const { data, error } = await client
+      .from('ordenventa')
+      .select(`
+        nro_orden,
+        descripcion,
+        fechaventa,
+        referencia,
+        ci_cliente,
+        id_empresa,
+        clientes (
+          ci,
+          nombre,
+          apellido,
+          email,
+          telefono
+        ),
+        ordenventaproductos (
+          cantidad,
+          precio,
+          productos (
+            id,
+            nombre,
+            descripcion,
+            categoria,
+            imagen
+          )
+        )
+      `)
+      .eq('id_empresa', id_empresa)
+      .order('fechaventa', { ascending: false });
+
+    if (error) throw error;
+
+    // Transformar datos al formato esperado
+    const ventasTransformadas = data.map(venta => {
+      const cliente = Array.isArray(venta.clientes) ? venta.clientes[0] : venta.clientes;
+      return {
+        id: venta.nro_orden,
+        cliente: {
+          nombre: `${cliente?.nombre || ''} ${cliente?.apellido || ''}`.trim(),
+          email: cliente?.email || '',
+          telefono: cliente?.telefono || '',
+          direccion: ''
+        },
+        productos: venta.ordenventaproductos.map((item: any) => ({
+          id_producto: item.productos.id,
+          nombre_producto: item.productos.nombre,
+          descripcion_producto: item.productos.descripcion,
+          precio_producto: item.precio,
+          categoria_producto: item.productos.categoria,
+          stock_producto: 0, // No disponible en esta consulta
+          imagen_producto: item.productos.imagen,
+          cantidad: item.cantidad,
+          subtotal: item.precio * item.cantidad
+        })),
+        metodoPago: 'Efectivo', // No disponible en la BD
+        fechaVenta: venta.fechaventa,
+        fechaPago: null, // No disponible en la BD
+        total: venta.ordenventaproductos.reduce((sum: number, item: any) => sum + (item.precio * item.cantidad), 0),
+        pagada: true // Asumimos que todas las ventas están pagadas
+      };
+    });
+
+    return { success: true, data: ventasTransformadas };
+  } catch (err) {
+    console.error(err);
+    return { success: false, data: [], error: err };
+  }
+}
+
 // Subir imagen a Supabase Storage
 export async function uploadImage(file: File, fileName: string) {
   try {

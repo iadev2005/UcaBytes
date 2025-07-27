@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { getProductsByCompany } from '../supabase/data';
+import { getProductsByCompany, createSale, getSalesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 const mockEmpleados = [
@@ -205,7 +205,7 @@ interface Venta {
   cliente: Cliente;
   metodoPago: string;
   fechaVenta: string;
-  fechaPago?: string;
+  fechaPago?: string | null;
   total: number;
   pagada: boolean;
 }
@@ -251,6 +251,9 @@ export default function CentralOperations() {
   const [modalVentaOpen, setModalVentaOpen] = useState(false);
   const [productos, setProductos] = useState<ProductoVenta[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(false);
+  const [loadingVentas, setLoadingVentas] = useState(false);
+  const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
+
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date();
@@ -323,101 +326,17 @@ export default function CentralOperations() {
     }
   }, [searchParams]);
 
+  // Guardar tareas en localStorage
   useEffect(() => {
     if (isInitialized) {
-      console.log('💾 Guardando tareas:', tareas);
       localStorage.setItem('task_planner', JSON.stringify(tareas));
     }
   }, [tareas, isInitialized]);
 
-  // Cargar todos los datos del localStorage al inicializar
+  // Marcar como inicializado
   useEffect(() => {
-    console.log('🔄 Cargando datos desde localStorage...');
-    
-    // Cargar tareas
-    const tareasGuardadas = localStorage.getItem('task_planner');
-    if (tareasGuardadas) {
-      const tareasCargadas = JSON.parse(tareasGuardadas);
-      setTareas(tareasCargadas);
-      console.log('📝 Tareas cargadas:', tareasCargadas);
-    }
-
-    // Cargar ventas
-    const ventasGuardadas = localStorage.getItem('ventas');
-    if (ventasGuardadas) {
-      const ventasCargadas = JSON.parse(ventasGuardadas);
-      setVentas(ventasCargadas);
-      console.log('💰 Ventas cargadas:', ventasCargadas);
-    }
-
-    // Cargar servicios vendidos
-    const ventasServiciosGuardadas = localStorage.getItem('ventasServicios');
-    if (ventasServiciosGuardadas) {
-      const serviciosCargados = JSON.parse(ventasServiciosGuardadas);
-      setVentasServicios(serviciosCargados);
-      console.log('🔧 Servicios vendidos cargados:', serviciosCargados);
-    }
-
-    // Cargar empleados
-    const empleadosGuardados = localStorage.getItem('empleados');
-    if (empleadosGuardados) {
-      const empleadosCargados = JSON.parse(empleadosGuardados);
-      setEmpleados(empleadosCargados);
-      console.log('👥 Empleados cargados:', empleadosCargados);
-    }
-
-    // Cargar productos del localStorage (sincronización con ProductsServices)
-    const productosGuardados = localStorage.getItem('productos');
-    if (productosGuardados) {
-      const productosCargados = JSON.parse(productosGuardados);
-      setProductos(productosCargados);
-      console.log('📦 Productos cargados:', productosCargados);
-    }
-
-    // Cargar servicios del localStorage (sincronización con ProductsServices)
-    const serviciosGuardados = localStorage.getItem('servicios');
-    if (serviciosGuardados) {
-      const serviciosCargados = JSON.parse(serviciosGuardados);
-      setServicios(serviciosCargados);
-      console.log('🔧 Servicios cargados:', serviciosCargados);
-    }
-
-    // Marcar como inicializado después de cargar todo
     setIsInitialized(true);
-    console.log('✅ Inicialización completada');
   }, []);
-
-  useEffect(() => {
-    const ventasGuardadas = localStorage.getItem('ventas');
-    console.log('Cargando ventas del localStorage:', ventasGuardadas);
-    if (ventasGuardadas) {
-      setVentas(JSON.parse(ventasGuardadas));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando ventas:', ventas);
-      localStorage.setItem('ventas', JSON.stringify(ventas));
-    }
-  }, [ventas, isInitialized]);
-
-
-
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando servicios vendidos:', ventasServicios);
-      localStorage.setItem('ventasServicios', JSON.stringify(ventasServicios));
-    }
-  }, [ventasServicios, isInitialized]);
-
-  // Guardar empleados en localStorage
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando empleados:', empleados);
-      localStorage.setItem('empleados', JSON.stringify(empleados));
-    }
-  }, [empleados, isInitialized]);
 
 
 
@@ -610,40 +529,67 @@ export default function CentralOperations() {
     return nuevaVenta.productos.reduce((total, producto) => total + (producto.subtotal || 0), 0);
   };
 
-  const handleCrearVenta = (e: React.FormEvent) => {
+  const handleCrearVenta = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nuevaVenta.productos.length === 0) return;
     if (!nuevaVenta.cliente.nombre.trim()) return;
+    if (!companyData?.id) return;
 
-    const ventaCompleta: Venta = {
-      id: Date.now(),
-      ...nuevaVenta,
-      total: calcularTotal(),
-      fechaVenta: new Date(nuevaVenta.fechaVenta).toISOString(),
-      fechaPago: nuevaVenta.fechaPago ? new Date(nuevaVenta.fechaPago).toISOString() : undefined,
-      pagada: !!nuevaVenta.fechaPago
-    };
+    console.log('🔄 Creando venta en Supabase...');
+    console.log('📦 Productos:', nuevaVenta.productos);
+    console.log('👤 Cliente:', nuevaVenta.cliente);
+    console.log('🏢 Empresa ID:', companyData.id);
 
-
-    setVentas([ventaCompleta, ...ventas]);
+    const total = calcularTotal();
     
-    // Reset form
-    setNuevaVenta({
-      productos: [],
-      cliente: {
-        nombre: '',
-        email: '',
-        telefono: '',
-        direccion: ''
-      },
-      metodoPago: 'Efectivo',
-      fechaVenta: getCurrentDate(),
-      fechaPago: '',
-      total: 0,
-      pagada: false
+    // Preparar datos para Supabase
+    const productosParaSupabase = nuevaVenta.productos.map(producto => ({
+      id_producto: producto.id_producto,
+      cantidad: producto.cantidad || 0,
+      precio: producto.precio_producto
+    }));
+
+    const result = await createSale({
+      cliente: nuevaVenta.cliente,
+      productos: productosParaSupabase,
+      metodoPago: nuevaVenta.metodoPago,
+      fechaVenta: nuevaVenta.fechaVenta,
+      fechaPago: nuevaVenta.fechaPago || undefined,
+      total,
+      id_empresa: companyData.id
     });
-    
-    setModalVentaOpen(false);
+
+    console.log('📊 Resultado de creación de venta:', result);
+
+    if (result.success) {
+      console.log('✅ Venta creada exitosamente en Supabase');
+      // Recargar ventas desde Supabase
+      await loadVentas();
+      
+      // Reset form
+      setNuevaVenta({
+        productos: [],
+        cliente: {
+          nombre: '',
+          email: '',
+          telefono: '',
+          direccion: ''
+        },
+        metodoPago: 'Efectivo',
+        fechaVenta: getCurrentDate(),
+        fechaPago: '',
+        total: 0,
+        pagada: false
+      });
+      
+      setModalVentaOpen(false);
+      setSaleSuccess('Venta creada exitosamente');
+      setTimeout(() => setSaleSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
+    } else {
+      console.error('❌ Error creando venta:', result.message);
+      setSaleSuccess('Error al crear la venta: ' + result.message);
+      setTimeout(() => setSaleSuccess(null), 5000); // Limpiar mensaje de error después de 5 segundos
+    }
   };
 
   const eliminarVenta = (ventaId: number) => {
@@ -848,15 +794,47 @@ export default function CentralOperations() {
     }
   };
 
+  // Cargar ventas desde Supabase
+  const loadVentas = async () => {
+    if (!companyData?.id) return;
+    
+    console.log('🔄 Cargando ventas desde Supabase para empresa:', companyData.id);
+    setLoadingVentas(true);
+    try {
+      const result = await getSalesByCompany(companyData.id);
+      console.log('📊 Resultado de carga de ventas:', result);
+      if (result.success) {
+        setVentas(result.data || []);
+        console.log('✅ Ventas cargadas desde Supabase:', result.data);
+      } else {
+        console.error('❌ Error cargando ventas:', result.error);
+        setVentas([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando ventas:', error);
+      setVentas([]);
+    } finally {
+      setLoadingVentas(false);
+    }
+  };
+
   // Cargar productos cuando se inicializa el componente
   useEffect(() => {
     if (companyData?.id) {
       loadProductos();
+      loadVentas();
     }
   }, [companyData?.id]);
 
   return (
-    <div className="w-full mx-auto px-20 py-10 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
+    <div className="w-full mx-auto px-20 py-10 pb-30 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
+      {/* Mensaje de éxito */}
+      {saleSuccess && (
+        <div className="fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 bg-green-500 text-white">
+          {saleSuccess}
+        </div>
+      )}
+      
       {/* Tabs */}
       <div className="flex mb-8 w-full px-20 mx-auto">
         <div className="flex w-full rounded-2xl border-2 border-[var(--color-primary-600)] bg-white overflow-hidden">
@@ -1058,7 +1036,12 @@ export default function CentralOperations() {
       {/* Lista de ventas */}
       {tab === 'ventas' && (
         <div className="flex flex-col gap-4 mb-15">
-          {ventas.length === 0 ? (
+          {loadingVentas ? (
+            <div className="text-center text-gray-400 py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary-600)] mx-auto mb-4"></div>
+              <p className="text-xl mb-2">Cargando ventas...</p>
+            </div>
+          ) : ventas.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay ventas registradas</p>
               <p>Haz clic en "Nueva Venta" para comenzar</p>
