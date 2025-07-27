@@ -278,8 +278,7 @@ export default function Home() {
         <div className="flex flex-col gap-4 flex-1 justify-start h-[70vh]">
           <div className="bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
             <div className="flex items-center gap-2 mb-2">
-              <DashboardIcon className="text-[var(--color-primary-400)] w-5 h-5" />
-              <h2 className="text-lg font-bold">Resumen de Ciclo o Progreso</h2>
+              <h2 className="text-lg font-bold px-5">Resumen de Ciclo o Progreso</h2>
             </div>
             <div className="flex items-center justify-center h-16 text-sm text-gray-400">
               No hay datos para mostrar.
@@ -384,7 +383,7 @@ export default function Home() {
             </div>
 
             <div className="bg-white rounded-3xl shadow-2xl p-5 border border-gray-200 w-full animate-fade-in-up">
-              <h2 className="text-xl font-bold mb-2">To-Do List:</h2>
+              <h2 className="text-xl font-bold mb-2">Por hacer:</h2>
               <hr className="border-t border-gray-300 mb-4" />
               {prioridades.map(prio => {
                 const tasks = plannerTasksByPriority(prio);
