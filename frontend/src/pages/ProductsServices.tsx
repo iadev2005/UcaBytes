@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
+import { getProductsByCompany } from '../supabase/data';
+import { useCompany } from '../context/CompanyContext';
 
 // Eliminar mockProductos y mockServicios
 // const mockProductos = [
@@ -92,37 +94,54 @@ export default function ProductsServices() {
   const [tab, setTab] = useState<'productos' | 'servicios'>('productos');
   const [cat, setCat] = useState('Todos');
   const [modalOpen, setModalOpen] = useState(false);
-  // Inicializar productos y servicios como arrays vacíos para datos reales
   const [productos, setProductos] = useState<any[]>([]);
   const [servicios, setServicios] = useState<any[]>([]);
   const [editProducto, setEditProducto] = useState<any | null>(null);
   const [editServicio, setEditServicio] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { companyData } = useCompany();
 
-  // Guardar productos en localStorage
+  // Cargar productos desde Supabase
   useEffect(() => {
-    localStorage.setItem('productos', JSON.stringify(productos));
-  }, [productos]);
+    const loadProductos = async () => {
+      if (!companyData?.id) return;
+      
+      setLoading(true);
+      try {
+        const result = await getProductsByCompany(companyData.id);
+        if (result.success) {
+          setProductos(result.data || []);
+        } else {
+          console.error('Error cargando productos:', result.error);
+          setProductos([]);
+        }
+      } catch (error) {
+        console.error('Error cargando productos:', error);
+        setProductos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Cargar productos del localStorage
-  useEffect(() => {
-    const productosGuardados = localStorage.getItem('productos');
-    if (productosGuardados) {
-      setProductos(JSON.parse(productosGuardados));
+    loadProductos();
+  }, [companyData?.id]);
+
+  // Recargar productos cuando se agrega uno nuevo
+  const reloadProductos = async () => {
+    if (!companyData?.id) return;
+    
+    setLoading(true);
+    try {
+      const result = await getProductsByCompany(companyData.id);
+      if (result.success) {
+        setProductos(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error recargando productos:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  // Guardar servicios en localStorage
-  useEffect(() => {
-    localStorage.setItem('servicios', JSON.stringify(servicios));
-  }, [servicios]);
-
-  // Cargar servicios del localStorage
-  useEffect(() => {
-    const serviciosGuardados = localStorage.getItem('servicios');
-    if (serviciosGuardados) {
-      setServicios(JSON.parse(serviciosGuardados));
-    }
-  }, []);
+  };
 
   // Manejar parámetros de URL para acceso rápido
   useEffect(() => {
@@ -140,8 +159,8 @@ export default function ProductsServices() {
   }, [searchParams]);
 
   // Handlers para agregar
-  const handleAddProducto = (producto: any) => {
-    setProductos((prev) => [...prev, producto]);
+  const handleAddProducto = async (producto: any) => {
+    await reloadProductos(); // Recargar desde Supabase
     setModalOpen(false);
   };
 
@@ -151,8 +170,8 @@ export default function ProductsServices() {
   };
 
   // Handler para editar producto
-  const handleEditProducto = (productoEditado: any) => {
-    setProductos((prev) => prev.map((p) => p.id_producto === productoEditado.id_producto ? productoEditado : p));
+  const handleEditProducto = async (productoEditado: any) => {
+    await reloadProductos(); // Recargar desde Supabase
     setEditProducto(null);
     setModalOpen(false);
   };
@@ -165,8 +184,8 @@ export default function ProductsServices() {
   };
 
   // Eliminar producto
-  const eliminarProducto = (id: string) => {
-    setProductos(productos.filter(p => p.id_producto !== id));
+  const eliminarProducto = async (id: string) => {
+    await reloadProductos(); // Recargar desde Supabase
   };
 
   // Eliminar servicio
@@ -175,13 +194,13 @@ export default function ProductsServices() {
   };
 
   // Filtrar productos por categoría
-  const productosFiltrados = cat === 'Todos' ? productos : productos.filter(p => p.categoria_producto === cat);
+  const productosFiltrados = cat === 'Todos' ? productos : productos.filter(p => p.productos?.categoria === cat);
 
   // Calcular estadísticas
   const totalProductos = productos.length;
   const totalServicios = servicios.length;
-  const stockTotal = productos.reduce((total, p) => total + parseInt(p.stock_producto), 0);
-  const valorTotalInventario = productos.reduce((total, p) => total + (parseFloat(p.precio_producto) * parseInt(p.stock_producto)), 0);
+  const stockTotal = productos.reduce((total, p) => total + Number(p.cantidad_actual || 0), 0);
+  const valorTotalInventario = productos.reduce((total, p) => total + (Number(p.precio_venta || 0) * Number(p.cantidad_actual || 0)), 0);
 
   return (
     <div className="w-full mx-auto px-20 py-10 pb-30 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
@@ -307,28 +326,31 @@ export default function ProductsServices() {
       {/* Lista de productos */}
       {tab === 'productos' && (
         <div className="flex flex-col gap-4">
-          {productos.length === 0 ? (
+          {loading ? (
+            <div className="text-center text-gray-400 py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary-600)] mx-auto mb-4"></div>
+              <p className="text-xl mb-2">Cargando productos...</p>
+            </div>
+          ) : productos.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay productos en esta categoría</p>
               <p>Haz clic en "Agregar producto" para comenzar</p>
             </div>
           ) : (
             productos.map((item) => (
-              <div key={item.id} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
+              <div key={item.id_producto} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                   {/* Imagen del producto */}
                   <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
-                    {producto.imagen_producto ? (
+                    {item.productos?.imagen ? (
                       <img 
-                        src={producto.imagen_producto} 
-                        alt={producto.nombre_producto}
+                        src={item.productos.imagen} 
+                        alt={item.productos.nombre}
                         className="w-full h-full object-cover rounded-lg border border-gray-200"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                        <span className="text-2xl text-gray-400">📷</span>
                       </div>
                     )}
                   </div>
@@ -357,8 +379,24 @@ export default function ProductsServices() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <img src={item.productos?.image} alt={item.productos?.nombre} className="w-24 h-24 object-cover rounded-lg border" />
-                  {/* ...botones de editar/eliminar... */}
+                  {/* Botones de editar/eliminar */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditProducto(item);
+                        setModalOpen(true);
+                      }}
+                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => eliminarProducto(item.id_producto)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors cursor-pointer"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </div>
             ))

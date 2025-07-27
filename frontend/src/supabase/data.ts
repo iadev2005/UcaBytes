@@ -116,7 +116,6 @@ export async function getProductsByCompany(id_empresa: number) {
     const { data, error } = await client
       .from('inventario')
       .select(`
-        id,
         id_empresa,
         id_producto,
         precio_venta,
@@ -127,7 +126,7 @@ export async function getProductsByCompany(id_empresa: number) {
           descripcion,
           cantidad_minima,
           cantidad_maxima,
-          image,
+          imagen,
           categoria
         )
       `)
