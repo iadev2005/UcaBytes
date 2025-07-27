@@ -54,6 +54,7 @@ def main():
     parser = argparse.ArgumentParser(description='Crear carrusel de Instagram con múltiples imágenes')
     parser.add_argument('--image_urls', nargs='+', required=True, help='URLs de las imágenes')
     parser.add_argument('--caption', required=True, help='Caption de la publicación')
+    parser.add_argument('--scheduled_time', type=int, help='Timestamp para programación (opcional)')
     args = parser.parse_args()
 
     instagram_id, page_name = extract_instagram_id()
@@ -87,6 +88,12 @@ def main():
         if not carousel_id:
             print(json.dumps({'success': False, 'error': 'Error creando contenedor carrusel'}))
             sys.exit(1)
+        
+        # Si se proporciona scheduled_time, no publicar inmediatamente
+        if args.scheduled_time:
+            print(f"Carrusel programado para: {args.scheduled_time}")
+            print(json.dumps({'success': True, 'creation_id': carousel_id}))
+            return
         
         # Paso 3: Publicar el carrusel
         publish_response = publish_carousel(instagram_id, carousel_id)

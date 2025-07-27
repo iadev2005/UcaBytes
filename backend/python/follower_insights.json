@@ -31,6 +31,6 @@
     }
   ],
   "paging": {
-    "previous": "https://graph.facebook.com/v23.0/17841475801593188/insights?access_token=EAAKJrM0WC6IBPDZARfB40mVCydyEj9uULvnInAL4potOvXZBvCYF51kEn4e8H7RlP8PqTggFJQZA8d2KrmZBWAbRm3ULAp6Ly4l7msqBSNB91ulOuV3keO2dDm0fxTVN0vW2GPiZCBhzspHf5Gwkbgv9JP9wdnDlFns3AxiNlK4hZB3mZBvfgFiZCItXLxNIFEv5y5FbVmjtPRSu7jbIpaP025r281pZBOGaHfTeO&since=1750550399&until=1753142399&metric=follower_count&period=day"
+    "previous": "https://graph.facebook.com/v23.0/17841475801593188/insights?access_token=EAAKJrM0WC6IBPEoZAy428EsfZCQypR6QBffH7kdXLZCOW2ZATAmiXZAwYJKITSQe82361NIfdzw3xiCAR5P2MzBYaFuA3PZB7E7ARInzaNC8wm0hAFBxD5ojeEnPZByE04p7tF5AmEUcm2s970vlleoBkYSWJsHlb5l79lBvUSIpjb3s2pQmchgx9kdFndPdAZBKhb6lqLZA6d3uNp6Qv1aZARvnUgO3MrEOwvlz9e&since=1750550399&until=1753142399&metric=follower_count&period=day"
   }
 }

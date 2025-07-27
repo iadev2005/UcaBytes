@@ -52,6 +52,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   const [showStoryForm, setShowStoryForm] = useState(false);
   const [storyMediaUrl, setStoryMediaUrl] = useState('');
   const [storyPreview, setStoryPreview] = useState('');
+  const [storyDate, setStoryDate] = useState('');
+  const [storyTime, setStoryTime] = useState('');
   const [publishingStory, setPublishingStory] = useState(false);
   const [storyPublishMsg, setStoryPublishMsg] = useState<string | null>(null);
   
@@ -88,12 +90,13 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   };
 
   // Componente de video estilo Instagram
-  const InstagramVideo = ({ src, className, style, showControls = true, isPreview = false }: { 
+  const InstagramVideo = ({ src, className, style, showControls = true, isPreview = false, isDragArea = false }: { 
     src: string; 
     className?: string; 
     style?: React.CSSProperties; 
     showControls?: boolean;
     isPreview?: boolean;
+    isDragArea?: boolean;
   }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(!isPreview); // En vista previa, no muted por defecto
@@ -152,13 +155,13 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
 
     return (
       <div 
-        className={`relative group instagram-video ${className}`} 
+        className={`relative group instagram-video ${className} ${isDragArea ? 'max-w-32 max-h-32' : ''}`} 
         style={style}
       >
         <video
           ref={videoRef}
           src={src}
-          className="w-full h-full object-cover"
+          className={`${isDragArea ? 'max-w-full max-h-full' : 'w-full h-full'} object-cover`}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onPlay={() => setIsPlaying(true)}
@@ -483,12 +486,6 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
         // Es un video individual
         endpoint = 'http://localhost:3001/api/instagram/create-video';
         body.video_url = firstUrl;
-        
-        if (date && time) {
-          setPublishMsg('La programación de videos no está disponible aún.');
-          setPublishing(false);
-          return;
-        }
       } else {
         // Post simple de imagen
         endpoint = 'http://localhost:3001/api/instagram/create-post';
@@ -498,11 +495,23 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
       // Manejar programación si se especificó fecha y hora
       if (date && time) {
         const isCarouselForScheduling = validUrls.length > 1 || validPreviews.length > 1;
-        endpoint = isCarouselForScheduling 
-          ? 'http://localhost:3001/api/instagram/schedule-carousel'
-          : 'http://localhost:3001/api/instagram/schedule-post';
-        body.date = date;
-        body.time = time;
+        
+        if (isCarouselForScheduling) {
+          endpoint = 'http://localhost:3001/api/instagram/schedule-carousel';
+          body.date = date;
+          body.time = time;
+        } else if (isVideo) {
+          // Video individual
+          endpoint = 'http://localhost:3001/api/instagram/schedule-video';
+          body.video_url = firstUrl;
+          body.date = date;
+          body.time = time;
+        } else {
+          // Imagen individual
+          endpoint = 'http://localhost:3001/api/instagram/schedule-post';
+          body.date = date;
+          body.time = time;
+        }
       }
       
       console.log('Frontend enviando:', { endpoint, body });
@@ -515,7 +524,9 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
       
       const data = await res.json();
       if (data.success) {
-        setPublishMsg('¡Publicación realizada con éxito!');
+        // Determinar si es una publicación programada o inmediata
+        const isScheduled = date && time;
+        setPublishMsg(isScheduled ? '¡Publicación programada con éxito!' : '¡Publicación realizada con éxito!');
         
         // Limpiar formulario
         setImageUrls(['']);
@@ -587,7 +598,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
   const handleShowStories = async () => {
     setViewMode('stories');
     setShowStories(true);
-    setShowAddPost(false);
+    setShowAddPost(true);
     setShowStoryForm(true);
     setShowScheduled(false);
     setShowSuggestions(false);
@@ -646,6 +657,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
     console.log('[DEBUG] handlePublishStory iniciado');
     console.log('[DEBUG] storyMediaUrl:', storyMediaUrl);
     console.log('[DEBUG] storyPreview:', storyPreview);
+    console.log('[DEBUG] storyDate:', storyDate);
+    console.log('[DEBUG] storyTime:', storyTime);
     
     if (!storyMediaUrl.trim() && !storyPreview) {
       console.log('[DEBUG] URL y preview vacíos, mostrando mensaje de error');
@@ -659,12 +672,21 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
 
     try {
       const mediaUrl = storyMediaUrl.trim() || storyPreview;
-      const requestBody = {
+      let endpoint = 'http://localhost:3001/api/instagram/create-story';
+      let requestBody: any = {
         media_url: mediaUrl
       };
-      console.log('[DEBUG] Enviando request al backend:', requestBody);
+
+      // Manejar programación si se especificó fecha y hora
+      if (storyDate && storyTime) {
+        endpoint = 'http://localhost:3001/api/instagram/schedule-story';
+        requestBody.date = storyDate;
+        requestBody.time = storyTime;
+      }
+
+      console.log('[DEBUG] Enviando request al backend:', { endpoint, requestBody });
       
-      const response = await fetch('http://localhost:3001/api/instagram/create-story', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -679,15 +701,18 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
       console.log('[DEBUG] Response data:', data);
 
       if (data.success) {
-        console.log('[DEBUG] Historia publicada exitosamente');
-        setStoryPublishMsg('Historia publicada con éxito!');
+        console.log('[DEBUG] Historia procesada exitosamente');
+        const isScheduled = storyDate && storyTime;
+        setStoryPublishMsg(isScheduled ? '¡Historia programada con éxito!' : '¡Historia publicada con éxito!');
         setStoryMediaUrl('');
         setStoryPreview('');
+        setStoryDate('');
+        setStoryTime('');
         // Recargar las historias después de publicar
         handleShowStories();
       } else {
         console.log('[DEBUG] Error en la respuesta:', data.error);
-        setStoryPublishMsg(data.error || 'Error al publicar la historia');
+        setStoryPublishMsg(data.error || 'Error al procesar la historia');
       }
     } catch (error) {
       console.error('[DEBUG] Error en handlePublishStory:', error);
@@ -931,7 +956,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
           </div>
           
           {/* Subbotones centrados */}
-          {(showAddPost || viewMode === 'stories') && (
+          {showAddPost && (
             <div className="flex justify-center">
               <div className="flex flex-row gap-2 lg:gap-4">
                 <button 
@@ -971,7 +996,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
               ) : null}
             </div>
           )}
-          {showAddPost && !showScheduled && !showSuggestions ? (
+          {showAddPost && !showStoryForm && !showScheduled && !showSuggestions ? (
             <form className={`flex flex-col gap-3 lg:gap-4 w-full max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { e.preventDefault(); handlePublish(); }}>
               <div>
                 <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">
@@ -993,6 +1018,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                                 className="max-h-32 rounded" 
                                 showControls={true}
                                 isPreview={true}
+                                isDragArea={true}
                               />
                             ) : (
                               <img src={preview} alt={`preview ${index + 1}`} className="max-h-32 rounded" />
@@ -1116,7 +1142,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
               {/* Espacio adicional para asegurar que los botones sean visibles */}
               <div className="h-20 lg:h-24"></div>
             </form>
-                      ) : showStoryForm && !showScheduled && !showSuggestions ? (
+                      ) : showAddPost && showStoryForm && !showScheduled && !showSuggestions ? (
             <form className={`flex flex-col gap-4 w-full max-w-[600px] lg:max-w-[650px] pb-8${isSidebarCollapsed ? ' ml-13' : ''}`} onSubmit={e => { 
               console.log('[DEBUG] Formulario de historia enviado');
               e.preventDefault(); 
@@ -1137,6 +1163,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                           className="max-h-32 rounded" 
                           showControls={true}
                           isPreview={true}
+                          isDragArea={true}
                         />
                       ) : (
                         <img src={storyPreview} alt="preview" className="max-h-32 rounded" />
@@ -1156,7 +1183,19 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                 />
               </div>
               
-              <div className="flex gap-2 mt-4 justify-center">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">Fecha de publicación (opcional)</label>
+                  <input type="date" className="w-full border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={storyDate} onChange={e => setStoryDate(e.target.value)} />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">Hora (opcional)</label>
+                  <input type="time" className="w-full border border-gray-300 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]" value={storyTime} onChange={e => setStoryTime(e.target.value)} />
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-2 text-center">Si no se especifica fecha y hora, la historia se publicará inmediatamente.</div>
+              
+              <div className="flex gap-2 mt-3 lg:mt-4 justify-center">
                 <button 
                   type="submit" 
                   className="bg-[var(--color-secondary-600)] text-white rounded-lg px-4 py-2 font-semibold shadow hover:bg-[var(--color-secondary-700)] transition-colors cursor-pointer" 
@@ -1171,6 +1210,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                   onClick={() => {
                     setStoryMediaUrl('');
                     setStoryPreview('');
+                    setStoryDate('');
+                    setStoryTime('');
                     setStoryPublishMsg(null);
                   }}
                 >
@@ -1196,7 +1237,35 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
                       onClick={() => handleDeleteScheduled(post.creation_id)}
                     >×</button>
                     <div className="font-normal text-lg text-gray-700">
-                      Próximo post programado: {formatDateDMYHM(post.scheduled_time)} - "{post.caption}"
+                      {post.is_story ? (
+                        <>
+                          Próxima historia programada: {formatDateDMYHM(post.scheduled_time)}
+                          {post.media_url && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              Medio: {post.media_url.includes('video') || post.media_url.includes('mp4') ? 'Video' : 'Imagen'}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          Próximo post programado: {formatDateDMYHM(post.scheduled_time)}
+                          {post.caption && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              Caption: "{post.caption}"
+                            </div>
+                          )}
+                          {post.is_carousel && (
+                            <div className="text-sm text-gray-500">
+                              Tipo: {post.is_mixed ? 'Carrusel mixto' : 'Carrusel de imágenes'}
+                            </div>
+                          )}
+                          {post.is_video && (
+                            <div className="text-sm text-gray-500">
+                              Tipo: Video individual
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                     {idx < scheduledPosts.length - 1 && <hr className="my-4 border-gray-200" />}
                   </div>

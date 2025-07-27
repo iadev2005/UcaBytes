@@ -4,8 +4,9 @@ import requests
 from datetime import datetime
 import time
 import logging
+import subprocess
 
-TOKEN = "EAAKJrM0WC6IBPDZARfB40mVCydyEj9uULvnInAL4potOvXZBvCYF51kEn4e8H7RlP8PqTggFJQZA8d2KrmZBWAbRm3ULAp6Ly4l7msqBSNB91ulOuV3keO2dDm0fxTVN0vW2GPiZCBhzspHf5Gwkbgv9JP9wdnDlFns3AxiNlK4hZB3mZBvfgFiZCItXLxNIFEv5y5FbVmjtPRSu7jbIpaP025r281pZBOGaHfTeO"
+TOKEN = "EAAKJrM0WC6IBPEoZAy428EsfZCQypR6QBffH7kdXLZCOW2ZATAmiXZAwYJKITSQe82361NIfdzw3xiCAR5P2MzBYaFuA3PZB7E7ARInzaNC8wm0hAFBxD5ojeEnPZByE04p7tF5AmEUcm2s970vlleoBkYSWJsHlb5l79lBvUSIpjb3s2pQmchgx9kdFndPdAZBKhb6lqLZA6d3uNp6Qv1aZARvnUgO3MrEOwvlz9e"
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -53,6 +54,28 @@ def publish_post(instagram_id, creation_id):
         logging.error(f"Error al publicar: {creation_id}")
     return response
 
+def publish_story(media_url):
+    """Publica una historia ejecutando el script correspondiente"""
+    logging.info(f"Intentando publicar historia: {media_url}")
+    
+    try:
+        # Ejecutar el script de historias sin programación (publicación inmediata)
+        script_path = os.path.join(os.path.dirname(__file__), "create_instagram_story_scheduled.py")
+        result = subprocess.run([
+            "pythonw.exe", script_path, 
+            "--media_url", media_url
+        ], capture_output=True, text=True, cwd=os.path.dirname(__file__))
+        
+        if result.returncode == 0:
+            logging.info(f"Historia publicada exitosamente: {media_url}")
+            return True
+        else:
+            logging.error(f"Error al publicar historia: {result.stderr}")
+            return False
+    except Exception as e:
+        logging.error(f"Error ejecutando script de historia: {e}")
+        return False
+
 def load_scheduled_posts():
     """Carga las publicaciones programadas desde el archivo"""
     if os.path.exists(SCHEDULED_POSTS_FILE):
@@ -74,7 +97,17 @@ def check_and_publish():
     for post in posts:
         if current_time >= post['scheduled_time']:
             logging.info(f"Procesando publicación programada para {datetime.fromtimestamp(post['scheduled_time'])}")
-            publish_post(post['instagram_id'], post['creation_id'])
+            
+            # Manejar diferentes tipos de contenido
+            if post.get('is_story'):
+                # Es una historia
+                if publish_story(post['media_url']):
+                    logging.info(f"Historia procesada exitosamente: {post['media_url']}")
+                else:
+                    logging.error(f"Error procesando historia: {post['media_url']}")
+            else:
+                # Es un post normal
+                publish_post(post['instagram_id'], post['creation_id'])
         else:
             remaining_posts.append(post)
     

@@ -42,6 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description='Crear carrusel mixto en Instagram')
     parser.add_argument('--media_urls', required=True, nargs='+', help='URLs de imágenes y videos')
     parser.add_argument('--caption', required=True, help='Caption del carrusel')
+    parser.add_argument('--scheduled_time', type=int, help='Timestamp para programación (opcional)')
     
     args = parser.parse_args()
     
@@ -152,6 +153,12 @@ def main():
         if carousel_response and 'id' in carousel_response:
             carousel_id = carousel_response['id']
             print(f"Carrusel creado con ID: {carousel_id}")
+            
+            # Si se proporciona scheduled_time, no publicar inmediatamente
+            if args.scheduled_time:
+                print(f"Carrusel programado para: {args.scheduled_time}")
+                print(json.dumps({'success': True, 'creation_id': carousel_id}))
+                return
             
             # Paso 3: Publicar el carrusel con reintentos si contiene videos
             has_videos = any(media_type == 'REELS' for media_type in media_types)

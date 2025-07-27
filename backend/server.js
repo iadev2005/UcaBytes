@@ -498,6 +498,328 @@ app.post('/api/instagram/schedule-post', async (req, res) => {
   }
 });
 
+app.post('/api/instagram/schedule-carousel', async (req, res) => {
+  const { media_urls, image_urls, caption, date, time } = req.body;
+  if (!caption || !date || !time) {
+    return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
+  }
+  
+  // Determinar qué URLs usar (media_urls para mixto, image_urls para solo imágenes)
+  const urls = media_urls || image_urls;
+  if (!urls || !Array.isArray(urls) || urls.length < 2) {
+    return res.status(400).json({ error: 'Se requieren al menos 2 URLs para crear un carrusel' });
+  }
+  
+  if (urls.length > 10) {
+    return res.status(400).json({ error: 'Máximo 10 medios permitidos' });
+  }
+  
+  // Convertir fecha y hora a timestamp
+  const fecha_dt = new Date(`${date}T${time}`);
+  const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
+  
+  try {
+    // Obtener instagram_id
+    const { spawnSync } = require('child_process');
+    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
+    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
+    const [instagram_id] = JSON.parse(idResult.stdout.toString());
+    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
+    
+    // Determinar si es carrusel mixto o solo imágenes
+    const hasVideos = urls.some(url => 
+      url.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i) || 
+      url.includes('video') || 
+      url.includes('reel')
+    );
+    
+    let creation_id;
+    
+    if (hasVideos) {
+      // Carrusel mixto - usar el script de carrusel mixto
+      const scriptPath = path.join(__dirname, 'python', 'create_instagram_mixed_carousel.py');
+      const args = ['--media_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+      const { spawn } = require('child_process');
+      const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+      
+      return new Promise((resolve, reject) => {
+        let output = '';
+        let lastJsonOutput = null;
+        
+        py.stdout.on('data', (data) => { 
+          output += data.toString(); 
+          // Buscar el último JSON válido en la salida
+          const lines = output.split('\n');
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (line.startsWith('{') && line.endsWith('}')) {
+              try {
+                lastJsonOutput = JSON.parse(line);
+                break;
+              } catch (e) {
+                // Continuar buscando
+              }
+            }
+          }
+        });
+        
+        py.stderr.on('data', (data) => { 
+          output += data.toString(); 
+        });
+        
+        py.on('close', (code) => {
+          if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
+            // Guardar en scheduled_posts.json
+            const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+            let posts = [];
+            if (fs.existsSync(scheduledPath)) {
+              posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+            }
+            posts.push({ 
+              instagram_id, 
+              creation_id: lastJsonOutput.creation_id, 
+              scheduled_time, 
+              caption, 
+              media_urls: urls,
+              is_carousel: true,
+              is_mixed: true
+            });
+            fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
+            res.json({ success: true });
+          } else {
+            res.status(500).json({ 
+              error: 'Error programando carrusel mixto', 
+              details: lastJsonOutput?.error || output 
+            });
+          }
+        });
+      });
+    } else {
+      // Carrusel solo imágenes - usar el script de carrusel normal
+      const scriptPath = path.join(__dirname, 'python', 'create_instagram_carousel.py');
+      const args = ['--image_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+      const { spawn } = require('child_process');
+      const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+      
+      return new Promise((resolve, reject) => {
+        let output = '';
+        let lastJsonOutput = null;
+        
+        py.stdout.on('data', (data) => { 
+          output += data.toString(); 
+          // Buscar el último JSON válido en la salida
+          const lines = output.split('\n');
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (line.startsWith('{') && line.endsWith('}')) {
+              try {
+                lastJsonOutput = JSON.parse(line);
+                break;
+              } catch (e) {
+                // Continuar buscando
+              }
+            }
+          }
+        });
+        
+        py.stderr.on('data', (data) => { 
+          output += data.toString(); 
+        });
+        
+        py.on('close', (code) => {
+          if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
+            // Guardar en scheduled_posts.json
+            const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+            let posts = [];
+            if (fs.existsSync(scheduledPath)) {
+              posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+            }
+            posts.push({ 
+              instagram_id, 
+              creation_id: lastJsonOutput.creation_id, 
+              scheduled_time, 
+              caption, 
+              image_urls: urls,
+              is_carousel: true,
+              is_mixed: false
+            });
+            fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
+            res.json({ success: true });
+          } else {
+            res.status(500).json({ 
+              error: 'Error programando carrusel de imágenes', 
+              details: lastJsonOutput?.error || output 
+            });
+          }
+        });
+      });
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Error programando carrusel', details: e.message });
+  }
+});
+
+app.post('/api/instagram/schedule-video', async (req, res) => {
+  const { video_url, caption, date, time } = req.body;
+  if (!video_url || !caption || !date || !time) {
+    return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
+  }
+  
+  // Convertir fecha y hora a timestamp
+  const fecha_dt = new Date(`${date}T${time}`);
+  const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
+  
+  try {
+    // Obtener instagram_id
+    const { spawnSync } = require('child_process');
+    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
+    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
+    const [instagram_id] = JSON.parse(idResult.stdout.toString());
+    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
+    
+    // Usar el script de video programado
+    const scriptPath = path.join(__dirname, 'python', 'create_instagram_video_scheduled.py');
+    const args = ['--video_url', video_url, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+    const { spawn } = require('child_process');
+    const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+    
+    return new Promise((resolve, reject) => {
+      let output = '';
+      let lastJsonOutput = null;
+      
+      py.stdout.on('data', (data) => { 
+        output += data.toString(); 
+        // Buscar el último JSON válido en la salida
+        const lines = output.split('\n');
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              lastJsonOutput = JSON.parse(line);
+              break;
+            } catch (e) {
+              // Continuar buscando
+            }
+          }
+        }
+      });
+      
+      py.stderr.on('data', (data) => { 
+        output += data.toString(); 
+      });
+      
+      py.on('close', (code) => {
+        if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
+          // Guardar en scheduled_posts.json
+          const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+          let posts = [];
+          if (fs.existsSync(scheduledPath)) {
+            posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+          }
+          posts.push({ 
+            instagram_id, 
+            creation_id: lastJsonOutput.creation_id, 
+            scheduled_time, 
+            caption, 
+            video_url: video_url,
+            is_video: true,
+            is_carousel: false
+          });
+          fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
+          res.json({ success: true });
+        } else {
+          res.status(500).json({ 
+            error: 'Error programando video', 
+            details: lastJsonOutput?.error || output 
+          });
+        }
+      });
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error programando video', details: e.message });
+  }
+});
+
+app.post('/api/instagram/schedule-story', async (req, res) => {
+  const { media_url, date, time } = req.body;
+  if (!media_url || !date || !time) {
+    return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
+  }
+  
+  // Convertir fecha y hora a timestamp
+  const fecha_dt = new Date(`${date}T${time}`);
+  const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
+  
+  try {
+    // Obtener instagram_id
+    const { spawnSync } = require('child_process');
+    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
+    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
+    const [instagram_id] = JSON.parse(idResult.stdout.toString());
+    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
+    
+    // Usar el script de historia programada
+    const scriptPath = path.join(__dirname, 'python', 'create_instagram_story_scheduled.py');
+    const args = ['--media_url', media_url, '--scheduled_time', scheduled_time.toString()];
+    const { spawn } = require('child_process');
+    const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+    
+    return new Promise((resolve, reject) => {
+      let output = '';
+      let lastJsonOutput = null;
+      
+      py.stdout.on('data', (data) => { 
+        output += data.toString(); 
+        // Buscar el último JSON válido en la salida
+        const lines = output.split('\n');
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              lastJsonOutput = JSON.parse(line);
+              break;
+            } catch (e) {
+              // Continuar buscando
+            }
+          }
+        }
+      });
+      
+      py.stderr.on('data', (data) => { 
+        output += data.toString(); 
+      });
+      
+      py.on('close', (code) => {
+        if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
+          // Guardar en scheduled_posts.json
+          const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
+          let posts = [];
+          if (fs.existsSync(scheduledPath)) {
+            posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+          }
+          posts.push({ 
+            instagram_id, 
+            creation_id: lastJsonOutput.creation_id, 
+            scheduled_time, 
+            media_url: media_url,
+            is_story: true,
+            is_carousel: false
+          });
+          fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
+          res.json({ success: true });
+        } else {
+          res.status(500).json({ 
+            error: 'Error programando historia', 
+            details: lastJsonOutput?.error || output 
+          });
+        }
+      });
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Error programando historia', details: e.message });
+  }
+});
+
 // Endpoint para crear carrusel de Instagram
 app.post('/api/instagram/create-carousel', (req, res) => {
   const { image_urls, caption } = req.body;
@@ -623,7 +945,7 @@ app.post('/api/instagram/suggestions', async (req, res) => {
     const followerInsights = fs.existsSync(followerInsightsPath) ? JSON.parse(fs.readFileSync(followerInsightsPath, 'utf8')) : {};
     
     // Función para obtener muestra aleatoria de posts
-    const getRandomSample = (posts, sampleSize = 15) => {
+    const getRandomSample = (posts, sampleSize = 13) => {
       if (posts.length <= sampleSize) {
         return posts; // Si hay menos posts que el tamaño de muestra, devolver todos
       }
@@ -641,8 +963,8 @@ app.post('/api/instagram/suggestions', async (req, res) => {
       return shuffled.slice(0, sampleSize);
     };
     
-    // Obtener muestra aleatoria de posts (15-20 posts)
-    const sampleSize = Math.min(20, Math.max(15, Math.floor(allPosts.length * 0.3))); // Entre 15-20 posts o 30% del total
+    // Obtener muestra aleatoria de posts (13-18 posts)
+    const sampleSize = Math.min(18, Math.max(13, Math.floor(allPosts.length * 0.3))); // Entre 13-18 posts o 30% del total
     const posts = getRandomSample(allPosts, sampleSize);
     
     console.log(`Muestreo estadístico: ${allPosts.length} posts totales → ${posts.length} posts para IA`);
