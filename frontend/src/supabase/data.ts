@@ -138,3 +138,56 @@ export async function getProductsByCompany(id_empresa: number) {
     return { success: false, data: [], error: err };
   }
 }
+
+// Eliminar un producto y su inventario
+export async function deleteProduct(id_producto: number) {
+  try {
+    // 1. Eliminar el inventario asociado
+    const { error: inventarioError } = await client
+      .from('inventario')
+      .delete()
+      .eq('id_producto', id_producto);
+
+    if (inventarioError) {
+      return { success: false, message: 'No se pudo eliminar el inventario: ' + inventarioError.message };
+    }
+
+    // 2. Eliminar el producto
+    const { error: productoError } = await client
+      .from('productos')
+      .delete()
+      .eq('id', id_producto);
+
+    if (productoError) {
+      return { success: false, message: 'No se pudo eliminar el producto: ' + productoError.message };
+    }
+
+    return { success: true, message: '¡Producto eliminado con éxito!' };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'No se pudo eliminar el producto.' };
+  }
+}
+
+// Subir imagen a Supabase Storage
+export async function uploadImage(file: File, fileName: string) {
+  try {
+    const { data, error } = await client.storage
+      .from('product-images')
+      .upload(fileName, file);
+
+    if (error) {
+      return { success: false, message: 'Error subiendo imagen: ' + error.message };
+    }
+
+    // Obtener la URL pública de la imagen
+    const { data: urlData } = client.storage
+      .from('product-images')
+      .getPublicUrl(fileName);
+
+    return { success: true, url: urlData.publicUrl };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error subiendo imagen.' };
+  }
+}

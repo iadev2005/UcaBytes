@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
-import { getProductsByCompany } from '../supabase/data';
+import { getProductsByCompany, deleteProduct } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 // Eliminar mockProductos y mockServicios
@@ -99,6 +99,7 @@ export default function ProductsServices() {
   const [editProducto, setEditProducto] = useState<any | null>(null);
   const [editServicio, setEditServicio] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const { companyData } = useCompany();
 
   // Cargar productos desde Supabase
@@ -184,8 +185,17 @@ export default function ProductsServices() {
   };
 
   // Eliminar producto
-  const eliminarProducto = async (id: string) => {
-    await reloadProductos(); // Recargar desde Supabase
+  const eliminarProducto = async (id: number) => {
+    const result = await deleteProduct(id);
+    if (result.success) {
+      await reloadProductos(); // Recargar desde Supabase
+      setDeleteSuccess('Producto eliminado exitosamente.');
+      setTimeout(() => setDeleteSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
+    } else {
+      console.error('Error eliminando producto:', result.message);
+      setDeleteSuccess('Error al eliminar el producto.');
+      setTimeout(() => setDeleteSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
+    }
   };
 
   // Eliminar servicio
@@ -204,6 +214,15 @@ export default function ProductsServices() {
 
   return (
     <div className="w-full mx-auto px-20 py-10 pb-30 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
+      {/* Mensaje de éxito/error */}
+      {deleteSuccess && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+          deleteSuccess.includes('Error') ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+        }`}>
+          {deleteSuccess}
+        </div>
+      )}
+      
       {/* Tabs */}
       <div className="flex mb-8 w-full px-20 mx-auto">
         <div className="flex w-full rounded-2xl border-2 border-[var(--color-primary-600)] bg-white overflow-hidden">

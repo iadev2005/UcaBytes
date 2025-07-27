@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createProductWithInventory } from '../supabase/data';
+import { createProductWithInventory, uploadImage } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 // Nuevo tipo para el formulario de producto
@@ -74,13 +74,20 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
   };
 
   // Imagen
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Por ahora solo guardamos la URL local (puedes cambiar esto por upload real)
-      const url = URL.createObjectURL(file);
-      setProducto((prev) => ({ ...prev, image: url }));
-      setImgPreview(url);
+      setLoading(true);
+      const fileName = `${Date.now()}-${file.name}`;
+      const result = await uploadImage(file, fileName);
+      setLoading(false);
+      
+      if (result.success && result.url) {
+        setProducto((prev) => ({ ...prev, image: result.url }));
+        setImgPreview(result.url);
+      } else {
+        setError('Error al subir la imagen: ' + (result.message || 'Error desconocido'));
+      }
     }
   };
 
@@ -156,7 +163,13 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
           {/* Columna 2: imagen */}
           <div className="flex flex-col items-center justify-center gap-4 mt-4 md:mt-0">
             <label className="block mb-1 font-medium">Imagen del producto</label>
-            <input className="border rounded px-3 py-2 w-full" type="file" name="image" accept="image/*" onChange={handleImage} />
+            <input className="border rounded px-3 py-2 w-full" type="file" name="image" accept="image/*" onChange={handleImage} disabled={loading} />
+            {loading && (
+              <div className="text-sm text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 inline-block mr-2"></div>
+                Subiendo imagen...
+              </div>
+            )}
             {imgPreview ? (
               <img src={imgPreview} alt="preview" className="mt-2 w-32 h-32 md:w-40 md:h-40 object-cover rounded-xl border" />
             ) : (
