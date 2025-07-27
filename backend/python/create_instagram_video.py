@@ -2,13 +2,17 @@ import argparse
 import sys
 import json
 import time
-from graphAPI import extract_instagram_id, make_api_request
+from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def main():
     parser = argparse.ArgumentParser(description='Crear publicación de video inmediata en Instagram')
     parser.add_argument('--video_url', required=True, help='URL del video')
     parser.add_argument('--caption', required=True, help='Caption de la publicación')
+    parser.add_argument('token', help='Token de acceso de Instagram')
     args = parser.parse_args()
+
+    # Establecer el token
+    set_token(args.token)
 
     instagram_id, page_name = extract_instagram_id()
     if not instagram_id:

@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import WebsiteBuilder from '../components/marketing/WebsiteBuilder';
 import InstagramAssistant from '../components/marketing/InstagramAssistant';
 import LoadingScreen from '../components/marketing/LoadingScreen';
+import TokenInputModal from '../components/marketing/TokenInputModal';
 import { SidebarCollapseContext } from './Layout';
 import { GlobeIcon } from '../icons';
 
@@ -11,6 +12,79 @@ export default function Marketing() {
   const [showInstagramAssistant, setShowInstagramAssistant] = useState(false);
   const [instagramPosts, setInstagramPosts] = useState(null);
   const [loadingInstagram, setLoadingInstagram] = useState(false);
+  
+  // Estados para el token
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [isTokenValid, setIsTokenValid] = useState(false);
+  const [currentToken, setCurrentToken] = useState<string>('');
+  const [validatingToken, setValidatingToken] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // Funciones para manejar el token
+  const handleTokenSubmit = async (token: string) => {
+    setValidatingToken(true);
+    setTokenError(null);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/instagram/validate-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.valid) {
+        setCurrentToken(token);
+        setIsTokenValid(true);
+        setShowTokenModal(false);
+        setTokenError(null);
+        // Cargar posts después de validar el token
+        await loadInstagramPosts(token);
+      } else {
+        setTokenError(data.error || 'Token inválido');
+      }
+    } catch (error) {
+      setTokenError('Error de conexión al validar el token');
+    } finally {
+      setValidatingToken(false);
+    }
+  };
+
+  const handleTokenModalClose = () => {
+    // Solo permitir cerrar si hay un token válido
+    if (isTokenValid) {
+      setShowTokenModal(false);
+      setTokenError(null);
+    }
+  };
+
+  // Función para cargar posts después de validar el token
+  const loadInstagramPosts = async (token: string) => {
+    setLoadingInstagram(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInstagramPosts(data.posts);
+        setShowInstagramAssistant(true);
+      } else {
+        console.error('Error al obtener publicaciones de Instagram');
+      }
+    } catch (e) {
+      console.error('Error de red o backend al cargar posts:', e);
+    } finally {
+      setLoadingInstagram(false);
+    }
+  };
 
   if (loadingInstagram) {
     return <LoadingScreen />;
@@ -19,7 +93,11 @@ export default function Marketing() {
     return <WebsiteBuilder />;
   }
   if (showInstagramAssistant) {
-    return <InstagramAssistant posts={instagramPosts} isSidebarCollapsed={isSidebarCollapsed} />;
+    return <InstagramAssistant 
+      posts={instagramPosts} 
+      isSidebarCollapsed={isSidebarCollapsed}
+      token={currentToken}
+    />;
   }
 
   return (
@@ -49,21 +127,8 @@ export default function Marketing() {
 
           {/* Card InstagramAssistant */}
           <button
-            onClick={async () => {
-              setLoadingInstagram(true);
-              try {
-                const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                  setInstagramPosts(data.posts);
-                  setShowInstagramAssistant(true);
-                } else {
-                  alert('Error al obtener publicaciones de Instagram');
-                }
-              } catch (e) {
-                alert('Error de red o backend');
-              }
-              setLoadingInstagram(false);
+            onClick={() => {
+              setShowTokenModal(true);
             }}
             className="bg-gradient-to-br from-white via-gray-50 to-gray-100 border border-gray-200 rounded-3xl shadow-2xl p-10 text-left transition-all duration-300 hover:shadow-3xl hover:-translate-y-2 hover:scale-105 cursor-pointer group"
           >
@@ -81,6 +146,15 @@ export default function Marketing() {
         </div>
       </div>
       {loadingInstagram && <LoadingScreen />}
+      
+      {/* Modal de Token */}
+      <TokenInputModal
+        isOpen={showTokenModal}
+        onSubmit={handleTokenSubmit}
+        onClose={handleTokenModalClose}
+        isLoading={validatingToken}
+        error={tokenError}
+      />
     </div>
   );
 }

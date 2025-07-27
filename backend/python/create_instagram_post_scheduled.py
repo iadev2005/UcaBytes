@@ -2,19 +2,22 @@ import argparse
 import sys
 import json
 import time
+import os
 from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def main():
-    print("[DEBUG] === Iniciando script de creación de post ===")
-    parser = argparse.ArgumentParser(description='Crear publicación inmediata en Instagram')
+    print("[DEBUG] === Iniciando script de programación de post ===")
+    parser = argparse.ArgumentParser(description='Programar publicación en Instagram')
     parser.add_argument('--image_url', required=True, help='URL de la imagen')
     parser.add_argument('--caption', required=True, help='Caption de la publicación')
+    parser.add_argument('--scheduled_time', type=int, required=True, help='Timestamp para programación')
     parser.add_argument('token', help='Token de acceso de Instagram')
     args = parser.parse_args()
 
     print(f"[DEBUG] Argumentos recibidos:")
     print(f"[DEBUG] - image_url: {args.image_url}")
     print(f"[DEBUG] - caption: {args.caption}")
+    print(f"[DEBUG] - scheduled_time: {args.scheduled_time}")
     print(f"[DEBUG] - token: {'TOKEN_PROVIDED' if args.token else 'NO_TOKEN'}")
 
     # Establecer el token
@@ -28,13 +31,14 @@ def main():
     
     if not instagram_id:
         print("[ERROR] No se encontró una cuenta de Instagram Business asociada")
-        print(json.dumps({'success': False, 'error': 'No se encontró una cuenta de Instagram Business asociada'}))
+        result = {'success': False, 'error': 'No se encontró una cuenta de Instagram Business asociada'}
+        print(json.dumps(result))
         sys.exit(1)
     
     print(f"[DEBUG] Usando cuenta: {page_name} (ID: {instagram_id})")
 
     try:
-        print("[DEBUG] Creando contenedor de la publicación...")
+        print("[DEBUG] Creando contenedor de la publicación programada...")
         params = {
             'image_url': args.image_url,
             'caption': args.caption
@@ -50,49 +54,49 @@ def main():
             creation_id = container_response['id']
             print(f"[DEBUG] Contenedor creado con ID: {creation_id}")
             
-            print("[DEBUG] Publicando la publicación...")
-            publish_params = { 'creation_id': creation_id }
-            publish_endpoint = f"{instagram_id}/media_publish"
-            print(f"[DEBUG] Endpoint de publicación: {publish_endpoint}")
-            print(f"[DEBUG] Parámetros de publicación: {publish_params}")
+            # Guardar en scheduled_posts.json
+            print("[DEBUG] Guardando en scheduled_posts.json...")
+            scheduled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scheduled_posts.json')
             
-            publish_response = make_api_request(publish_endpoint, publish_params, method="POST")
-            print(f"[DEBUG] Respuesta de publicación: {publish_response}")
-            
-            if publish_response and 'id' in publish_response:
-                print(f"[DEBUG] ¡Publicación exitosa! ID: {publish_response['id']}")
-                
-                # Guardar los datos del post publicado
+            posts = []
+            if os.path.exists(scheduled_path):
                 try:
-                    from save_instagram_posts import save_single_post
-                    post_data = {
-                        'id': publish_response['id'],
-                        'media_type': 'IMAGE',
-                        'caption': args.caption,
-                        'media_url': args.image_url,
-                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
-                        'like_count': 0,
-                        'comments_count': 0
-                    }
-                    save_single_post(post_data)
-                    print("[DEBUG] Post guardado en archivo local")
+                    with open(scheduled_path, 'r', encoding='utf-8') as f:
+                        posts = json.load(f)
                 except Exception as e:
-                    # Si falla el guardado, no es crítico, solo log
-                    print(f"[WARNING] No se pudo guardar el post: {e}")
+                    print(f"[WARNING] Error leyendo archivo existente: {e}")
+                    posts = []
             
-                # Enviar respuesta de éxito (esta debe ser la última línea)
-                result = {'success': True, 'response': publish_response}
-                print(json.dumps(result))
-                sys.exit(0)
-            else:
-                print("[ERROR] No se pudo publicar la publicación")
-                result = {'success': False, 'error': 'No se pudo publicar la publicación'}
+            # Agregar el nuevo post programado
+            new_post = {
+                'instagram_id': instagram_id,
+                'creation_id': creation_id,
+                'scheduled_time': args.scheduled_time,
+                'caption': args.caption,
+                'image_url': args.image_url,
+                'media_type': 'IMAGE'
+            }
+            
+            posts.append(new_post)
+            
+            # Guardar el archivo
+            try:
+                with open(scheduled_path, 'w', encoding='utf-8') as f:
+                    json.dump(posts, f, indent=2, ensure_ascii=False)
+                print(f"[DEBUG] Post programado guardado exitosamente")
+            except Exception as e:
+                print(f"[ERROR] Error guardando archivo: {e}")
+                result = {'success': False, 'error': f'Error guardando programación: {str(e)}'}
                 print(json.dumps(result))
                 sys.exit(1)
+            
+            # Enviar respuesta de éxito
+            result = {'success': True, 'creation_id': creation_id, 'scheduled_time': args.scheduled_time}
+            print(json.dumps(result))
+            sys.exit(0)
         else:
             print("[ERROR] No se pudo crear el contenedor de la publicación")
             print(f"[DEBUG] Respuesta completa: {container_response}")
-            # Enviar respuesta de error (esta debe ser la última línea)
             result = {'success': False, 'error': 'No se pudo crear el contenedor de la publicación'}
             print(json.dumps(result))
             sys.exit(1)

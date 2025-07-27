@@ -1,6 +1,7 @@
 import json
 import os
-from graphAPI import extract_instagram_id, get_instagram_posts, get_post_details
+import sys
+from graphAPI import extract_instagram_id, get_instagram_posts, get_post_details, set_token
 
 def save_single_post(post_data):
     """Guarda un solo post en el archivo de posts de Instagram"""
@@ -58,4 +59,10 @@ def save_all_instagram_posts():
         print("No se encontraron publicaciones o hubo un error con la API")
 
 if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Uso: python save_instagram_posts.py <token>")
+        sys.exit(1)
+    
+    token = sys.argv[1]
+    set_token(token)
     save_all_instagram_posts() 

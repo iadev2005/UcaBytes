@@ -4,7 +4,21 @@ import json
 from datetime import datetime, timedelta
 import time
 
-TOKEN = "EAAKJrM0WC6IBPEoZAy428EsfZCQypR6QBffH7kdXLZCOW2ZATAmiXZAwYJKITSQe82361NIfdzw3xiCAR5P2MzBYaFuA3PZB7E7ARInzaNC8wm0hAFBxD5ojeEnPZByE04p7tF5AmEUcm2s970vlleoBkYSWJsHlb5l79lBvUSIpjb3s2pQmchgx9kdFndPdAZBKhb6lqLZA6d3uNp6Qv1aZARvnUgO3MrEOwvlz9e"
+# Variable global para almacenar el token
+CURRENT_TOKEN = None
+
+def set_token(token):
+    """Establece el token a usar para las llamadas a la API"""
+    global CURRENT_TOKEN
+    CURRENT_TOKEN = token
+
+def get_token():
+    """Obtiene el token actual"""
+    global CURRENT_TOKEN
+    if not CURRENT_TOKEN:
+        raise ValueError("No se ha establecido un token de Instagram. Use set_token() primero")
+    return CURRENT_TOKEN
+
 APP_ID = "1047562113346147"
 API_VER = "v23.0"
 BASE_URL = f"https://graph.facebook.com/{API_VER}"
@@ -13,7 +27,7 @@ SCHEDULED_POSTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 def make_api_request(endpoint, params=None, method="GET"):
     if params is None:
         params = {}
-    params['access_token'] = TOKEN
+    params['access_token'] = get_token()
     params['app_id'] = APP_ID
     
     try:
@@ -57,7 +71,7 @@ def get_instagram_posts(instagram_id):
     all_posts = []
     endpoint = f"{instagram_id}/media"
     params = {
-        'fields': 'id,caption,timestamp,media_type',
+        'fields': 'id,media_type,media_url,thumbnail_url,caption,children,permalink,like_count,comments_count,timestamp,comments{username,replies,text,like_count}',
         'limit': 100  # Máximo permitido por la API
     }
     
@@ -181,7 +195,7 @@ def schedule_instagram_post(instagram_id):
 
 def get_post_details(post_id):
     """Obtiene información detallada de una publicación específica"""
-    fields = "like_count,media_url,caption,comments_count,comments,media_type,children{media_url,media_type},insights.metric(impressions,reach,saved,total_interactions){title,values}"
+    fields = "like_count,media_url,caption,comments_count,comments{username,replies,text,like_count,timestamp,id},media_type,children{media_url,media_type},insights.metric(impressions,reach,saved,total_interactions){title,values}"
     endpoint = f"{post_id}?fields={fields}"
     return make_api_request(endpoint)
 

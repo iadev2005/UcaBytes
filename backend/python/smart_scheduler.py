@@ -5,6 +5,17 @@ import subprocess
 from datetime import datetime, timedelta
 
 SCHEDULED_POSTS_FILE = "scheduled_posts.json"
+CONFIG_FILE = "instagram_config.json"
+
+def load_token():
+    """Carga el token desde el archivo de configuración"""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        return config.get('token')
+    except Exception as e:
+        print(f"Error cargando token: {e}")
+        return None
 
 def has_scheduled_posts():
     """Verifica si hay publicaciones programadas"""
@@ -32,8 +43,14 @@ def has_scheduled_posts():
 def run_post_scheduler():
     """Ejecuta el post_scheduler.py"""
     try:
+        # Cargar el token
+        token = load_token()
+        if not token:
+            print(f"[{datetime.now()}] No se pudo cargar el token de Instagram")
+            return
+        
         script_path = os.path.join(os.path.dirname(__file__), "post_scheduler.py")
-        result = subprocess.run(['python', script_path], 
+        result = subprocess.run(['python', script_path, token], 
                               capture_output=True, 
                               text=True, 
                               timeout=60)  # Timeout de 1 minuto
@@ -51,23 +68,14 @@ def run_post_scheduler():
 def main():
     print(f"[{datetime.now()}] Smart Scheduler iniciado")
     
-    while True:
-        try:
-            if has_scheduled_posts():
-                print(f"[{datetime.now()}] Publicaciones programadas encontradas, ejecutando scheduler...")
-                run_post_scheduler()
-            else:
-                print(f"[{datetime.now()}] No hay publicaciones programadas, esperando...")
-            
-            # Esperar 1 minuto antes de la siguiente verificación
-            time.sleep(60)
-            
-        except KeyboardInterrupt:
-            print(f"[{datetime.now()}] Smart Scheduler detenido por el usuario")
-            break
-        except Exception as e:
-            print(f"[{datetime.now()}] Error en smart scheduler: {e}")
-            time.sleep(60)  # Continuar incluso si hay errores
+    # Verificar si hay publicaciones programadas
+    if has_scheduled_posts():
+        print(f"[{datetime.now()}] Publicaciones programadas encontradas, ejecutando scheduler...")
+        run_post_scheduler()
+    else:
+        print(f"[{datetime.now()}] No hay publicaciones programadas")
+    
+    print(f"[{datetime.now()}] Smart Scheduler completado")
 
 if __name__ == "__main__":
     main() 

@@ -174,20 +174,83 @@ app.post('/api/ia-chat', async (req, res) => {
   }
 });
 
+app.post('/api/instagram/validate-token', (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ valid: false, error: 'Token requerido' });
+  }
+
+  // Usar graphAPI.py para validar el token
+  const scriptPath = path.join(__dirname, 'python', 'validate_token.py');
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, token], { cwd: path.dirname(scriptPath) });
+  
+  let output = '';
+  py.stdout.on('data', (data) => { output += data.toString(); });
+  py.stderr.on('data', (data) => { output += data.toString(); });
+  
+  py.on('close', (code) => {
+    try {
+      const result = JSON.parse(output);
+      res.json(result);
+    } catch (e) {
+      console.error('Error parsing validation result:', output);
+      res.status(500).json({ valid: false, error: 'Error validando token' });
+    }
+  });
+});
+
 app.post('/api/instagram/fetch-posts', (req, res) => {
+  const { token } = req.body;
+  
+  console.log('fetch-posts endpoint llamado con token:', token ? 'TOKEN_PROVIDED' : 'NO_TOKEN');
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Token requerido' });
+  }
+
   const scriptPath = path.join(__dirname, 'python', 'save_instagram_posts.py');
-  execFile('python', [scriptPath], { cwd: path.dirname(scriptPath) }, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Error ejecutando script:', error, stderr);
+  console.log('Ejecutando script:', scriptPath);
+  const { spawn } = require('child_process');
+  const py = spawn('python', [scriptPath, token], { cwd: path.dirname(scriptPath) });
+  
+  let output = '';
+  let errorOutput = '';
+  
+  py.stdout.on('data', (data) => { 
+    output += data.toString(); 
+    console.log('Script stdout:', data.toString());
+  });
+  py.stderr.on('data', (data) => { 
+    errorOutput += data.toString(); 
+    console.log('Script stderr:', data.toString());
+  });
+  
+  py.on('close', (code) => {
+    console.log('Script terminó con código:', code);
+    console.log('Output completo:', output);
+    console.log('Error output:', errorOutput);
+    
+    if (code !== 0) {
+      console.error('Error ejecutando script:', output);
       return res.status(500).json({ error: 'Error ejecutando script de Instagram' });
     }
+    
     // Después de guardar los posts, guardamos los detalles generales
     const detailsScript = path.join(__dirname, 'python', 'save_instagram_details.py');
-    execFile('python', [detailsScript], { cwd: path.dirname(detailsScript) }, (err2, stdout2, stderr2) => {
-      if (err2) {
-        console.error('Error ejecutando script de detalles:', err2, stderr2);
+    const detailsPy = spawn('python', [detailsScript, token], { cwd: path.dirname(detailsScript) });
+    
+    let detailsOutput = '';
+    detailsPy.stdout.on('data', (data) => { detailsOutput += data.toString(); });
+    detailsPy.stderr.on('data', (data) => { detailsOutput += data.toString(); });
+    
+    detailsPy.on('close', (detailsCode) => {
+      if (detailsCode !== 0) {
+        console.error('Error ejecutando script de detalles:', detailsOutput);
         // No detenemos la respuesta, solo avisamos en consola
       }
+      
       // Leer el archivo generado y devolverlo
       const postsPath = path.join(__dirname, 'python', 'instagram_posts.json');
       if (fs.existsSync(postsPath)) {
@@ -202,22 +265,74 @@ app.post('/api/instagram/fetch-posts', (req, res) => {
 
 // Endpoint para crear una publicación inmediata en Instagram
 app.post('/api/instagram/create-post', (req, res) => {
-  const { image_url, caption } = req.body;
-  if (!image_url || !caption) {
+  console.log('[DEBUG] === Endpoint create-post llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { image_url, caption, token } = req.body;
+  if (!image_url || !caption || !token) {
+    console.log('[ERROR] Faltan parámetros:', { image_url: !!image_url, caption: !!caption, token: !!token });
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
+  
+  console.log('[DEBUG] Parámetros válidos, ejecutando script...');
   const scriptPath = path.join(__dirname, 'python', 'create_instagram_post.py');
-  const args = ['--image_url', image_url, '--caption', caption];
+  const args = ['--image_url', image_url, '--caption', caption, token];
+  console.log('[DEBUG] Script path:', scriptPath);
+  console.log('[DEBUG] Argumentos:', args);
+  
   const { spawn } = require('child_process');
   const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  
   let output = '';
-  py.stdout.on('data', (data) => { output += data.toString(); });
-  py.stderr.on('data', (data) => { output += data.toString(); });
+  let errorOutput = '';
+  
+  py.stdout.on('data', (data) => { 
+    const dataStr = data.toString();
+    output += dataStr;
+    console.log('[DEBUG] Script stdout:', dataStr);
+  });
+  
+  py.stderr.on('data', (data) => { 
+    const dataStr = data.toString();
+    errorOutput += dataStr;
+    console.log('[DEBUG] Script stderr:', dataStr);
+  });
+  
   py.on('close', (code) => {
+    console.log('[DEBUG] Script terminó con código:', code);
+    console.log('[DEBUG] Output completo:', output);
+    console.log('[DEBUG] Error output:', errorOutput);
+    
     try {
-      const json = JSON.parse(output);
-      res.json(json);
+      // Buscar el último JSON válido en la salida
+      const lines = output.split('\n');
+      let lastJson = null;
+      
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            lastJson = JSON.parse(line);
+            console.log('[DEBUG] JSON encontrado en línea:', i, lastJson);
+            break;
+          } catch (e) {
+            // Continuar buscando
+          }
+        }
+      }
+      
+      if (lastJson) {
+        console.log('[DEBUG] JSON parseado exitosamente:', lastJson);
+        res.json(lastJson);
+      } else {
+        // Fallback: intentar parsear toda la salida
+        const json = JSON.parse(output);
+        console.log('[DEBUG] JSON parseado del output completo:', json);
+        res.json(json);
+      }
     } catch (e) {
+      console.log('[ERROR] Error parseando JSON:', e);
+      console.log('[ERROR] Output que causó el error:', output);
       res.status(500).json({ error: 'Error ejecutando script', details: output });
     }
   });
@@ -225,12 +340,12 @@ app.post('/api/instagram/create-post', (req, res) => {
 
 // Endpoint para crear una publicación de video inmediata en Instagram
 app.post('/api/instagram/create-video', (req, res) => {
-  const { video_url, caption } = req.body;
-  if (!video_url || !caption) {
+  const { video_url, caption, token } = req.body;
+  if (!video_url || !caption || !token) {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
   const scriptPath = path.join(__dirname, 'python', 'create_instagram_video.py');
-  const args = ['--video_url', video_url, '--caption', caption];
+  const args = ['--video_url', video_url, '--caption', caption, token];
   const { spawn } = require('child_process');
   const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
   let output = '';
@@ -288,13 +403,13 @@ app.post('/api/instagram/create-video', (req, res) => {
 // Endpoint para crear una historia de Instagram
 app.post('/api/instagram/create-story', (req, res) => {
   console.log('[DEBUG] Endpoint create-story llamado con:', req.body);
-  const { media_url } = req.body;
-  if (!media_url) {
-    return res.status(400).json({ error: 'Falta la URL del medio' });
+  const { media_url, token } = req.body;
+  if (!media_url || !token) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
   }
   
   const scriptPath = path.join(__dirname, 'python', 'create_instagram_story.py');
-  const args = ['--media_url', media_url];
+  const args = ['--media_url', media_url, token];
   console.log('[DEBUG] Ejecutando script con args:', args);
   const { spawn } = require('child_process');
   const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
@@ -383,31 +498,48 @@ app.post('/api/instagram/create-story', (req, res) => {
 
 // Endpoint para crear carrusel mixto (fotos y videos)
 app.post('/api/instagram/create-mixed-carousel', (req, res) => {
-  console.log('Servidor recibiendo:', req.body);
-  const { media_urls, caption } = req.body;
+  console.log('[DEBUG] === Endpoint create-mixed-carousel llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { media_urls, caption, token } = req.body;
   
   if (!media_urls || !Array.isArray(media_urls) || media_urls.length < 2) {
+    console.log('[ERROR] Faltan URLs de medios válidas');
     return res.status(400).json({ error: 'Se requieren al menos 2 URLs de medios para crear un carrusel' });
   }
   
   if (media_urls.length > 10) {
+    console.log('[ERROR] Demasiados medios');
     return res.status(400).json({ error: 'Máximo 10 medios permitidos' });
   }
   
   if (!caption || caption.trim() === '') {
+    console.log('[ERROR] Falta caption');
     return res.status(400).json({ error: 'El caption es requerido' });
   }
   
+  if (!token) {
+    console.log('[ERROR] Falta token');
+    return res.status(400).json({ error: 'Token requerido' });
+  }
+  
+  console.log('[DEBUG] Parámetros válidos, ejecutando script...');
   const scriptPath = path.join(__dirname, 'python', 'create_instagram_mixed_carousel.py');
-  const args = ['--media_urls', ...media_urls, '--caption', caption];
-  console.log('Ejecutando script con args:', args);
+  const args = ['--media_urls', ...media_urls, '--caption', caption, token];
+  console.log('[DEBUG] Script path:', scriptPath);
+  console.log('[DEBUG] Argumentos:', args);
   const { spawn } = require('child_process');
   const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+  
   let output = '';
+  let errorOutput = '';
   let lastJsonOutput = null;
   
   py.stdout.on('data', (data) => { 
-    output += data.toString(); 
+    const dataStr = data.toString();
+    output += dataStr;
+    console.log('[DEBUG] Script stdout:', dataStr);
+    
     // Buscar el último JSON válido en la salida
     const lines = output.split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -424,93 +556,140 @@ app.post('/api/instagram/create-mixed-carousel', (req, res) => {
   });
   
   py.stderr.on('data', (data) => { 
-    output += data.toString(); 
+    const dataStr = data.toString();
+    errorOutput += dataStr;
+    console.log('[DEBUG] Script stderr:', dataStr);
   });
   
   py.on('close', (code) => {
-    console.log('Script terminó con código:', code);
-    console.log('Output completo:', output);
-    console.log('Último JSON encontrado:', lastJsonOutput);
+    console.log('[DEBUG] Script terminó con código:', code);
+    console.log('[DEBUG] Output completo:', output);
+    console.log('[DEBUG] Error output:', errorOutput);
+    console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
     try {
       // Usar el último JSON válido encontrado
       if (lastJsonOutput) {
-        if (lastJsonOutput.success) {
-          res.json({ 
-            success: true, 
-            message: 'Publicación realizada con éxito',
-            post_id: lastJsonOutput.response.id,
-            caption: caption,
-            media_count: media_urls.length
-          });
-        } else {
-          res.status(500).json({ 
-            error: 'Error creando publicación', 
-            details: lastJsonOutput.error 
-          });
-        }
+        console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+        res.json(lastJsonOutput);
       } else {
         // Fallback: intentar parsear toda la salida
         const json = JSON.parse(output);
+        console.log('[DEBUG] JSON parseado del output completo:', json);
         res.json(json);
       }
     } catch (e) {
-      console.log('Error en catch:', e);
+      console.log('[ERROR] Error parseando JSON:', e);
+      console.log('[ERROR] Output que causó el error:', output);
       res.status(500).json({ error: 'Error ejecutando script', details: output });
     }
   });
 });
 
 app.post('/api/instagram/schedule-post', async (req, res) => {
-  const { image_url, caption, date, time } = req.body;
-  if (!image_url || !caption || !date || !time) {
+  console.log('[DEBUG] === Endpoint schedule-post llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { image_url, caption, date, time, token } = req.body;
+  if (!image_url || !caption || !date || !time || !token) {
+    console.log('[ERROR] Faltan parámetros:', { image_url: !!image_url, caption: !!caption, date: !!date, time: !!time, token: !!token });
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
+  
   // Convertir fecha y hora a timestamp
-  const fechaHora = `${date} ${time}`;
   const fecha_dt = new Date(`${date}T${time}`);
   const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
+  
+  console.log('[DEBUG] Fecha programada:', fecha_dt);
+  console.log('[DEBUG] Timestamp:', scheduled_time);
+  
   try {
-    // Obtener instagram_id
-    const scriptPath = path.join(__dirname, 'python', 'create_instagram_post.py');
-    const { spawnSync } = require('child_process');
-    // Usar extract_instagram_id desde Python
-    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
-    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
-    const [instagram_id] = JSON.parse(idResult.stdout.toString());
-    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
-    // Crear contenedor
-    const makeApiScript = `from graphAPI import make_api_request; import sys, json; params = {'image_url': sys.argv[1], 'caption': sys.argv[2]}; print(json.dumps(make_api_request(f'{sys.argv[3]}/media', params, method='POST')))`;
-    const contResult = spawnSync('python', ['-c', makeApiScript, image_url, caption, instagram_id], { cwd: path.join(__dirname, 'python') });
-    const container_response = JSON.parse(contResult.stdout.toString());
-    if (!container_response || !container_response.id) return res.status(500).json({ error: 'No se pudo crear el contenedor de la publicación' });
-    const creation_id = container_response.id;
-    // Guardar en scheduled_posts.json
-    const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
-    let posts = [];
-    if (fs.existsSync(scheduledPath)) {
-      posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
-    }
-    posts.push({ instagram_id, creation_id, scheduled_time, caption, image_url });
-    fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
-    res.json({ success: true });
+    console.log('[DEBUG] Ejecutando script de programación...');
+    const scriptPath = path.join(__dirname, 'python', 'create_instagram_post_scheduled.py');
+    const args = ['--image_url', image_url, '--caption', caption, '--scheduled_time', scheduled_time.toString(), token];
+    
+    console.log('[DEBUG] Script path:', scriptPath);
+    console.log('[DEBUG] Argumentos:', args);
+    
+    const { spawn } = require('child_process');
+    const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
+    
+    let output = '';
+    let errorOutput = '';
+    let lastJsonOutput = null;
+    
+    py.stdout.on('data', (data) => { 
+      const dataStr = data.toString();
+      output += dataStr;
+      console.log('[DEBUG] Script stdout:', dataStr);
+      
+      // Buscar el último JSON válido en la salida
+      const lines = output.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            lastJsonOutput = JSON.parse(line);
+            break;
+          } catch (e) {
+            // Continuar buscando
+          }
+        }
+      }
+    });
+    
+    py.stderr.on('data', (data) => { 
+      const dataStr = data.toString();
+      errorOutput += dataStr;
+      console.log('[DEBUG] Script stderr:', dataStr);
+    });
+    
+    py.on('close', (code) => {
+      console.log('[DEBUG] Script terminó con código:', code);
+      console.log('[DEBUG] Output completo:', output);
+      console.log('[DEBUG] Error output:', errorOutput);
+      console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
+      
+      try {
+        if (lastJsonOutput) {
+          console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+          res.json(lastJsonOutput);
+        } else {
+          // Fallback: intentar parsear toda la salida
+          const json = JSON.parse(output);
+          console.log('[DEBUG] JSON parseado del output completo:', json);
+          res.json(json);
+        }
+      } catch (e) {
+        console.log('[ERROR] Error parseando JSON:', e);
+        console.log('[ERROR] Output que causó el error:', output);
+        res.status(500).json({ error: 'Error ejecutando script', details: output });
+      }
+    });
   } catch (e) {
+    console.log('[ERROR] Error inesperado:', e);
     res.status(500).json({ error: 'Error programando publicación', details: e.message });
   }
 });
 
 app.post('/api/instagram/schedule-carousel', async (req, res) => {
-  const { media_urls, image_urls, caption, date, time } = req.body;
-  if (!caption || !date || !time) {
+  console.log('[DEBUG] === Endpoint schedule-carousel llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { media_urls, image_urls, caption, date, time, token } = req.body;
+  if (!caption || !date || !time || !token) {
+    console.log('[ERROR] Faltan parámetros:', { caption: !!caption, date: !!date, time: !!time, token: !!token });
     return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
   }
   
   // Determinar qué URLs usar (media_urls para mixto, image_urls para solo imágenes)
   const urls = media_urls || image_urls;
   if (!urls || !Array.isArray(urls) || urls.length < 2) {
+    console.log('[ERROR] URLs inválidas:', urls);
     return res.status(400).json({ error: 'Se requieren al menos 2 URLs para crear un carrusel' });
   }
   
   if (urls.length > 10) {
+    console.log('[ERROR] Demasiados medios:', urls.length);
     return res.status(400).json({ error: 'Máximo 10 medios permitidos' });
   }
   
@@ -518,13 +697,11 @@ app.post('/api/instagram/schedule-carousel', async (req, res) => {
   const fecha_dt = new Date(`${date}T${time}`);
   const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
   
+  console.log('[DEBUG] Fecha programada:', fecha_dt);
+  console.log('[DEBUG] Timestamp:', scheduled_time);
+  console.log('[DEBUG] URLs:', urls);
+  
   try {
-    // Obtener instagram_id
-    const { spawnSync } = require('child_process');
-    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
-    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
-    const [instagram_id] = JSON.parse(idResult.stdout.toString());
-    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
     
     // Determinar si es carrusel mixto o solo imágenes
     const hasVideos = urls.some(url => 
@@ -536,68 +713,78 @@ app.post('/api/instagram/schedule-carousel', async (req, res) => {
     let creation_id;
     
     if (hasVideos) {
-      // Carrusel mixto - usar el script de carrusel mixto
-      const scriptPath = path.join(__dirname, 'python', 'create_instagram_mixed_carousel.py');
-      const args = ['--media_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+      // Carrusel mixto - usar el script específico para carruseles mixtos programados
+      console.log('[DEBUG] Ejecutando script de carrusel mixto programado...');
+      const scriptPath = path.join(__dirname, 'python', 'create_instagram_mixed_carousel_scheduled.py');
+      const args = ['--media_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString(), token];
+      
+      console.log('[DEBUG] Script path:', scriptPath);
+      console.log('[DEBUG] Argumentos:', args);
+      
       const { spawn } = require('child_process');
       const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
       
-      return new Promise((resolve, reject) => {
-        let output = '';
-        let lastJsonOutput = null;
+      let output = '';
+      let errorOutput = '';
+      let lastJsonOutput = null;
+      
+      py.stdout.on('data', (data) => { 
+        const dataStr = data.toString();
+        output += dataStr;
+        console.log('[DEBUG] Script stdout:', dataStr);
         
-        py.stdout.on('data', (data) => { 
-          output += data.toString(); 
-          // Buscar el último JSON válido en la salida
-          const lines = output.split('\n');
-          for (let i = lines.length - 1; i >= 0; i--) {
-            const line = lines[i].trim();
-            if (line.startsWith('{') && line.endsWith('}')) {
-              try {
-                lastJsonOutput = JSON.parse(line);
-                break;
-              } catch (e) {
-                // Continuar buscando
-              }
+        // Buscar el último JSON válido en la salida
+        const lines = output.split('\n');
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              lastJsonOutput = JSON.parse(line);
+              break;
+            } catch (e) {
+              // Continuar buscando
             }
           }
-        });
+        }
+      });
+      
+      py.stderr.on('data', (data) => { 
+        const dataStr = data.toString();
+        errorOutput += dataStr;
+        console.log('[DEBUG] Script stderr:', dataStr);
+      });
+      
+      py.on('close', (code) => {
+        console.log('[DEBUG] Script terminó con código:', code);
+        console.log('[DEBUG] Output completo:', output);
+        console.log('[DEBUG] Error output:', errorOutput);
+        console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
         
-        py.stderr.on('data', (data) => { 
-          output += data.toString(); 
-        });
-        
-        py.on('close', (code) => {
-          if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
-            // Guardar en scheduled_posts.json
-            const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
-            let posts = [];
-            if (fs.existsSync(scheduledPath)) {
-              posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
-            }
-            posts.push({ 
-              instagram_id, 
-              creation_id: lastJsonOutput.creation_id, 
-              scheduled_time, 
-              caption, 
-              media_urls: urls,
-              is_carousel: true,
-              is_mixed: true
-            });
-            fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
-            res.json({ success: true });
+        try {
+          if (lastJsonOutput) {
+            console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+            res.json(lastJsonOutput);
           } else {
-            res.status(500).json({ 
-              error: 'Error programando carrusel mixto', 
-              details: lastJsonOutput?.error || output 
-            });
+            // Fallback: intentar parsear toda la salida
+            const json = JSON.parse(output);
+            console.log('[DEBUG] JSON parseado del output completo:', json);
+            res.json(json);
           }
-        });
+        } catch (e) {
+          console.log('[ERROR] Error parseando JSON:', e);
+          console.log('[ERROR] Output que causó el error:', output);
+          res.status(500).json({ error: 'Error ejecutando script', details: output });
+        }
       });
     } else {
-      // Carrusel solo imágenes - usar el script de carrusel normal
-      const scriptPath = path.join(__dirname, 'python', 'create_instagram_carousel.py');
-      const args = ['--image_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+      // Carrusel solo imágenes - usar el script específico para carruseles programados
+      console.log('[DEBUG] Ejecutando script de carrusel de imágenes programado...');
+      const scriptPath = path.join(__dirname, 'python', 'create_instagram_carousel_scheduled.py');
+      const args = ['--image_urls', ...urls, '--caption', caption, '--scheduled_time', scheduled_time.toString(), token];
+      
+      console.log('[DEBUG] Script path:', scriptPath);
+      console.log('[DEBUG] Argumentos:', args);
+      
       const { spawn } = require('child_process');
       const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
       
@@ -627,29 +814,24 @@ app.post('/api/instagram/schedule-carousel', async (req, res) => {
         });
         
         py.on('close', (code) => {
-          if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
-            // Guardar en scheduled_posts.json
-            const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
-            let posts = [];
-            if (fs.existsSync(scheduledPath)) {
-              posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
+          console.log('[DEBUG] Script terminó con código:', code);
+          console.log('[DEBUG] Output completo:', output);
+          console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
+          
+          try {
+            if (lastJsonOutput && lastJsonOutput.success) {
+              console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+              res.json(lastJsonOutput);
+            } else {
+              // Fallback: intentar parsear toda la salida
+              const json = JSON.parse(output);
+              console.log('[DEBUG] JSON parseado del output completo:', json);
+              res.json(json);
             }
-            posts.push({ 
-              instagram_id, 
-              creation_id: lastJsonOutput.creation_id, 
-              scheduled_time, 
-              caption, 
-              image_urls: urls,
-              is_carousel: true,
-              is_mixed: false
-            });
-            fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
-            res.json({ success: true });
-          } else {
-            res.status(500).json({ 
-              error: 'Error programando carrusel de imágenes', 
-              details: lastJsonOutput?.error || output 
-            });
+          } catch (e) {
+            console.log('[ERROR] Error parseando JSON:', e);
+            console.log('[ERROR] Output que causó el error:', output);
+            res.status(500).json({ error: 'Error ejecutando script', details: output });
           }
         });
       });
@@ -660,8 +842,12 @@ app.post('/api/instagram/schedule-carousel', async (req, res) => {
 });
 
 app.post('/api/instagram/schedule-video', async (req, res) => {
-  const { video_url, caption, date, time } = req.body;
-  if (!video_url || !caption || !date || !time) {
+  console.log('[DEBUG] === Endpoint schedule-video llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { video_url, caption, date, time, token } = req.body;
+  if (!video_url || !caption || !date || !time || !token) {
+    console.log('[ERROR] Faltan parámetros:', { video_url: !!video_url, caption: !!caption, date: !!date, time: !!time, token: !!token });
     return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
   }
   
@@ -669,71 +855,70 @@ app.post('/api/instagram/schedule-video', async (req, res) => {
   const fecha_dt = new Date(`${date}T${time}`);
   const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
   
+  console.log('[DEBUG] Fecha programada:', fecha_dt);
+  console.log('[DEBUG] Timestamp:', scheduled_time);
+  
   try {
-    // Obtener instagram_id
-    const { spawnSync } = require('child_process');
-    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
-    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
-    const [instagram_id] = JSON.parse(idResult.stdout.toString());
-    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
-    
-    // Usar el script de video programado
+    console.log('[DEBUG] Ejecutando script de programación de video...');
     const scriptPath = path.join(__dirname, 'python', 'create_instagram_video_scheduled.py');
-    const args = ['--video_url', video_url, '--caption', caption, '--scheduled_time', scheduled_time.toString()];
+    const args = ['--video_url', video_url, '--caption', caption, '--scheduled_time', scheduled_time.toString(), token];
+    
+    console.log('[DEBUG] Script path:', scriptPath);
+    console.log('[DEBUG] Argumentos:', args);
     const { spawn } = require('child_process');
     const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
     
-    return new Promise((resolve, reject) => {
-      let output = '';
-      let lastJsonOutput = null;
+    let output = '';
+    let errorOutput = '';
+    let lastJsonOutput = null;
+    
+    py.stdout.on('data', (data) => { 
+      const dataStr = data.toString();
+      output += dataStr;
+      console.log('[DEBUG] Script stdout:', dataStr);
       
-      py.stdout.on('data', (data) => { 
-        output += data.toString(); 
-        // Buscar el último JSON válido en la salida
-        const lines = output.split('\n');
-        for (let i = lines.length - 1; i >= 0; i--) {
-          const line = lines[i].trim();
-          if (line.startsWith('{') && line.endsWith('}')) {
-            try {
-              lastJsonOutput = JSON.parse(line);
-              break;
-            } catch (e) {
-              // Continuar buscando
-            }
+      // Buscar el último JSON válido en la salida
+      const lines = output.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            lastJsonOutput = JSON.parse(line);
+            break;
+          } catch (e) {
+            // Continuar buscando
           }
         }
-      });
+      }
+    });
+    
+    py.stderr.on('data', (data) => { 
+      const dataStr = data.toString();
+      errorOutput += dataStr;
+      console.log('[DEBUG] Script stderr:', dataStr);
+    });
+    
+    py.on('close', (code) => {
+      console.log('[DEBUG] Script terminó con código:', code);
+      console.log('[DEBUG] Output completo:', output);
+      console.log('[DEBUG] Error output:', errorOutput);
+      console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
       
-      py.stderr.on('data', (data) => { 
-        output += data.toString(); 
-      });
-      
-      py.on('close', (code) => {
-        if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
-          // Guardar en scheduled_posts.json
-          const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
-          let posts = [];
-          if (fs.existsSync(scheduledPath)) {
-            posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
-          }
-          posts.push({ 
-            instagram_id, 
-            creation_id: lastJsonOutput.creation_id, 
-            scheduled_time, 
-            caption, 
-            video_url: video_url,
-            is_video: true,
-            is_carousel: false
-          });
-          fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
-          res.json({ success: true });
+      try {
+        if (lastJsonOutput) {
+          console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+          res.json(lastJsonOutput);
         } else {
-          res.status(500).json({ 
-            error: 'Error programando video', 
-            details: lastJsonOutput?.error || output 
-          });
+          // Fallback: intentar parsear toda la salida
+          const json = JSON.parse(output);
+          console.log('[DEBUG] JSON parseado del output completo:', json);
+          res.json(json);
         }
-      });
+      } catch (e) {
+        console.log('[ERROR] Error parseando JSON:', e);
+        console.log('[ERROR] Output que causó el error:', output);
+        res.status(500).json({ error: 'Error ejecutando script', details: output });
+      }
     });
   } catch (e) {
     res.status(500).json({ error: 'Error programando video', details: e.message });
@@ -741,8 +926,12 @@ app.post('/api/instagram/schedule-video', async (req, res) => {
 });
 
 app.post('/api/instagram/schedule-story', async (req, res) => {
-  const { media_url, date, time } = req.body;
-  if (!media_url || !date || !time) {
+  console.log('[DEBUG] === Endpoint schedule-story llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { media_url, date, time, token } = req.body;
+  if (!media_url || !date || !time || !token) {
+    console.log('[ERROR] Faltan parámetros:', { media_url: !!media_url, date: !!date, time: !!time, token: !!token });
     return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
   }
   
@@ -750,70 +939,70 @@ app.post('/api/instagram/schedule-story', async (req, res) => {
   const fecha_dt = new Date(`${date}T${time}`);
   const scheduled_time = Math.floor(fecha_dt.getTime() / 1000);
   
+  console.log('[DEBUG] Fecha programada:', fecha_dt);
+  console.log('[DEBUG] Timestamp:', scheduled_time);
+  
   try {
-    // Obtener instagram_id
-    const { spawnSync } = require('child_process');
-    const extractIdScript = `from graphAPI import extract_instagram_id; import json; print(json.dumps(extract_instagram_id()))`;
-    const idResult = spawnSync('python', ['-c', extractIdScript], { cwd: path.join(__dirname, 'python') });
-    const [instagram_id] = JSON.parse(idResult.stdout.toString());
-    if (!instagram_id) return res.status(500).json({ error: 'No se encontró una cuenta de Instagram Business asociada' });
-    
-    // Usar el script de historia programada
+    console.log('[DEBUG] Ejecutando script de programación de historia...');
     const scriptPath = path.join(__dirname, 'python', 'create_instagram_story_scheduled.py');
-    const args = ['--media_url', media_url, '--scheduled_time', scheduled_time.toString()];
+    const args = ['--media_url', media_url, '--scheduled_time', scheduled_time.toString(), token];
+    
+    console.log('[DEBUG] Script path:', scriptPath);
+    console.log('[DEBUG] Argumentos:', args);
     const { spawn } = require('child_process');
     const py = spawn('python', [scriptPath, ...args], { cwd: path.dirname(scriptPath) });
     
-    return new Promise((resolve, reject) => {
-      let output = '';
-      let lastJsonOutput = null;
+    let output = '';
+    let errorOutput = '';
+    let lastJsonOutput = null;
+    
+    py.stdout.on('data', (data) => { 
+      const dataStr = data.toString();
+      output += dataStr;
+      console.log('[DEBUG] Script stdout:', dataStr);
       
-      py.stdout.on('data', (data) => { 
-        output += data.toString(); 
-        // Buscar el último JSON válido en la salida
-        const lines = output.split('\n');
-        for (let i = lines.length - 1; i >= 0; i--) {
-          const line = lines[i].trim();
-          if (line.startsWith('{') && line.endsWith('}')) {
-            try {
-              lastJsonOutput = JSON.parse(line);
-              break;
-            } catch (e) {
-              // Continuar buscando
-            }
+      // Buscar el último JSON válido en la salida
+      const lines = output.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            lastJsonOutput = JSON.parse(line);
+            break;
+          } catch (e) {
+            // Continuar buscando
           }
         }
-      });
+      }
+    });
+    
+    py.stderr.on('data', (data) => { 
+      const dataStr = data.toString();
+      errorOutput += dataStr;
+      console.log('[DEBUG] Script stderr:', dataStr);
+    });
+    
+    py.on('close', (code) => {
+      console.log('[DEBUG] Script terminó con código:', code);
+      console.log('[DEBUG] Output completo:', output);
+      console.log('[DEBUG] Error output:', errorOutput);
+      console.log('[DEBUG] Último JSON encontrado:', lastJsonOutput);
       
-      py.stderr.on('data', (data) => { 
-        output += data.toString(); 
-      });
-      
-      py.on('close', (code) => {
-        if (code === 0 && lastJsonOutput && lastJsonOutput.success) {
-          // Guardar en scheduled_posts.json
-          const scheduledPath = path.join(__dirname, 'python', 'scheduled_posts.json');
-          let posts = [];
-          if (fs.existsSync(scheduledPath)) {
-            posts = JSON.parse(fs.readFileSync(scheduledPath, 'utf8'));
-          }
-          posts.push({ 
-            instagram_id, 
-            creation_id: lastJsonOutput.creation_id, 
-            scheduled_time, 
-            media_url: media_url,
-            is_story: true,
-            is_carousel: false
-          });
-          fs.writeFileSync(scheduledPath, JSON.stringify(posts, null, 2));
-          res.json({ success: true });
+      try {
+        if (lastJsonOutput) {
+          console.log('[DEBUG] JSON parseado exitosamente:', lastJsonOutput);
+          res.json(lastJsonOutput);
         } else {
-          res.status(500).json({ 
-            error: 'Error programando historia', 
-            details: lastJsonOutput?.error || output 
-          });
+          // Fallback: intentar parsear toda la salida
+          const json = JSON.parse(output);
+          console.log('[DEBUG] JSON parseado del output completo:', json);
+          res.json(json);
         }
-      });
+      } catch (e) {
+        console.log('[ERROR] Error parseando JSON:', e);
+        console.log('[ERROR] Output que causó el error:', output);
+        res.status(500).json({ error: 'Error ejecutando script', details: output });
+      }
     });
   } catch (e) {
     res.status(500).json({ error: 'Error programando historia', details: e.message });
@@ -868,9 +1057,15 @@ app.post('/api/instagram/create-carousel', (req, res) => {
 
 // Endpoint para ejecutar el script de historias
 app.post('/api/instagram/update-stories', (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Token requerido' });
+  }
+
   const scriptPath = path.join(__dirname, 'python', 'save_instagram_stories.py');
   const { spawn } = require('child_process');
-  const py = spawn('python', [scriptPath], { cwd: path.dirname(scriptPath) });
+  const py = spawn('python', [scriptPath, token], { cwd: path.dirname(scriptPath) });
   let output = '';
   let errorOutput = '';
   

@@ -14,6 +14,17 @@ logging.basicConfig(
 )
 
 SCHEDULED_POSTS_FILE = "scheduled_posts.json"
+CONFIG_FILE = "instagram_config.json"
+
+def load_token():
+    """Carga el token desde el archivo de configuración"""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        return config.get('token')
+    except Exception as e:
+        logging.error(f"Error cargando token: {e}")
+        return None
 
 def process_scheduled_posts():
     """Procesa las publicaciones programadas una sola vez"""
@@ -39,9 +50,15 @@ def process_scheduled_posts():
         
         logging.info(f"Encontradas {len(posts_to_publish)} publicaciones para procesar")
         
+        # Cargar el token
+        token = load_token()
+        if not token:
+            logging.error("No se pudo cargar el token de Instagram")
+            return False
+        
         # Ejecutar el post_scheduler para procesar las publicaciones
         script_path = os.path.join(os.path.dirname(__file__), "post_scheduler.py")
-        result = subprocess.run(['pythonw.exe', script_path], 
+        result = subprocess.run(['pythonw.exe', script_path, token], 
                               capture_output=True, 
                               text=True, 
                               timeout=60)

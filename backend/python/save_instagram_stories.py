@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from graphAPI import extract_instagram_id, make_api_request
+from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def get_stories(instagram_id):
     """Obtiene las historias activas de Instagram"""
@@ -237,4 +237,10 @@ def main():
         print(f"  - {media_type}: {count} historias")
 
 if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Uso: python save_instagram_stories.py <token>")
+        sys.exit(1)
+    
+    token = sys.argv[1]
+    set_token(token)
     main() 
