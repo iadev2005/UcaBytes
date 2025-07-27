@@ -1,5 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { HomeIcon, NotificationIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon, LogOutIcon } from '../icons';
+import { HomeIcon, MegaphoneIcon, ServicesIcon, OperationsIcon, ConfigurationIcon, SidebarExpandIcon, SidebarCollapseIcon, LogOutIcon, DashboardIcon } from '../icons';
 import { motion } from 'framer-motion';
 import { Link, useLocation, useNavigate} from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -57,7 +57,7 @@ export default function Sidebar({ onCollapse }: SidebarProps) {
       <div className="flex-1 flex flex-col pt-4">
         <nav className="flex flex-col gap-2">
           <SidebarLink to="/app" icon={HomeIcon} label="Home" active={location.pathname === '/app'} isCollapsed={isCollapsed} />
-          <SidebarLink to="/app/dashboard" icon={NotificationIcon} label="Dashboard" active={location.pathname === '/app/dashboard'} isCollapsed={isCollapsed} />
+          <SidebarLink to="/app/dashboard" icon={DashboardIcon} label="Dashboard" active={location.pathname === '/app/dashboard'} isCollapsed={isCollapsed} />
           <SidebarLink to="/app/marketing" icon={MegaphoneIcon} label="Marketing" active={location.pathname === '/app/marketing'} isCollapsed={isCollapsed} />
           <SidebarLink to="/app/products-services" icon={ServicesIcon} label="Productos y Servicios" active={location.pathname === '/app/products-services'} isCollapsed={isCollapsed} />
           <SidebarLink to="/app/central-operations" icon={OperationsIcon} label="Operaciones Centrales" active={location.pathname === '/app/central-operations'} isCollapsed={isCollapsed} />
