@@ -191,6 +191,7 @@ interface ServicioVenta {
 export default function CentralOperations() {
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
   const [cat, setCat] = useState('Todos');
+  const [isInitialized, setIsInitialized] = useState(false);
   // Task planner state
   const [tareas, setTareas] = useState([
     { texto: 'Enviar facturas pendientes', prioridad: 'Alta', completada: false },
@@ -270,50 +271,102 @@ export default function CentralOperations() {
   });
 
   useEffect(() => {
-    localStorage.setItem('task_planner', JSON.stringify(tareas));
-  }, [tareas]);
+    if (isInitialized) {
+      console.log('💾 Guardando tareas:', tareas);
+      localStorage.setItem('task_planner', JSON.stringify(tareas));
+    }
+  }, [tareas, isInitialized]);
 
+  // Cargar todos los datos del localStorage al inicializar
   useEffect(() => {
+    console.log('🔄 Cargando datos desde localStorage...');
+    
+    // Cargar tareas
     const tareasGuardadas = localStorage.getItem('task_planner');
     if (tareasGuardadas) {
-      setTareas(JSON.parse(tareasGuardadas));
+      const tareasCargadas = JSON.parse(tareasGuardadas);
+      setTareas(tareasCargadas);
+      console.log('📝 Tareas cargadas:', tareasCargadas);
     }
+
+    // Cargar ventas
+    const ventasGuardadas = localStorage.getItem('ventas');
+    if (ventasGuardadas) {
+      const ventasCargadas = JSON.parse(ventasGuardadas);
+      setVentas(ventasCargadas);
+      console.log('💰 Ventas cargadas:', ventasCargadas);
+    }
+
+    // Cargar servicios vendidos
+    const ventasServiciosGuardadas = localStorage.getItem('ventasServicios');
+    if (ventasServiciosGuardadas) {
+      const serviciosCargados = JSON.parse(ventasServiciosGuardadas);
+      setVentasServicios(serviciosCargados);
+      console.log('🔧 Servicios vendidos cargados:', serviciosCargados);
+    }
+
+    // Cargar empleados
+    const empleadosGuardados = localStorage.getItem('empleados');
+    if (empleadosGuardados) {
+      const empleadosCargados = JSON.parse(empleadosGuardados);
+      setEmpleados(empleadosCargados);
+      console.log('👥 Empleados cargados:', empleadosCargados);
+    }
+
+    // Cargar productos del localStorage (sincronización con ProductsServices)
+    const productosGuardados = localStorage.getItem('productos');
+    if (productosGuardados) {
+      const productosCargados = JSON.parse(productosGuardados);
+      setProductos(productosCargados);
+      console.log('📦 Productos cargados:', productosCargados);
+    }
+
+    // Cargar servicios del localStorage (sincronización con ProductsServices)
+    const serviciosGuardados = localStorage.getItem('servicios');
+    if (serviciosGuardados) {
+      const serviciosCargados = JSON.parse(serviciosGuardados);
+      setServicios(serviciosCargados);
+      console.log('🔧 Servicios cargados:', serviciosCargados);
+    }
+
+    // Marcar como inicializado después de cargar todo
+    setIsInitialized(true);
+    console.log('✅ Inicialización completada');
   }, []);
 
   useEffect(() => {
     const ventasGuardadas = localStorage.getItem('ventas');
+    console.log('Cargando ventas del localStorage:', ventasGuardadas);
     if (ventasGuardadas) {
       setVentas(JSON.parse(ventasGuardadas));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('ventas', JSON.stringify(ventas));
-  }, [ventas]);
-
-  useEffect(() => {
-    const ventasServiciosGuardadas = localStorage.getItem('ventasServicios');
-    if (ventasServiciosGuardadas) {
-      setVentasServicios(JSON.parse(ventasServiciosGuardadas));
+    if (isInitialized) {
+      console.log('💾 Guardando ventas:', ventas);
+      localStorage.setItem('ventas', JSON.stringify(ventas));
     }
-  }, []);
+  }, [ventas, isInitialized]);
+
+
 
   useEffect(() => {
-    localStorage.setItem('ventasServicios', JSON.stringify(ventasServicios));
-  }, [ventasServicios]);
+    if (isInitialized) {
+      console.log('💾 Guardando servicios vendidos:', ventasServicios);
+      localStorage.setItem('ventasServicios', JSON.stringify(ventasServicios));
+    }
+  }, [ventasServicios, isInitialized]);
 
   // Guardar empleados en localStorage
   useEffect(() => {
-    localStorage.setItem('empleados', JSON.stringify(empleados));
-  }, [empleados]);
-
-  // Cargar empleados del localStorage
-  useEffect(() => {
-    const empleadosGuardados = localStorage.getItem('empleados');
-    if (empleadosGuardados) {
-      setEmpleados(JSON.parse(empleadosGuardados));
+    if (isInitialized) {
+      console.log('💾 Guardando empleados:', empleados);
+      localStorage.setItem('empleados', JSON.stringify(empleados));
     }
-  }, []);
+  }, [empleados, isInitialized]);
+
+
 
   const empleadosFiltrados = cat === 'Todos' ? empleados : empleados.filter(e => e.categoria === cat);
 
@@ -518,6 +571,7 @@ export default function CentralOperations() {
       pagada: !!nuevaVenta.fechaPago
     };
 
+
     setVentas([ventaCompleta, ...ventas]);
     
     // Reset form
@@ -647,6 +701,7 @@ export default function CentralOperations() {
       pagado: !!nuevaServicioVenta.fechaPago
     };
 
+
     setVentasServicios([servicioVentaCompleta, ...ventasServicios]);
     
     // Reset form
@@ -761,24 +816,30 @@ export default function CentralOperations() {
       {tab === 'ventas' && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Ventas</h2>
-          <button
-            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
-            onClick={() => setModalVentaOpen(true)}
-          >
-            Nueva Venta
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
+              onClick={() => setModalVentaOpen(true)}
+            >
+              Nueva Venta
+            </button>
+
+          </div>
         </div>
       )}
 
       {tab === 'servicios' && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Servicios</h2>
-          <button
-            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
-            onClick={() => setModalServicioOpen(true)}
-          >
-            Nuevo Servicio
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
+              onClick={() => setModalServicioOpen(true)}
+            >
+              Nuevo Servicio
+            </button>
+
+          </div>
         </div>
       )}
 

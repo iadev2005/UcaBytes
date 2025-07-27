@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
 
@@ -94,6 +94,32 @@ export default function ProductsServices() {
   const [servicios, setServicios] = useState(mockServicios);
   const [editProducto, setEditProducto] = useState<any | null>(null);
   const [editServicio, setEditServicio] = useState<any | null>(null);
+
+  // Guardar productos en localStorage
+  useEffect(() => {
+    localStorage.setItem('productos', JSON.stringify(productos));
+  }, [productos]);
+
+  // Cargar productos del localStorage
+  useEffect(() => {
+    const productosGuardados = localStorage.getItem('productos');
+    if (productosGuardados) {
+      setProductos(JSON.parse(productosGuardados));
+    }
+  }, []);
+
+  // Guardar servicios en localStorage
+  useEffect(() => {
+    localStorage.setItem('servicios', JSON.stringify(servicios));
+  }, [servicios]);
+
+  // Cargar servicios del localStorage
+  useEffect(() => {
+    const serviciosGuardados = localStorage.getItem('servicios');
+    if (serviciosGuardados) {
+      setServicios(JSON.parse(serviciosGuardados));
+    }
+  }, []);
 
   // Handlers para agregar
   const handleAddProducto = (producto: any) => {
