@@ -666,6 +666,13 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed }: Instag
       return;
     }
 
+    // Validar que si se especifica fecha, también se especifique hora (y viceversa)
+    if ((storyDate && !storyTime) || (!storyDate && storyTime)) {
+      console.log('[DEBUG] Fecha u hora incompleta, mostrando mensaje de error');
+      setStoryPublishMsg('Para programar una historia, debes especificar tanto la fecha como la hora');
+      return;
+    }
+
     console.log('[DEBUG] Iniciando publicación de historia...');
     setPublishingStory(true);
     setStoryPublishMsg(null);
