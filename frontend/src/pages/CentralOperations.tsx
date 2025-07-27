@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
+import { getProductsByCompany } from '../supabase/data';
+import { useCompany } from '../context/CompanyContext';
 
 const mockEmpleados = [
   { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, foto: '', pagado: false }
@@ -140,13 +142,43 @@ const metodosPago = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'T
 
 // Types - actualizados para usar el formato de ProductsServices.tsx
 interface Producto {
-  id_producto: string;
-  rif_pyme: string;
+  id_producto: number;
+  rif_pyme?: string;
   nombre_producto: string;
   descripcion_producto: string;
-  precio_producto: string;
+  precio_producto: number;
   categoria_producto: string;
-  stock_producto: string;
+  stock_producto: number;
+  imagen_producto?: string;
+  cantidad?: number;
+  subtotal?: number;
+}
+
+// Interfaz para productos de Supabase
+interface SupabaseProducto {
+  id_empresa: number;
+  id_producto: number;
+  precio_venta: number;
+  cantidad_actual: number;
+  productos: {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    cantidad_minima: number;
+    cantidad_maxima: number;
+    imagen: string;
+    categoria: string;
+  };
+}
+
+// Interfaz para productos adaptados para ventas
+interface ProductoVenta {
+  id_producto: number;
+  nombre_producto: string;
+  descripcion_producto: string;
+  precio_producto: number;
+  categoria_producto: string;
+  stock_producto: number;
   imagen_producto?: string;
   cantidad?: number;
   subtotal?: number;
@@ -169,7 +201,7 @@ interface Cliente {
 
 interface Venta {
   id: number;
-  productos: Producto[];
+  productos: ProductoVenta[];
   cliente: Cliente;
   metodoPago: string;
   fechaVenta: string;
@@ -194,6 +226,8 @@ export default function CentralOperations() {
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
   const [cat, setCat] = useState('Todos');
   const [isInitialized, setIsInitialized] = useState(false);
+  const { companyData } = useCompany();
+  
   // Task planner state
   const [tareas, setTareas] = useState([
     { texto: 'Enviar facturas pendientes', prioridad: 'Alta', completada: false },
@@ -215,7 +249,8 @@ export default function CentralOperations() {
   // Sales state
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [modalVentaOpen, setModalVentaOpen] = useState(false);
-  const [productos, setProductos] = useState(mockProductos);
+  const [productos, setProductos] = useState<ProductoVenta[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(false);
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date();
@@ -239,7 +274,7 @@ export default function CentralOperations() {
     total: 0,
     pagada: false
   });
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState<number | ''>('');
   const [cantidadProducto, setCantidadProducto] = useState(1);
   const [inputCantidadProducto, setInputCantidadProducto] = useState('1');
 
@@ -527,7 +562,7 @@ export default function CentralOperations() {
         ...nuevaVenta,
         productos: nuevaVenta.productos.map(p => 
           p.id_producto === producto.id_producto 
-            ? { ...p, cantidad: (p.cantidad || 0) + cantidad, subtotal: ((p.cantidad || 0) + cantidad) * parseFloat(p.precio_producto) }
+            ? { ...p, cantidad: (p.cantidad || 0) + cantidad, subtotal: ((p.cantidad || 0) + cantidad) * p.precio_producto }
             : p
         )
       });
@@ -537,7 +572,7 @@ export default function CentralOperations() {
         productos: [...nuevaVenta.productos, {
           ...producto,
           cantidad: cantidad,
-          subtotal: parseFloat(producto.precio_producto) * cantidad
+          subtotal: producto.precio_producto * cantidad
         }]
       });
     }
@@ -548,14 +583,14 @@ export default function CentralOperations() {
     setErroresVenta(prev => ({ ...prev, cantidad: '' }));
   };
 
-  const removerProductoDeVenta = (productoId: string) => {
+  const removerProductoDeVenta = (productoId: number) => {
     setNuevaVenta({
       ...nuevaVenta,
       productos: nuevaVenta.productos.filter(p => p.id_producto !== productoId)
     });
   };
 
-  const actualizarCantidadProducto = (productoId: string, nuevaCantidad: number) => {
+  const actualizarCantidadProducto = (productoId: number, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
       removerProductoDeVenta(productoId);
       return;
@@ -565,7 +600,7 @@ export default function CentralOperations() {
       ...nuevaVenta,
       productos: nuevaVenta.productos.map(p => 
         p.id_producto === productoId 
-          ? { ...p, cantidad: nuevaCantidad, subtotal: parseFloat(p.precio_producto) * nuevaCantidad }
+          ? { ...p, cantidad: nuevaCantidad, subtotal: p.precio_producto * nuevaCantidad }
           : p
       )
     });
@@ -781,6 +816,44 @@ export default function CentralOperations() {
       minute: '2-digit'
     });
   };
+
+  // Cargar productos desde Supabase
+  const loadProductos = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingProductos(true);
+    try {
+      const result = await getProductsByCompany(companyData.id);
+      if (result.success && result.data) {
+        // Convertir productos de Supabase al formato necesario para ventas
+        const productosAdaptados: ProductoVenta[] = result.data.map((item: any) => ({
+          id_producto: item.productos.id,
+          nombre_producto: item.productos.nombre,
+          descripcion_producto: item.productos.descripcion,
+          precio_producto: item.precio_venta,
+          categoria_producto: item.productos.categoria,
+          stock_producto: item.cantidad_actual,
+          imagen_producto: item.productos.imagen
+        }));
+        setProductos(productosAdaptados);
+      } else {
+        console.error('Error cargando productos:', result.error);
+        setProductos([]);
+      }
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      setProductos([]);
+    } finally {
+      setLoadingProductos(false);
+    }
+  };
+
+  // Cargar productos cuando se inicializa el componente
+  useEffect(() => {
+    if (companyData?.id) {
+      loadProductos();
+    }
+  }, [companyData?.id]);
 
   return (
     <div className="w-full mx-auto px-20 py-10 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
@@ -1560,13 +1633,16 @@ export default function CentralOperations() {
                   <div className="flex flex-col sm:flex-row gap-2">
                     <select
                       value={productoSeleccionado}
-                      onChange={e => setProductoSeleccionado(e.target.value)}
+                      onChange={e => setProductoSeleccionado(e.target.value ? parseInt(e.target.value) : '')}
                       className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                      disabled={loadingProductos}
                     >
-                      <option value="">Seleccionar producto...</option>
+                      <option value="">
+                        {loadingProductos ? 'Cargando productos...' : 'Seleccionar producto...'}
+                      </option>
                       {productos.map(producto => (
                         <option key={producto.id_producto} value={producto.id_producto}>
-                          {producto.nombre_producto} - ${parseFloat(producto.precio_producto).toLocaleString('es-MX')}
+                          {producto.nombre_producto} - ${producto.precio_producto.toLocaleString('es-MX')}
                         </option>
                       ))}
                     </select>
@@ -1585,7 +1661,7 @@ export default function CentralOperations() {
                             const prod = productos.find(p => p.id_producto === productoSeleccionado);
                             let error = '';
                             if (val < 1) error = 'Cantidad mínima 1';
-                            else if (prod && val > parseInt(prod.stock_producto)) error = `Stock máximo: ${prod.stock_producto}`;
+                            else if (prod && val > prod.stock_producto) error = `Stock máximo: ${prod.stock_producto}`;
                             setErroresVenta(prev => ({ ...prev, cantidad: error }));
                           } else {
                             setErroresVenta(prev => ({ ...prev, cantidad: '' }));
@@ -1622,7 +1698,7 @@ export default function CentralOperations() {
                         <div key={producto.id_producto} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2 rounded gap-2">
                           <div className="flex-1 min-w-0">
                             <span className="font-medium text-sm sm:text-base truncate block">{producto.nombre_producto}</span>
-                            <span className="text-xs sm:text-sm text-gray-500">${parseFloat(producto.precio_producto).toLocaleString('es-MX')} c/u</span>
+                            <span className="text-xs sm:text-sm text-gray-500">${producto.precio_producto.toLocaleString('es-MX')} c/u</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <input
