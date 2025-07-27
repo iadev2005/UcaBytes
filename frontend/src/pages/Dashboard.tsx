@@ -41,6 +41,8 @@ export default function Dashboard() {
   const [demographics, setDemographics] = useState<DemographicsData | null>(null);
   const [currentFollowers, setCurrentFollowers] = useState(0);
   const [selectedTheme, setSelectedTheme] = useState('marketing');
+  const [reachData, setReachData] = useState(0);
+  const [impressionsData, setImpressionsData] = useState(0);
 
   useEffect(() => {
     const updateAndFetchData = async () => {
@@ -49,7 +51,6 @@ export default function Dashboard() {
         setError(null);
         
         // Primero ejecutar los scripts para actualizar los datos
-        console.log('Ejecutando scripts de actualización...');
         const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
           method: 'POST',
         });
@@ -57,16 +58,16 @@ export default function Dashboard() {
         if (!updateResponse.ok) {
           throw new Error('Error al actualizar los datos');
         }
-        
-        console.log('Scripts ejecutados exitosamente, cargando datos...');
         setDataUpdating(false);
         setLoading(true);
         
         // Ahora cargar los datos actualizados
-        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse] = await Promise.all([
+        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
           fetch('http://localhost:3001/api/demographics'),
           fetch('http://localhost:3001/api/follower-insights'),
-          fetch('http://localhost:3001/api/instagram-details')
+          fetch('http://localhost:3001/api/instagram-details'),
+          fetch('http://localhost:3001/api/reach-insights'),
+          fetch('http://localhost:3001/api/impressions-insights')
         ]);
         
         if (!followerInsightsResponse.ok) {
@@ -76,6 +77,8 @@ export default function Dashboard() {
         const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
         const followerInsightsJson = await followerInsightsResponse.json();
         const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
+        const reachJson = reachResponse.ok ? await reachResponse.json() : null;
+        const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
         
         // Procesar datos de follower insights para el histograma (obligatorio)
         let processedFollowersData = [];
@@ -153,7 +156,26 @@ export default function Dashboard() {
           if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
             totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
             setCurrentFollowers(totalFollowersFromDetails);
-            console.log('Total real de seguidores desde Instagram Details:', totalFollowersFromDetails);
+          }
+        }
+
+        // Procesar datos de alcance (reach)
+        if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
+          const reachValues = reachJson.data[0].values;
+          if (reachValues.length > 0) {
+            const latestReach = reachValues[reachValues.length - 1].value;
+            setReachData(latestReach);
+          }
+        }
+
+
+
+        // Procesar datos de impresiones
+        if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
+          const impressionsValues = impressionsJson.data[0].values;
+          if (impressionsValues.length > 0) {
+            const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
+            setImpressionsData(latestImpressions);
           }
         }
 
@@ -204,7 +226,6 @@ export default function Dashboard() {
             }
           }
           
-          console.log('Datos demográficos procesados:', processedDemographics);
           setDemographics(processedDemographics);
         }
 
@@ -219,7 +240,7 @@ export default function Dashboard() {
     };
 
     updateAndFetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const radialData = [
     {
@@ -258,8 +279,6 @@ export default function Dashboard() {
     }
 
     const finalData = data.sort((a, b) => b.value - a.value);
-    console.log('Datos del gráfico de edad:', finalData);
-    console.log('Total de seguidores usado para porcentajes:', currentFollowers);
     return finalData;
   })() : [];
 
@@ -341,6 +360,31 @@ export default function Dashboard() {
       case 'marketing':
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
+            
+            {/* Métricas principales */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Seguidores Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{currentFollowers.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+{growthPercentage >= 0 ? '+' : ''}{growthPercentage}% vs ayer</p>
+              </div>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Crecimiento</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">{growthPercentage >= 0 ? '+' : ''}{growthPercentage}%</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Desde {firstDate}</p>
+              </div>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Alcance</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{reachData.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Últimos 30 días</p>
+              </div>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Impresiones</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">{impressionsData.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Últimos 30 días</p>
+              </div>
+            </div>
+
             {/* Primera fila: Histograma y Crecimiento */}
             <div className="w-full flex flex-col md:flex-row gap-8 justify-center items-stretch">
               {/* Gráfico de barras */}
@@ -449,14 +493,14 @@ export default function Dashboard() {
                             transform: 'translate(0, 0)',
                             lineHeight: '24px'
                           }}
-                          formatter={(value: string, entry: any) => {
+                          formatter={(_value: string, entry: any) => {
                             // Mostrar en la leyenda: "Rango - Cantidad"
                             const data = entry.payload;
                             return `${data.name} - ${data.count}`;
                           }}
                         />
                         <Tooltip
-                          formatter={(value: number, name: string, entry: any) => {
+                          formatter={(value: number, _name: string, entry: any) => {
                             const data = entry.payload;
                             return [
                               `${data.count} ${data.count === 1 ? 'seguidor' : 'seguidores'}`,
@@ -510,7 +554,7 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value, name, entry) => [
+                          formatter={(value, _name, entry) => [
                             `${value} seguidores (${entry.payload.percentage}%)`, 
                             'Cantidad'
                           ]}
@@ -627,25 +671,25 @@ export default function Dashboard() {
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-blue-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">Ventas Totales</h3>
-                <p className="text-3xl font-bold text-blue-600">$738,000</p>
-                <p className="text-sm text-blue-500 mt-1">+12.5% vs mes anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Ventas Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">$738,000</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+12.5% vs mes anterior</p>
               </div>
-              <div className="bg-green-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-green-700 mb-2">Ventas del Mes</h3>
-                <p className="text-3xl font-bold text-green-600">$95,000</p>
-                <p className="text-sm text-green-500 mt-1">+8.3% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ventas del Mes</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">$95,000</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+8.3% vs mes anterior</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Clientes Nuevos</h3>
-                <p className="text-3xl font-bold text-purple-600">48</p>
-                <p className="text-sm text-purple-500 mt-1">+5 clientes este mes</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Clientes Nuevos</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">48</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+5 clientes este mes</p>
               </div>
-              <div className="bg-orange-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-orange-700 mb-2">Ticket Promedio</h3>
-                <p className="text-3xl font-bold text-orange-600">$1,979</p>
-                <p className="text-sm text-orange-500 mt-1">+2.1% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ticket Promedio</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">$1,979</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+2.1% vs mes anterior</p>
               </div>
             </div>
 
@@ -680,7 +724,7 @@ export default function Dashboard() {
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {productosVendidos.map((entry, index) => (
+                      {productosVendidos.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
                       ))}
                     </Pie>
@@ -767,25 +811,25 @@ export default function Dashboard() {
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-emerald-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-emerald-700 mb-2">Servicios Totales</h3>
-                <p className="text-3xl font-bold text-emerald-600">738</p>
-                <p className="text-sm text-emerald-500 mt-1">+15.2% vs año anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Servicios Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">738</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+15.2% vs año anterior</p>
               </div>
-              <div className="bg-blue-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">Ingresos por Servicios</h3>
-                <p className="text-3xl font-bold text-blue-600">$369,000</p>
-                <p className="text-sm text-blue-500 mt-1">+12.8% vs año anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ingresos por Servicios</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">$369,000</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+12.8% vs año anterior</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Clientes Atendidos</h3>
-                <p className="text-3xl font-bold text-purple-600">598</p>
-                <p className="text-sm text-purple-500 mt-1">+18.5% vs año anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Clientes Atendidos</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">598</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+18.5% vs año anterior</p>
               </div>
-              <div className="bg-orange-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-orange-700 mb-2">Satisfacción</h3>
-                <p className="text-3xl font-bold text-orange-600">4.6/5</p>
-                <p className="text-sm text-orange-500 mt-1">+0.2 vs año anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Satisfacción</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">4.6/5</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+0.2 vs año anterior</p>
               </div>
             </div>
 
@@ -821,7 +865,7 @@ export default function Dashboard() {
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {serviciosPorTipo.map((entry, index) => (
+                      {serviciosPorTipo.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
                       ))}
                     </Pie>
@@ -908,25 +952,25 @@ export default function Dashboard() {
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-pink-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-pink-700 mb-2">Total Empleados</h3>
-                <p className="text-3xl font-bold text-pink-600">45</p>
-                <p className="text-sm text-pink-500 mt-1">+2 este mes</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Total Empleados</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">45</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+2 este mes</p>
               </div>
-              <div className="bg-cyan-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-cyan-700 mb-2">Nómina Mensual</h3>
-                <p className="text-3xl font-bold text-cyan-600">$108,500</p>
-                <p className="text-sm text-cyan-500 mt-1">+5.2% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Nómina Mensual</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">$108,500</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+5.2% vs mes anterior</p>
               </div>
-              <div className="bg-lime-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-lime-700 mb-2">Tasa de Rotación</h3>
-                <p className="text-3xl font-bold text-lime-600">2.2%</p>
-                <p className="text-sm text-lime-500 mt-1">-0.5% vs mes anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Tasa de Rotación</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">2.2%</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">-0.5% vs mes anterior</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Satisfacción</h3>
-                <p className="text-3xl font-bold text-purple-600">4.2/5</p>
-                <p className="text-sm text-purple-500 mt-1">+0.3 vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Satisfacción</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">4.2/5</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">+0.3 vs mes anterior</p>
               </div>
             </div>
 
@@ -963,11 +1007,11 @@ export default function Dashboard() {
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {empleadosPorEdad.map((entry, index) => (
+                      {empleadosPorEdad.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#EC4899', '#06B6D4', '#84CC16', '#F59E0B', '#8B5CF6'][index]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} empleados`, 'Cantidad']} />
+                    <Tooltip formatter={(value, _name) => [`${value} empleados`, 'Cantidad']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -1001,11 +1045,11 @@ export default function Dashboard() {
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {satisfaccionEmpleados.map((entry, index) => (
+                      {satisfaccionEmpleados.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#10B981', '#84CC16', '#F59E0B', '#EF4444', '#991B1B'][index]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} empleados`, 'Cantidad']} />
+                    <Tooltip formatter={(value, _name) => [`${value} empleados`, 'Cantidad']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

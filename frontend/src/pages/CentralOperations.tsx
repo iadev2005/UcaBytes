@@ -205,12 +205,23 @@ export default function CentralOperations() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [empleados, setEmpleados] = useState(mockEmpleados.map(e => ({ ...e, pagado: false })));
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalEditarEmpleado, setModalEditarEmpleado] = useState(false);
+  const [empleadoEditando, setEmpleadoEditando] = useState<number | null>(null);
   const [nuevoEmpleado, setNuevoEmpleado] = useState({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
 
   // Sales state
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [modalVentaOpen, setModalVentaOpen] = useState(false);
   const [productos, setProductos] = useState(mockProductos);
+  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  const getCurrentDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [nuevaVenta, setNuevaVenta] = useState({
     productos: [] as Producto[],
     cliente: {
@@ -220,13 +231,14 @@ export default function CentralOperations() {
       direccion: ''
     },
     metodoPago: 'Efectivo',
-    fechaVenta: new Date().toISOString().split('T')[0],
+    fechaVenta: getCurrentDate(),
     fechaPago: '',
     total: 0,
     pagada: false
   });
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [cantidadProducto, setCantidadProducto] = useState(1);
+  const [inputCantidadProducto, setInputCantidadProducto] = useState('1');
 
   // Services state
   const [ventasServicios, setVentasServicios] = useState<ServicioVenta[]>([]);
@@ -241,13 +253,21 @@ export default function CentralOperations() {
       direccion: ''
     },
     metodoPago: 'Efectivo',
-    fechaServicio: new Date().toISOString().split('T')[0],
+    fechaServicio: getCurrentDate(),
     fechaPago: '',
     total: 0,
     pagado: false
   });
   const [servicioSeleccionado, setServicioSeleccionado] = useState('');
-  const [cantidadServicio, setCantidadServicio] = useState(1);
+  const [cantidadServicio, setCantidadServicio] = useState<number | string>(1);
+
+  // --- MODIFICACIONES EN EL MODAL DE NUEVA VENTA ---
+  // 1. Estados para errores de inputs
+  const [erroresVenta, setErroresVenta] = useState({
+    email: '',
+    telefono: '',
+    cantidad: '',
+  });
 
   useEffect(() => {
     localStorage.setItem('task_planner', JSON.stringify(tareas));
@@ -281,6 +301,19 @@ export default function CentralOperations() {
   useEffect(() => {
     localStorage.setItem('ventasServicios', JSON.stringify(ventasServicios));
   }, [ventasServicios]);
+
+  // Guardar empleados en localStorage
+  useEffect(() => {
+    localStorage.setItem('empleados', JSON.stringify(empleados));
+  }, [empleados]);
+
+  // Cargar empleados del localStorage
+  useEffect(() => {
+    const empleadosGuardados = localStorage.getItem('empleados');
+    if (empleadosGuardados) {
+      setEmpleados(JSON.parse(empleadosGuardados));
+    }
+  }, []);
 
   const empleadosFiltrados = cat === 'Todos' ? empleados : empleados.filter(e => e.categoria === cat);
 
@@ -361,9 +394,57 @@ export default function CentralOperations() {
     setEmpleados(empleados.map((e, i) => i === idx ? { ...e, pagado: !e.pagado } : e));
   };
 
+  // Funciones para eliminar y editar empleados
+  const eliminarEmpleado = (idx: number) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+      setEmpleados(empleados.filter((_, i) => i !== idx));
+    }
+  };
+
+  const editarEmpleado = (idx: number) => {
+    const empleado = empleados[idx];
+    setNuevoEmpleado({
+      nombre: empleado.nombre,
+      puesto: empleado.puesto,
+      categoria: empleado.categoria,
+      salario: empleado.salario.toString(),
+      foto: empleado.foto || '',
+      pagado: empleado.pagado
+    });
+    setEmpleadoEditando(idx);
+    setModalEditarEmpleado(true);
+  };
+
+  const handleEditarEmpleado = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoEmpleado.nombre.trim() || !nuevoEmpleado.puesto.trim() || !nuevoEmpleado.salario) return;
+    
+    if (empleadoEditando !== null) {
+      setEmpleados(empleados.map((e, i) => 
+        i === empleadoEditando 
+          ? {
+              nombre: nuevoEmpleado.nombre,
+              puesto: nuevoEmpleado.puesto,
+              categoria: nuevoEmpleado.categoria,
+              salario: parseFloat(nuevoEmpleado.salario),
+              foto: nuevoEmpleado.foto,
+              pagado: nuevoEmpleado.pagado
+            }
+          : e
+      ));
+    }
+    
+    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
+    setEmpleadoEditando(null);
+    setModalEditarEmpleado(false);
+  };
+
   // Sales handlers
   const agregarProductoAVenta = () => {
-    if (!productoSeleccionado || cantidadProducto <= 0) return;
+    if (!productoSeleccionado) return;
+    
+    const cantidad = parseInt(inputCantidadProducto) || 1;
+    if (cantidad <= 0) return;
     
     const producto = productos.find(p => p.id_producto === productoSeleccionado);
     if (!producto) return;
@@ -375,7 +456,7 @@ export default function CentralOperations() {
         ...nuevaVenta,
         productos: nuevaVenta.productos.map(p => 
           p.id_producto === producto.id_producto 
-            ? { ...p, cantidad: (p.cantidad || 0) + cantidadProducto, subtotal: ((p.cantidad || 0) + cantidadProducto) * parseFloat(p.precio_producto) }
+            ? { ...p, cantidad: (p.cantidad || 0) + cantidad, subtotal: ((p.cantidad || 0) + cantidad) * parseFloat(p.precio_producto) }
             : p
         )
       });
@@ -384,14 +465,16 @@ export default function CentralOperations() {
         ...nuevaVenta,
         productos: [...nuevaVenta.productos, {
           ...producto,
-          cantidad: cantidadProducto,
-          subtotal: parseFloat(producto.precio_producto) * cantidadProducto
+          cantidad: cantidad,
+          subtotal: parseFloat(producto.precio_producto) * cantidad
         }]
       });
     }
     
     setProductoSeleccionado('');
     setCantidadProducto(1);
+    setInputCantidadProducto('1');
+    setErroresVenta(prev => ({ ...prev, cantidad: '' }));
   };
 
   const removerProductoDeVenta = (productoId: string) => {
@@ -447,7 +530,7 @@ export default function CentralOperations() {
         direccion: ''
       },
       metodoPago: 'Efectivo',
-      fechaVenta: new Date().toISOString().split('T')[0],
+      fechaVenta: getCurrentDate(),
       fechaPago: '',
       total: 0,
       pagada: false
@@ -489,7 +572,10 @@ export default function CentralOperations() {
 
   // Services handlers
   const agregarServicioAVenta = () => {
-    if (!servicioSeleccionado || cantidadServicio <= 0) return;
+    if (!servicioSeleccionado) return;
+    
+    const cantidad = typeof cantidadServicio === 'string' ? parseInt(cantidadServicio) || 1 : cantidadServicio;
+    if (cantidad <= 0) return;
     
     const servicio = servicios.find(s => s.nombre_servicio === servicioSeleccionado);
     if (!servicio) return;
@@ -501,7 +587,7 @@ export default function CentralOperations() {
         ...nuevaServicioVenta,
         servicios: nuevaServicioVenta.servicios.map(s => 
           s.nombre_servicio === servicio.nombre_servicio 
-            ? { ...s, cantidad: (s.cantidad || 0) + cantidadServicio, subtotal: ((s.cantidad || 0) + cantidadServicio) * parseFloat(s.precio_servicio) }
+            ? { ...s, cantidad: (s.cantidad || 0) + cantidad, subtotal: ((s.cantidad || 0) + cantidad) * parseFloat(s.precio_servicio) }
             : s
         )
       });
@@ -510,8 +596,8 @@ export default function CentralOperations() {
         ...nuevaServicioVenta,
         servicios: [...nuevaServicioVenta.servicios, {
           ...servicio,
-          cantidad: cantidadServicio,
-          subtotal: parseFloat(servicio.precio_servicio) * cantidadServicio
+          cantidad: cantidad,
+          subtotal: parseFloat(servicio.precio_servicio) * cantidad
         }]
       });
     }
@@ -636,7 +722,7 @@ export default function CentralOperations() {
           ].map(({ key, label }, index, arr) => (
         <button
           key={key}
-          className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 ${
+          className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 cursor-pointer ${
           tab === key
             ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
             : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'
@@ -656,7 +742,7 @@ export default function CentralOperations() {
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Empleados</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+              className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
               onClick={() => setModalOpen(true)}
             >
               Agregar empleado
@@ -676,7 +762,7 @@ export default function CentralOperations() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Ventas</h2>
           <button
-            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
             onClick={() => setModalVentaOpen(true)}
           >
             Nueva Venta
@@ -688,7 +774,7 @@ export default function CentralOperations() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary-700)]">Gestión de Servicios</h2>
           <button
-            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
             onClick={() => setModalServicioOpen(true)}
           >
             Nuevo Servicio
@@ -700,37 +786,60 @@ export default function CentralOperations() {
       {tab === 'empleados' && (
         <div className="flex flex-col gap-4 mb-15">
           {empleadosFiltrados.map((emp, idx) => (
-            <div key={idx} className="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between border border-gray-200 gap-2 md:gap-0">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                  {emp.foto ? (
-                    <img 
-                      src={emp.foto} 
-                      alt={`Foto de ${emp.nombre}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <div className={`w-full h-full flex items-center justify-center text-gray-500 text-sm font-semibold ${emp.foto ? 'hidden' : ''}`}>
-                    {emp.nombre.split(' ').map(n => n[0]).join('').toUpperCase()}
+            <div key={idx} className="bg-white rounded-xl shadow p-4 border border-gray-200">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                {/* Información del empleado */}
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                    {emp.foto ? (
+                      <img 
+                        src={emp.foto} 
+                        alt={`Foto de ${emp.nombre}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center text-gray-500 text-sm font-semibold ${emp.foto ? 'hidden' : ''}`}>
+                      {emp.nombre.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-lg text-[var(--color-primary-700)]">{emp.nombre}</div>
+                    <div className="text-gray-500 text-sm">{emp.puesto}</div>
+                    <div className="text-xs text-gray-400">{emp.categoria}</div>
                   </div>
                 </div>
-                <div>
-                  <span className="font-bold text-lg text-[var(--color-primary-700)]">{emp.nombre}</span>
-                  <span className="ml-4 text-gray-500">{emp.puesto}</span>
-                  <span className="ml-4 text-xs text-gray-400">{emp.categoria}</span>
+
+                {/* Información financiera y controles */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <span className="text-sm text-gray-700">Salario: <span className="font-semibold">${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></span>
+                    <span className="text-sm text-[var(--color-primary-400)]">Pago quincenal: <span className="font-semibold">${emp.salario ? (emp.salario/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></span>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="checkbox" checked={emp.pagado} onChange={() => togglePagado(idx)} className="accent-[var(--color-primary-400)] w-5 h-5" />
+                      Nómina pagada
+                    </label>
+                  </div>
+                  
+                  {/* Botones de acción */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => editarEmpleado(idx)}
+                      className="bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)] px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-300)] transition-colors cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => eliminarEmpleado(idx)}
+                      className="bg-[var(--color-secondary-400)] text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-                <span className="text-sm text-gray-700">Salario: <span className="font-semibold">${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></span>
-                <span className="text-sm text-[var(--color-primary-400)]">Pago quincenal: <span className="font-semibold">${emp.salario ? (emp.salario/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></span>
-                <label className="flex items-center gap-2 text-xs">
-                  <input type="checkbox" checked={emp.pagado} onChange={() => togglePagado(idx)} className="accent-[var(--color-primary-400)] w-5 h-5" />
-                  Nómina pagada
-                </label>
               </div>
             </div>
           ))}
@@ -877,7 +986,7 @@ export default function CentralOperations() {
                   </div>
                   <button
                     onClick={() => eliminarVenta(venta.id)}
-                    className="text-red-500 hover:text-red-700 text-sm font-semibold self-start sm:self-auto"
+                    className="text-red-500 hover:text-red-700 text-sm font-semibold self-start sm:self-auto cursor-pointer"
                   >
                     Eliminar venta
                   </button>
@@ -916,7 +1025,7 @@ export default function CentralOperations() {
               </div>
               <button 
                 type="submit" 
-                className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+                className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
               >
                 Agregar tarea
               </button>
@@ -975,7 +1084,7 @@ export default function CentralOperations() {
                          )}
                          <button 
                            onClick={() => eliminarTarea(globalIdx)} 
-                           className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
+                           className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 cursor-pointer"
                          >
                            ×
                          </button>
@@ -1074,7 +1183,7 @@ export default function CentralOperations() {
                   </div>
                   <button
                     onClick={() => eliminarServicioVenta(servicioVenta.id)}
-                    className="text-red-500 hover:text-red-700 text-sm font-semibold self-start sm:self-auto"
+                    className="text-red-500 hover:text-red-700 text-sm font-semibold self-start sm:self-auto cursor-pointer"
                   >
                     Eliminar servicio
                   </button>
@@ -1158,7 +1267,99 @@ export default function CentralOperations() {
               </div>
             )}
           </label>
-          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors">Agregar</button>
+          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer">Agregar</button>
+        </form>
+      </Modal>
+
+      {/* Modal para editar empleado */}
+      <Modal open={modalEditarEmpleado} onClose={() => setModalEditarEmpleado(false)} title="Editar Empleado" size="md">
+        <form onSubmit={handleEditarEmpleado} className="flex flex-col gap-4 w-full">
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Nombre</span>
+            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Puesto</span>
+            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Categoría</span>
+            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
+              {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Salario mensual</span>
+            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+          </label>
+          <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          <label className="flex flex-col gap-1">
+            <span className="font-semibold">Foto del empleado</span>
+            <div className="flex gap-2">
+              <input 
+                type="url" 
+                value={nuevoEmpleado.foto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, foto: e.target.value })} 
+                placeholder="URL de la imagen o sube un archivo"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      setNuevoEmpleado({ ...nuevoEmpleado, foto: event.target?.result as string });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="hidden"
+                id="foto-empleado-editar"
+              />
+              <label
+                htmlFor="foto-empleado-editar"
+                className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Subir
+              </label>
+            </div>
+            {nuevoEmpleado.foto && (
+              <div className="mt-2">
+                <span className="text-sm text-gray-600">Vista previa:</span>
+                <div className="mt-1 w-16 h-16 rounded-full overflow-hidden bg-gray-200">
+                  <img 
+                    src={nuevoEmpleado.foto} 
+                    alt="Vista previa"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </label>
+          <div className="flex gap-3">
+            <button 
+              type="button" 
+              onClick={() => setModalEditarEmpleado(false)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+            >
+              Guardar Cambios
+            </button>
+          </div>
         </form>
       </Modal>
 
@@ -1187,18 +1388,35 @@ export default function CentralOperations() {
                     <input 
                       type="email" 
                       value={nuevaVenta.cliente.email} 
-                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, email: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      onChange={e => {
+                        const email = e.target.value;
+                        setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, email}});
+                        setErroresVenta(prev => ({
+                          ...prev,
+                          email: email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? 'Email inválido' : ''
+                        }));
+                      }} 
+                      className={`rounded-lg border ${erroresVenta.email ? 'border-red-500' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]`} 
                     />
+                    {erroresVenta.email && <span className="text-xs text-red-500 mt-1">{erroresVenta.email}</span>}
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Teléfono</span>
                     <input 
                       type="tel" 
                       value={nuevaVenta.cliente.telefono} 
-                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, telefono: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      maxLength={15}
+                      onChange={e => {
+                        const telefono = e.target.value.replace(/[^0-9]/g, '');
+                        setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, telefono}});
+                        setErroresVenta(prev => ({
+                          ...prev,
+                          telefono: telefono && telefono.length < 7 ? 'Teléfono muy corto' : ''
+                        }));
+                      }} 
+                      className={`rounded-lg border ${erroresVenta.telefono ? 'border-red-500' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]`} 
                     />
+                    {erroresVenta.telefono && <span className="text-xs text-red-500 mt-1">{erroresVenta.telefono}</span>}
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Dirección</span>
@@ -1277,15 +1495,38 @@ export default function CentralOperations() {
                       <input
                         type="number"
                         min="1"
-                        value={cantidadProducto}
-                        onChange={e => setCantidadProducto(parseInt(e.target.value) || 1)}
-                        className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                        value={inputCantidadProducto}
+                        onChange={e => {
+                          const inputValue = e.target.value;
+                          setInputCantidadProducto(inputValue);
+                          
+                          // Validar solo si hay un valor
+                          if (inputValue !== '') {
+                            const val = parseInt(inputValue) || 0;
+                            const prod = productos.find(p => p.id_producto === productoSeleccionado);
+                            let error = '';
+                            if (val < 1) error = 'Cantidad mínima 1';
+                            else if (prod && val > parseInt(prod.stock_producto)) error = `Stock máximo: ${prod.stock_producto}`;
+                            setErroresVenta(prev => ({ ...prev, cantidad: error }));
+                          } else {
+                            setErroresVenta(prev => ({ ...prev, cantidad: '' }));
+                          }
+                        }}
+                        onBlur={e => {
+                          const inputValue = e.target.value;
+                          const val = inputValue === '' || parseInt(inputValue) < 1 ? 1 : parseInt(inputValue);
+                          setCantidadProducto(val);
+                          setInputCantidadProducto(val.toString());
+                          setErroresVenta(prev => ({ ...prev, cantidad: '' }));
+                        }}
+                        className={`w-20 rounded-lg border ${erroresVenta.cantidad ? 'border-red-500' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]`}
                       />
+                      {erroresVenta.cantidad && <span className="text-xs text-red-500 mt-1">{erroresVenta.cantidad}</span>}
                       <button
                         type="button"
                         onClick={agregarProductoAVenta}
-                        disabled={!productoSeleccionado}
-                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        disabled={!productoSeleccionado || !!erroresVenta.cantidad}
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
                       >
                         Agregar
                       </button>
@@ -1309,7 +1550,15 @@ export default function CentralOperations() {
                               type="number"
                               min="1"
                               value={producto.cantidad}
-                              onChange={e => actualizarCantidadProducto(producto.id_producto, parseInt(e.target.value) || 1)}
+                              onChange={e => {
+                                const inputValue = e.target.value;
+                                const val = inputValue === '' ? 1 : parseInt(inputValue) || 1;
+                                actualizarCantidadProducto(producto.id_producto, val);
+                              }}
+                              onBlur={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                actualizarCantidadProducto(producto.id_producto, val);
+                              }}
                               className="w-16 sm:w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
                             />
                             <span className="font-semibold min-w-[70px] sm:min-w-[90px] text-right text-sm">
@@ -1318,7 +1567,7 @@ export default function CentralOperations() {
                             <button
                               type="button"
                               onClick={() => removerProductoDeVenta(producto.id_producto)}
-                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
+                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 cursor-pointer"
                             >
                               ×
                             </button>
@@ -1345,14 +1594,14 @@ export default function CentralOperations() {
             <button
               type="button"
               onClick={() => setModalVentaOpen(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto"
+              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={nuevaVenta.productos.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto"
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
             >
               Crear Venta
             </button>
@@ -1476,14 +1725,22 @@ export default function CentralOperations() {
                         type="number"
                         min="1"
                         value={cantidadServicio}
-                        onChange={e => setCantidadServicio(parseInt(e.target.value) || 1)}
+                        onChange={e => {
+                          const inputValue = e.target.value;
+                          const val = inputValue === '' ? 1 : parseInt(inputValue) || 1;
+                          setCantidadServicio(val);
+                        }}
+                        onBlur={e => {
+                          const val = parseInt(e.target.value) || 1;
+                          setCantidadServicio(val);
+                        }}
                         className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
                       />
                       <button
                         type="button"
                         onClick={agregarServicioAVenta}
                         disabled={!servicioSeleccionado}
-                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
                       >
                         Agregar
                       </button>
@@ -1507,7 +1764,15 @@ export default function CentralOperations() {
                               type="number"
                               min="1"
                               value={servicio.cantidad}
-                              onChange={e => actualizarCantidadServicio(servicio.nombre_servicio, parseInt(e.target.value) || 1)}
+                              onChange={e => {
+                                const inputValue = e.target.value;
+                                const val = inputValue === '' ? 1 : parseInt(inputValue) || 1;
+                                actualizarCantidadServicio(servicio.nombre_servicio, val);
+                              }}
+                              onBlur={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                actualizarCantidadServicio(servicio.nombre_servicio, val);
+                              }}
                               className="w-16 sm:w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
                             />
                             <span className="font-semibold min-w-[70px] sm:min-w-[90px] text-right text-sm">
@@ -1516,7 +1781,7 @@ export default function CentralOperations() {
                             <button
                               type="button"
                               onClick={() => removerServicioDeVenta(servicio.nombre_servicio)}
-                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50"
+                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 cursor-pointer"
                             >
                               ×
                             </button>
@@ -1543,14 +1808,14 @@ export default function CentralOperations() {
             <button
               type="button"
               onClick={() => setModalServicioOpen(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto"
+              className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors order-2 sm:order-1 w-full sm:w-auto cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={nuevaServicioVenta.servicios.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto"
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
             >
               Crear Servicio
             </button>
