@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
 import { cn } from '../lib/utils';
+import { getSalesByCompany, getProductsByCompany } from '../supabase/data';
+import { useCompany } from '../context/CompanyContext';
 
 interface FollowerData {
   name: string;
@@ -74,11 +76,12 @@ export default function Dashboard() {
   const [reachData, setReachData] = useState(0);
   const [impressionsData, setImpressionsData] = useState(0);
   
-  // Estados para datos de operaciones centrales
+  // Estados para datos de operaciones centrales desde Supabase
   const [ventasData, setVentasData] = useState<any[]>([]);
   const [serviciosData, setServiciosData] = useState<any[]>([]);
   const [empleadosData, setEmpleadosData] = useState<any[]>([]);
   const [productosData, setProductosData] = useState<any[]>([]);
+  const [loadingSupabaseData, setLoadingSupabaseData] = useState(false);
   
   // Estados para el token de Instagram
   const [instagramToken, setInstagramToken] = useState<string>('');
@@ -86,6 +89,9 @@ export default function Dashboard() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [validatingToken, setValidatingToken] = useState(false);
   const [initializing, setInitializing] = useState(true);
+
+  // Contexto de la empresa
+  const { companyData } = useCompany();
 
   // Función para cargar token guardado
   const loadSavedToken = async () => {
@@ -185,53 +191,259 @@ export default function Dashboard() {
     }
   };
 
-  // Cargar datos de operaciones centrales
-  useEffect(() => {
-    const cargarDatosOperaciones = () => {
-      try {
-        // Cargar ventas
-        const ventasGuardadas = localStorage.getItem('ventas');
-        if (ventasGuardadas) {
-          const ventas = JSON.parse(ventasGuardadas);
-          setVentasData(ventas);
-        }
-
-        // Cargar servicios
-        const serviciosGuardados = localStorage.getItem('ventasServicios');
-        if (serviciosGuardados) {
-          const servicios = JSON.parse(serviciosGuardados);
-          setServiciosData(servicios);
-        }
-
-        // Cargar empleados
-        const empleadosGuardados = localStorage.getItem('empleados');
-        if (empleadosGuardados) {
-          const empleados = JSON.parse(empleadosGuardados);
-          setEmpleadosData(empleados);
-        }
-
-        // Cargar productos (desde ProductsServices)
-        const productosGuardados = localStorage.getItem('productos');
-        if (productosGuardados) {
-          const productos = JSON.parse(productosGuardados);
-          setProductosData(productos);
-        }
-
-        // Cargar servicios del catálogo (desde ProductsServices)
-        const serviciosCatalogoGuardados = localStorage.getItem('servicios');
-        if (serviciosCatalogoGuardados) {
-          const serviciosCatalogo = JSON.parse(serviciosCatalogoGuardados);
-          // Aquí podrías usar serviciosCatalogo si necesitas datos del catálogo de servicios
-        }
-      } catch (error) {
-        console.error('Error al cargar datos de operaciones centrales:', error);
+  // Cargar datos de operaciones centrales desde Supabase
+  const loadSupabaseData = async () => {
+    if (!companyData?.id) return;
+    
+    console.log('🔄 Cargando datos del Dashboard desde Supabase para empresa:', companyData.id);
+    setLoadingSupabaseData(true);
+    
+    try {
+      // Cargar ventas desde Supabase
+      const ventasResult = await getSalesByCompany(companyData.id);
+      if (ventasResult.success) {
+        setVentasData(ventasResult.data || []);
+        console.log('✅ Ventas cargadas desde Supabase:', ventasResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando ventas:', ventasResult.error);
+        setVentasData([]);
       }
-    };
 
-    cargarDatosOperaciones();
-  }, []);
+      // Cargar productos desde Supabase
+      const productosResult = await getProductsByCompany(companyData.id);
+      if (productosResult.success) {
+        setProductosData(productosResult.data || []);
+        console.log('✅ Productos cargados desde Supabase:', productosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando productos:', productosResult.error);
+        setProductosData([]);
+      }
 
-  // Funciones para procesar datos reales
+      // Por ahora, mantener servicios y empleados como arrays vacíos
+      // ya que no tenemos esas funciones en Supabase aún
+      setServiciosData([]);
+      setEmpleadosData([]);
+      
+    } catch (error) {
+      console.error('❌ Error cargando datos de Supabase:', error);
+      setVentasData([]);
+      setProductosData([]);
+      setServiciosData([]);
+      setEmpleadosData([]);
+    } finally {
+      setLoadingSupabaseData(false);
+    }
+  };
+
+  // Cargar datos de Supabase cuando se inicializa el componente
+  useEffect(() => {
+    if (companyData?.id) {
+      loadSupabaseData();
+    }
+  }, [companyData?.id]);
+
+  // Función para actualizar y cargar datos de Instagram
+  const updateAndFetchData = async () => {
+    try {
+      setDataUpdating(true);
+      setError(null);
+      
+      // Verificar si hay token disponible
+      if (!instagramToken) {
+        setShowTokenModal(true);
+        return;
+      }
+      
+      // Primero ejecutar los scripts para actualizar los datos
+      const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: instagramToken }),
+      });
+      
+      if (!updateResponse.ok) {
+        throw new Error('Error al actualizar los datos');
+      }
+      setDataUpdating(false);
+      setLoading(true);
+      
+      // Ahora cargar los datos actualizados
+      const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/demographics'),
+        fetch('http://localhost:3001/api/follower-insights'),
+        fetch('http://localhost:3001/api/instagram-details'),
+        fetch('http://localhost:3001/api/reach-insights'),
+        fetch('http://localhost:3001/api/impressions-insights')
+      ]);
+      
+      if (!followerInsightsResponse.ok) {
+        throw new Error(`Error HTTP en follower insights: ${followerInsightsResponse.status}`);
+      }
+      
+      const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
+      const followerInsightsJson = await followerInsightsResponse.json();
+      const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
+      const reachJson = reachResponse.ok ? await reachResponse.json() : null;
+      const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
+      
+      // Procesar datos de follower insights para el histograma (obligatorio)
+      let processedFollowersData = [];
+      if (followerInsightsJson && followerInsightsJson.data && followerInsightsJson.data[0] && followerInsightsJson.data[0].values) {
+        const values = followerInsightsJson.data[0].values;
+        processedFollowersData = values.map((item: { end_time: string; value: number }) => ({
+          name: new Date(item.end_time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
+          seguidores: item.value,
+          originalDate: item.end_time.split('T')[0]
+        }));
+        
+        // Obtener el último valor para current followers
+        const lastValue = values[values.length - 1];
+        if (lastValue) {
+          setCurrentFollowers(lastValue.value);
+        }
+      } else {
+        throw new Error('No se pudieron obtener los datos de follower insights');
+      }
+      
+      // Calculate growth percentage comparing yesterday vs today
+      const sortedData = processedFollowersData.sort((a: FollowerData, b: FollowerData) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
+      
+      if (sortedData.length >= 2) {
+        // Buscar explícitamente las últimas dos fechas disponibles
+        const allDates = sortedData.map((item: FollowerData) => item.originalDate).filter((date: string | undefined) => date);
+        const uniqueDates = [...new Set(allDates)].sort();
+        
+        if (uniqueDates.length >= 2) {
+          const todayDate = uniqueDates[uniqueDates.length - 1]; // Última fecha disponible
+          const yesterdayDate = uniqueDates[uniqueDates.length - 2]; // Penúltima fecha disponible
+          
+          const todayData = sortedData.find((item: FollowerData) => item.originalDate === todayDate);
+          const yesterdayData = sortedData.find((item: FollowerData) => item.originalDate === yesterdayDate);
+          
+          if (todayData && yesterdayData) {
+            const todayFollowers = todayData.seguidores;
+            const yesterdayFollowers = yesterdayData.seguidores;
+            
+            const growth = todayFollowers - yesterdayFollowers;
+            let growthPercent = 0;
+            
+            if (yesterdayFollowers === 0 && todayFollowers === 0) {
+              // Si ambos días son 0, no hay crecimiento
+              growthPercent = 0;
+            } else if (yesterdayFollowers === 0 && todayFollowers > 0) {
+              // Si ayer era 0 y hoy hay seguidores, es crecimiento infinito (mostrar 100%)
+              growthPercent = 100;
+            } else {
+              // Cálculo normal
+              growthPercent = (growth / yesterdayFollowers) * 100;
+            }
+            setGrowthPercentage(Math.round(growthPercent));
+            
+            // Mostrar la fecha de ayer (día de referencia)
+            // Agregar tiempo para evitar problemas de zona horaria
+            const yesterdayDateObj = new Date(yesterdayDate + 'T12:00:00');
+            setFirstDate(yesterdayDateObj.toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric'
+            }));
+          }
+        }
+      }
+
+      setFollowersData(processedFollowersData);
+
+      // Obtener el total real de seguidores desde instagram_details.json
+      let totalFollowersFromDetails = currentFollowers; // fallback al valor anterior
+      if (instagramDetailsJson && instagramDetailsJson.data && instagramDetailsJson.data[0]) {
+        const instagramData = instagramDetailsJson.data[0];
+        if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
+          totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
+          setCurrentFollowers(totalFollowersFromDetails);
+        }
+      }
+
+      // Procesar datos de alcance (reach)
+      if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
+        const reachValues = reachJson.data[0].values;
+        if (reachValues.length > 0) {
+          const latestReach = reachValues[reachValues.length - 1].value;
+          setReachData(latestReach);
+        }
+      }
+
+      // Procesar datos de impresiones
+      if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
+        const impressionsValues = impressionsJson.data[0].values;
+        if (impressionsValues.length > 0) {
+          const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
+          setImpressionsData(latestImpressions);
+        }
+      }
+
+      // Procesar datos demográficos del nuevo formato
+      if (demographicsJson) {
+        const processedDemographics = {
+          gender: {},
+          age: {},
+          city: {}
+        };
+        
+        // Extraer datos de género
+        if (demographicsJson.gender && demographicsJson.gender.data && demographicsJson.gender.data[0]) {
+          const genderData = demographicsJson.gender.data[0];
+          if (genderData.total_value && genderData.total_value.breakdowns && genderData.total_value.breakdowns[0]) {
+            const results = genderData.total_value.breakdowns[0].results;
+            const genderObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              genderObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.gender = genderObj;
+          }
+        }
+        
+        // Extraer datos de edad
+        if (demographicsJson.age && demographicsJson.age.data && demographicsJson.age.data[0]) {
+          const ageData = demographicsJson.age.data[0];
+          if (ageData.total_value && ageData.total_value.breakdowns && ageData.total_value.breakdowns[0]) {
+            const results = ageData.total_value.breakdowns[0].results;
+            const ageObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              ageObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.age = ageObj;
+          }
+        }
+        
+        // Extraer datos de ciudad
+        if (demographicsJson.city && demographicsJson.city.data && demographicsJson.city.data[0]) {
+          const cityData = demographicsJson.city.data[0];
+          if (cityData.total_value && cityData.total_value.breakdowns && cityData.total_value.breakdowns[0]) {
+            const results = cityData.total_value.breakdowns[0].results;
+            const cityObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              cityObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.city = cityObj;
+          }
+        }
+        
+        setDemographics(processedDemographics);
+      }
+
+      setError(null);
+    } catch (error) {
+      console.error('Error completo:', error);
+      setError('Error al cargar los datos del dashboard');
+      setDataUpdating(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funciones para procesar datos reales desde Supabase
   const procesarDatosVentas = () => {
     if (!ventasData.length) return { totalVentas: 0, ventasMes: 0, clientesUnicos: 0, ticketPromedio: 0, ventasMensuales: [], productosVendidos: [] };
 
@@ -259,7 +471,7 @@ export default function Dashboard() {
       ventas: total
     }));
 
-    // Procesar productos vendidos usando los campos correctos
+    // Procesar productos vendidos usando la estructura de Supabase
     const productosVendidos = ventasData.reduce((acc, venta) => {
       if (venta.productos && Array.isArray(venta.productos)) {
         venta.productos.forEach((prod: any) => {
@@ -371,12 +583,13 @@ export default function Dashboard() {
 
     const totalProductos = productosData.length;
     const valorInventario = productosData.reduce((total, prod) => {
-      return total + (parseFloat(prod.precio_producto || '0') * parseInt(prod.stock_producto || '0'));
+      // Usar la estructura de Supabase: prod.precio_venta y prod.cantidad_actual
+      return total + ((prod.precio_venta || 0) * (prod.cantidad_actual || 0));
     }, 0);
 
-    // Agrupar productos por categoría usando el campo correcto
+    // Agrupar productos por categoría usando la estructura de Supabase
     const productosPorCategoria = productosData.reduce((acc, prod) => {
-      const categoria = prod.categoria_producto || 'Sin categoría';
+      const categoria = prod.productos?.categoria || 'Sin categoría';
       if (!acc[categoria]) acc[categoria] = 0;
       acc[categoria] += 1;
       return acc;
@@ -396,210 +609,6 @@ export default function Dashboard() {
       const hasValidToken = await loadSavedToken();
       setInitializing(false);
       
-      const updateAndFetchData = async () => {
-      try {
-        setDataUpdating(true);
-        setError(null);
-        
-        // Verificar si hay token disponible
-        if (!instagramToken) {
-          setShowTokenModal(true);
-          return;
-        }
-        
-        // Primero ejecutar los scripts para actualizar los datos
-        const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token: instagramToken }),
-        });
-        
-        if (!updateResponse.ok) {
-          throw new Error('Error al actualizar los datos');
-        }
-        setDataUpdating(false);
-        setLoading(true);
-        
-        // Ahora cargar los datos actualizados
-        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
-          fetch('http://localhost:3001/api/demographics'),
-          fetch('http://localhost:3001/api/follower-insights'),
-          fetch('http://localhost:3001/api/instagram-details'),
-          fetch('http://localhost:3001/api/reach-insights'),
-          fetch('http://localhost:3001/api/impressions-insights')
-        ]);
-        
-        if (!followerInsightsResponse.ok) {
-          throw new Error(`Error HTTP en follower insights: ${followerInsightsResponse.status}`);
-        }
-        
-        const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
-        const followerInsightsJson = await followerInsightsResponse.json();
-        const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
-        const reachJson = reachResponse.ok ? await reachResponse.json() : null;
-        const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
-        
-        // Procesar datos de follower insights para el histograma (obligatorio)
-        let processedFollowersData = [];
-        if (followerInsightsJson && followerInsightsJson.data && followerInsightsJson.data[0] && followerInsightsJson.data[0].values) {
-          const values = followerInsightsJson.data[0].values;
-          processedFollowersData = values.map((item: { end_time: string; value: number }) => ({
-            name: new Date(item.end_time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-            seguidores: item.value,
-            originalDate: item.end_time.split('T')[0]
-          }));
-          
-          // Obtener el último valor para current followers
-          const lastValue = values[values.length - 1];
-          if (lastValue) {
-            setCurrentFollowers(lastValue.value);
-          }
-        } else {
-          throw new Error('No se pudieron obtener los datos de follower insights');
-        }
-        
-        // Calculate growth percentage comparing yesterday vs today
-        const sortedData = processedFollowersData.sort((a: FollowerData, b: FollowerData) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
-        
-        if (sortedData.length >= 2) {
-          // Buscar explícitamente las últimas dos fechas disponibles
-          const allDates = sortedData.map((item: FollowerData) => item.originalDate).filter((date: string | undefined) => date);
-          const uniqueDates = [...new Set(allDates)].sort();
-          
-
-          
-          if (uniqueDates.length >= 2) {
-            const todayDate = uniqueDates[uniqueDates.length - 1]; // Última fecha disponible
-            const yesterdayDate = uniqueDates[uniqueDates.length - 2]; // Penúltima fecha disponible
-            
-            const todayData = sortedData.find((item: FollowerData) => item.originalDate === todayDate);
-            const yesterdayData = sortedData.find((item: FollowerData) => item.originalDate === yesterdayDate);
-            
-            if (todayData && yesterdayData) {
-              const todayFollowers = todayData.seguidores;
-              const yesterdayFollowers = yesterdayData.seguidores;
-              
-              const growth = todayFollowers - yesterdayFollowers;
-              let growthPercent = 0;
-              
-              if (yesterdayFollowers === 0 && todayFollowers === 0) {
-                // Si ambos días son 0, no hay crecimiento
-                growthPercent = 0;
-              } else if (yesterdayFollowers === 0 && todayFollowers > 0) {
-                // Si ayer era 0 y hoy hay seguidores, es crecimiento infinito (mostrar 100%)
-                growthPercent = 100;
-              } else {
-                // Cálculo normal
-                growthPercent = (growth / yesterdayFollowers) * 100;
-              }
-              setGrowthPercentage(Math.round(growthPercent));
-              
-              // Mostrar la fecha de ayer (día de referencia)
-              // Agregar tiempo para evitar problemas de zona horaria
-              const yesterdayDateObj = new Date(yesterdayDate + 'T12:00:00');
-              setFirstDate(yesterdayDateObj.toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-              }));
-            }
-          }
-        }
-
-        setFollowersData(processedFollowersData);
-
-        // Obtener el total real de seguidores desde instagram_details.json
-        let totalFollowersFromDetails = currentFollowers; // fallback al valor anterior
-        if (instagramDetailsJson && instagramDetailsJson.data && instagramDetailsJson.data[0]) {
-          const instagramData = instagramDetailsJson.data[0];
-          if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
-            totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
-            setCurrentFollowers(totalFollowersFromDetails);
-          }
-        }
-
-        // Procesar datos de alcance (reach)
-        if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
-          const reachValues = reachJson.data[0].values;
-          if (reachValues.length > 0) {
-            const latestReach = reachValues[reachValues.length - 1].value;
-            setReachData(latestReach);
-          }
-        }
-
-
-
-        // Procesar datos de impresiones
-        if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
-          const impressionsValues = impressionsJson.data[0].values;
-          if (impressionsValues.length > 0) {
-            const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
-            setImpressionsData(latestImpressions);
-          }
-        }
-
-        // Procesar datos demográficos del nuevo formato
-        if (demographicsJson) {
-          const processedDemographics = {
-            gender: {},
-            age: {},
-            city: {}
-          };
-          
-          // Extraer datos de género
-          if (demographicsJson.gender && demographicsJson.gender.data && demographicsJson.gender.data[0]) {
-            const genderData = demographicsJson.gender.data[0];
-            if (genderData.total_value && genderData.total_value.breakdowns && genderData.total_value.breakdowns[0]) {
-              const results = genderData.total_value.breakdowns[0].results;
-              const genderObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                genderObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.gender = genderObj;
-            }
-          }
-          
-          // Extraer datos de edad
-          if (demographicsJson.age && demographicsJson.age.data && demographicsJson.age.data[0]) {
-            const ageData = demographicsJson.age.data[0];
-            if (ageData.total_value && ageData.total_value.breakdowns && ageData.total_value.breakdowns[0]) {
-              const results = ageData.total_value.breakdowns[0].results;
-              const ageObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                ageObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.age = ageObj;
-            }
-          }
-          
-          // Extraer datos de ciudad
-          if (demographicsJson.city && demographicsJson.city.data && demographicsJson.city.data[0]) {
-            const cityData = demographicsJson.city.data[0];
-            if (cityData.total_value && cityData.total_value.breakdowns && cityData.total_value.breakdowns[0]) {
-              const results = cityData.total_value.breakdowns[0].results;
-              const cityObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                cityObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.city = cityObj;
-            }
-          }
-          
-          setDemographics(processedDemographics);
-        }
-
-        setError(null);
-      } catch (error) {
-        console.error('Error completo:', error);
-        setError('Error al cargar los datos del dashboard');
-        setDataUpdating(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
       // Solo ejecutar updateAndFetchData si hay token
       if (instagramToken) {
         updateAndFetchData();
@@ -1028,10 +1037,32 @@ export default function Dashboard() {
             { nombre: 'Sin productos', cantidad: 0, porcentaje: 0 }
           ]);
 
-
-
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
+            
+            {/* Indicador de carga para datos de Supabase */}
+            {loadingSupabaseData && (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Cargando datos desde Supabase...
+                </div>
+              </div>
+            )}
+            
+            {/* Botón de recarga */}
+            <div className="flex justify-end">
+              <button
+                onClick={loadSupabaseData}
+                disabled={loadingSupabaseData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {loadingSupabaseData ? 'Actualizando...' : 'Actualizar datos'}
+              </button>
+            </div>
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
