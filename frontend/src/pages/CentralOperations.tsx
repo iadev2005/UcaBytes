@@ -222,6 +222,8 @@ export default function CentralOperations() {
   const [loadingProductos, setLoadingProductos] = useState(false);
   const [loadingVentas, setLoadingVentas] = useState(false);
   const [loadingServicios, setLoadingServicios] = useState(false);
+  const [creatingVenta, setCreatingVenta] = useState(false);
+  const [creatingServicio, setCreatingServicio] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
   const [clientesExistentes, setClientesExistentes] = useState<any[]>([]);
 
@@ -508,62 +510,73 @@ export default function CentralOperations() {
     if (!nuevaVenta.cliente.nombre.trim()) return;
     if (!companyData?.id) return;
 
+    setCreatingVenta(true);
     console.log('🔄 Creando venta en Supabase...');
     console.log('📦 Productos:', nuevaVenta.productos);
     console.log('👤 Cliente:', nuevaVenta.cliente);
     console.log('🏢 Empresa ID:', companyData.id);
 
-    const total = calcularTotal();
-    
-    // Preparar datos para Supabase
-    const productosParaSupabase = nuevaVenta.productos.map(producto => ({
-      id_producto: producto.id_producto,
-      cantidad: producto.cantidad || 0,
-      precio: producto.precio_producto
-    }));
-
-    const result = await createSale({
-      cliente: nuevaVenta.cliente,
-      productos: productosParaSupabase,
-      metodoPago: nuevaVenta.metodoPago,
-      fechaVenta: nuevaVenta.fechaVenta,
-      fechaPago: nuevaVenta.fechaPago || undefined,
-      total,
-      id_empresa: companyData.id
-    });
-
-    console.log('📊 Resultado de creación de venta:', result);
-
-    if (result.success) {
-      console.log('✅ Venta creada exitosamente en Supabase');
-      // Recargar ventas desde Supabase
-      await loadVentas();
+    try {
+      const total = calcularTotal();
       
-      // Reset form
-      setNuevaVenta({
-        productos: [],
-        cliente: {
-          ci: '',
-          nombre: '',
-          apellido: '',
-          email: '',
-          telefono: '',
-          direccion: ''
-        },
-        metodoPago: 'Efectivo',
-        fechaVenta: getCurrentDate(),
-        fechaPago: '',
-        total: 0,
-        pagada: false
+      // Preparar datos para Supabase
+      const productosParaSupabase = nuevaVenta.productos.map(producto => ({
+        id_producto: producto.id_producto,
+        cantidad: producto.cantidad || 0,
+        precio: producto.precio_producto
+      }));
+
+      const result = await createSale({
+        cliente: nuevaVenta.cliente,
+        productos: productosParaSupabase,
+        metodoPago: nuevaVenta.metodoPago,
+        fechaVenta: nuevaVenta.fechaVenta,
+        fechaPago: nuevaVenta.fechaPago || undefined,
+        total,
+        id_empresa: companyData.id
       });
-      
-      setModalVentaOpen(false);
-      setSaleSuccess('Venta creada exitosamente');
-      setTimeout(() => setSaleSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
-    } else {
-      console.error('❌ Error creando venta:', result.message);
-      setSaleSuccess('Error al crear la venta: ' + result.message);
-      setTimeout(() => setSaleSuccess(null), 5000); // Limpiar mensaje de error después de 5 segundos
+
+      console.log('📊 Resultado de creación de venta:', result);
+
+      if (result.success) {
+        console.log('✅ Venta creada exitosamente en Supabase');
+        // Recargar ventas desde Supabase
+        await loadVentas();
+        
+        // Recargar lista de clientes existentes para incluir el nuevo cliente
+        await loadClientesExistentes();
+        
+        // Reset form
+        setNuevaVenta({
+          productos: [],
+          cliente: {
+            ci: '',
+            nombre: '',
+            apellido: '',
+            email: '',
+            telefono: ''
+          },
+          metodoPago: 'Efectivo',
+          fechaVenta: getCurrentDate(),
+          fechaPago: '',
+          total: 0,
+          pagada: false
+        });
+        
+        setModalVentaOpen(false);
+        setSaleSuccess('Venta creada exitosamente');
+        setTimeout(() => setSaleSuccess(null), 3000);
+      } else {
+        console.error('❌ Error creando venta:', result.message);
+        setSaleSuccess('Error al crear la venta: ' + result.message);
+        setTimeout(() => setSaleSuccess(null), 5000);
+      }
+    } catch (error) {
+      console.error('Error creando venta:', error);
+      setSaleSuccess('Error interno al crear la venta');
+      setTimeout(() => setSaleSuccess(null), 5000);
+    } finally {
+      setCreatingVenta(false);
     }
   };
 
@@ -673,6 +686,8 @@ export default function CentralOperations() {
       return;
     }
 
+    setCreatingServicio(true);
+
     try {
       const result = await createServiceSale({
         cliente: nuevaServicioVenta.cliente,
@@ -693,6 +708,9 @@ export default function CentralOperations() {
         // Recargar las ventas de servicios desde Supabase
         await loadVentasServicios();
         
+        // Recargar lista de clientes existentes para incluir el nuevo cliente
+        await loadClientesExistentes();
+        
         // Reset form
         setNuevaServicioVenta({
           servicios: [],
@@ -701,8 +719,7 @@ export default function CentralOperations() {
             nombre: '',
             apellido: '',
             email: '',
-            telefono: '',
-            direccion: ''
+            telefono: ''
           },
           metodoPago: 'Efectivo',
           fechaServicio: new Date().toISOString().split('T')[0],
@@ -720,6 +737,8 @@ export default function CentralOperations() {
     } catch (error) {
       console.error('Error creando venta de servicios:', error);
       alert('Error interno al crear la venta de servicios');
+    } finally {
+      setCreatingServicio(false);
     }
   };
 
@@ -890,38 +909,7 @@ export default function CentralOperations() {
     }
   };
 
-  // Función de debugging para verificar clientes en la base de datos
-  const debugClientes = async () => {
-    if (!companyData?.id) {
-      console.log('⚠️ No hay companyData.id disponible');
-      return;
-    }
-    
-    console.log('🔍 === DEBUG CLIENTES ===');
-    console.log('🏢 ID de empresa:', companyData.id);
-    
-    try {
-      // Verificar si hay clientes en la tabla clientesempresa
-      const { data: clientesEmpresa, error: errorCE } = await client
-        .from('clientesempresa')
-        .select('*')
-        .eq('id_empresa', companyData.id);
-      
-      console.log('📋 Clientes en clientesempresa:', clientesEmpresa);
-      console.log('❌ Error clientesempresa:', errorCE);
-      
-      // Verificar si hay clientes en la tabla clientes
-      const { data: todosClientes, error: errorClientes } = await client
-        .from('clientes')
-        .select('*');
-      
-      console.log('👥 Todos los clientes en la BD:', todosClientes);
-      console.log('❌ Error clientes:', errorClientes);
-      
-    } catch (error) {
-      console.error('❌ Error en debug:', error);
-    }
-  };
+
 
   // Aplicar datos de cliente encontrado
   const aplicarClienteEncontrado = (cliente: any, esVenta: boolean = true) => {
@@ -1023,12 +1011,7 @@ export default function CentralOperations() {
             >
               Nueva Venta
             </button>
-            <button
-              className="bg-blue-500 text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-600 transition-colors w-full sm:w-auto cursor-pointer"
-              onClick={debugClientes}
-            >
-              Debug Clientes
-            </button>
+
           </div>
         </div>
       )}
@@ -1740,15 +1723,7 @@ export default function CentralOperations() {
                     />
                     {erroresVenta.telefono && <span className="text-xs text-red-500 mt-1">{erroresVenta.telefono}</span>}
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="font-semibold">Dirección</span>
-                    <input 
-                      type="text" 
-                      value={nuevaVenta.cliente.direccion} 
-                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, direccion: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                    />
-                  </label>
+
                 </div>
               </div>
 
@@ -1925,10 +1900,17 @@ export default function CentralOperations() {
             </button>
             <button
               type="submit"
-              disabled={nuevaVenta.productos.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
+              disabled={nuevaVenta.productos.length === 0 || creatingVenta}
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2"
             >
-              Crear Venta
+              {creatingVenta ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creando...
+                </>
+              ) : (
+                'Crear Venta'
+              )}
             </button>
           </div>
         </form>
@@ -2182,10 +2164,17 @@ export default function CentralOperations() {
             </button>
             <button
               type="submit"
-              disabled={nuevaServicioVenta.servicios.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
+              disabled={nuevaServicioVenta.servicios.length === 0 || creatingServicio}
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2"
             >
-              Crear Servicio
+              {creatingServicio ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creando...
+                </>
+              ) : (
+                'Crear Servicio'
+              )}
             </button>
           </div>
         </form>
