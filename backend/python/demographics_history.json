@@ -23,7 +23,7 @@
                   "dimension_values": [
                     "M"
                   ],
-                  "value": 63
+                  "value": 59
                 },
                 {
                   "dimension_values": [
@@ -57,19 +57,19 @@
                   "dimension_values": [
                     "13-17"
                   ],
-                  "value": 23
+                  "value": 21
                 },
                 {
                   "dimension_values": [
                     "18-24"
                   ],
-                  "value": 66
+                  "value": 65
                 },
                 {
                   "dimension_values": [
                     "25-34"
                   ],
-                  "value": 46
+                  "value": 45
                 },
                 {
                   "dimension_values": [
@@ -113,12 +113,6 @@
               "results": [
                 {
                   "dimension_values": [
-                    "Ha Long, Quảng Ninh Province"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
                     "Ciudad Guayana, Bolívar (state)"
                   ],
                   "value": 8
@@ -143,7 +137,19 @@
                 },
                 {
                   "dimension_values": [
-                    "Narsingdi, Dhaka Division"
+                    "Thane, Maharashtra"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Burnaby, British Columbia"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Rio de Janeiro, Rio de Janeiro (state)"
                   ],
                   "value": 1
                 },
@@ -161,9 +167,33 @@
                 },
                 {
                   "dimension_values": [
+                    "Lisbon, Lisbon District"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "El-Misîn, Beheira Governorate"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Kolkata, West Bengal"
+                  ],
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
                     "Lagos, Lagos State"
                   ],
-                  "value": 3
+                  "value": 5
+                },
+                {
+                  "dimension_values": [
+                    "Pandanarum, Central Java"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -173,15 +203,9 @@
                 },
                 {
                   "dimension_values": [
-                    "Obigbo, Rivers State"
+                    "Bekasi, West Java"
                   ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Moscow, Moscow"
-                  ],
-                  "value": 1
+                  "value": 2
                 },
                 {
                   "dimension_values": [
@@ -191,9 +215,27 @@
                 },
                 {
                   "dimension_values": [
+                    "Phnom Penh, Phnom Penh"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
                     "Jakarta, Jakarta"
                   ],
-                  "value": 3
+                  "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Danao City, Central Visayas"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Accra, Greater Accra Region"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -203,9 +245,21 @@
                 },
                 {
                   "dimension_values": [
+                    "Madhubani, Bihar"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
                     "El Mourouj, Ben Arous Governorate"
                   ],
-                  "value": 2
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Kalyan, Maharashtra"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -215,7 +269,7 @@
                 },
                 {
                   "dimension_values": [
-                    "Guna, Madhya Pradesh"
+                    "Mitrovica, Kosovo"
                   ],
                   "value": 1
                 },
@@ -223,7 +277,7 @@
                   "dimension_values": [
                     "Delhi, Delhi"
                   ],
-                  "value": 1
+                  "value": 2
                 },
                 {
                   "dimension_values": [
@@ -239,7 +293,7 @@
                 },
                 {
                   "dimension_values": [
-                    "São Bernardo do Campo, São Paulo (state)"
+                    "Hajipur, Bihar"
                   ],
                   "value": 1
                 },
@@ -251,37 +305,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Bulawayo, Bulawayo"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Soweto, Gauteng"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
                     "Pindamonhangaba, São Paulo (state)"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Gauhati, Assam"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Majenang, Central Java"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Malaba, Western Province"
+                    "Rada`, Al Bayda Governorate"
                   ],
                   "value": 1
                 },
@@ -290,18 +320,6 @@
                     "Pimpri, Maharashtra"
                   ],
                   "value": 2
-                },
-                {
-                  "dimension_values": [
-                    "Abuja, Federal Capital Territory"
-                  ],
-                  "value": 2
-                },
-                {
-                  "dimension_values": [
-                    "Jatikuwung, Central Java"
-                  ],
-                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -317,25 +335,31 @@
                 },
                 {
                   "dimension_values": [
+                    "Alexandria, Alexandria Governorate"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
                     "Bhavnagar, Gujarat"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Mumbai, Maharashtra"
-                  ],
-                  "value": 2
-                },
-                {
-                  "dimension_values": [
-                    "Shirpur, Maharashtra"
+                    "Priuksumurdaun, Banten"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Sirsa, Haryana"
+                    "Antananarivo, Analamanga"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Shirpur, Maharashtra"
                   ],
                   "value": 1
                 },
@@ -347,37 +371,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Santo André, São Paulo (state)"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Kaduna, Kaduna State"
+                    "Sirsa, Haryana"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
                     "Taiz, Taiz Governorate"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Lonavala, Maharashtra"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Erode, Tamil Nadu"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Caloocan, Metro Manila"
                   ],
                   "value": 1
                 }

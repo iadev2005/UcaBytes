@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
+import TokenInputModal from '../components/marketing/TokenInputModal';
 import { cn } from '../lib/utils';
 
 interface FollowerData {
@@ -78,6 +79,111 @@ export default function Dashboard() {
   const [serviciosData, setServiciosData] = useState<any[]>([]);
   const [empleadosData, setEmpleadosData] = useState<any[]>([]);
   const [productosData, setProductosData] = useState<any[]>([]);
+  
+  // Estados para el token de Instagram
+  const [instagramToken, setInstagramToken] = useState<string>('');
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [validatingToken, setValidatingToken] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+
+  // Función para cargar token guardado
+  const loadSavedToken = async () => {
+    const savedToken = localStorage.getItem('instagram_token');
+    const tokenValid = localStorage.getItem('instagram_token_valid');
+    
+    if (savedToken && tokenValid === 'true') {
+      // Validar el token guardado para asegurar que sigue siendo válido
+      try {
+        const response = await fetch('http://localhost:3001/api/instagram/validate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: savedToken }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.valid) {
+          setInstagramToken(savedToken);
+          return true;
+        } else {
+          // Token ya no es válido, limpiarlo
+          clearInvalidToken();
+          return false;
+        }
+      } catch (error) {
+        // Error de conexión, limpiar token por seguridad
+        clearInvalidToken();
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // Función para guardar token válido
+  const saveValidToken = (token: string) => {
+    localStorage.setItem('instagram_token', token);
+    localStorage.setItem('instagram_token_valid', 'true');
+  };
+
+  // Función para limpiar token inválido
+  const clearInvalidToken = () => {
+    localStorage.removeItem('instagram_token');
+    localStorage.removeItem('instagram_token_valid');
+  };
+
+  // Función para validar el token de Instagram
+  const validateInstagramToken = async (token: string) => {
+    setValidatingToken(true);
+    setTokenError(null);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/instagram/validate-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.valid) {
+        setInstagramToken(token);
+        saveValidToken(token); // Guardar token válido
+        setShowTokenModal(false);
+        setTokenError(null);
+        return true;
+      } else {
+        setTokenError(data.error || 'Token inválido');
+        clearInvalidToken(); // Limpiar token inválido
+        return false;
+      }
+    } catch (error) {
+      setTokenError('Error de conexión al validar el token');
+      return false;
+    } finally {
+      setValidatingToken(false);
+    }
+  };
+
+  const handleTokenSubmit = async (token: string) => {
+    const isValid = await validateInstagramToken(token);
+    if (isValid) {
+      // Ejecutar la actualización de datos después de validar el token
+      updateAndFetchData();
+    }
+  };
+
+  const handleTokenModalClose = () => {
+    // Solo permitir cerrar si hay un token válido
+    if (instagramToken) {
+      setShowTokenModal(false);
+      setTokenError(null);
+    }
+  };
 
   // Cargar datos de operaciones centrales
   useEffect(() => {
@@ -285,14 +391,29 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const updateAndFetchData = async () => {
+    // Cargar token guardado al inicio
+    const initializeToken = async () => {
+      const hasValidToken = await loadSavedToken();
+      setInitializing(false);
+      
+      const updateAndFetchData = async () => {
       try {
         setDataUpdating(true);
         setError(null);
         
+        // Verificar si hay token disponible
+        if (!instagramToken) {
+          setShowTokenModal(true);
+          return;
+        }
+        
         // Primero ejecutar los scripts para actualizar los datos
         const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: instagramToken }),
         });
         
         if (!updateResponse.ok) {
@@ -479,8 +600,18 @@ export default function Dashboard() {
       }
     };
 
-    updateAndFetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      // Solo ejecutar updateAndFetchData si hay token
+      if (instagramToken) {
+        updateAndFetchData();
+      } else if (!hasValidToken) {
+        // Si no hay token y no se cargó uno válido, mostrar el modal inmediatamente
+        setShowTokenModal(true);
+      }
+    };
+
+    // Ejecutar la inicialización
+    initializeToken();
+  }, [instagramToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const radialData = [
     {
@@ -1205,8 +1336,15 @@ export default function Dashboard() {
     }
   };
 
-  // Mostrar pantalla de carga mientras se actualizan los datos
-  if (dataUpdating) {
+  // Mostrar pantalla de carga durante inicialización o actualización de datos
+  if (initializing) {
+    return <LoadingScreen 
+      message="Inicializando dashboard..." 
+      subtitle="Verificando token de Instagram" 
+    />;
+  }
+  
+  if (dataUpdating && instagramToken) {
     return <LoadingScreen 
       message="Actualizando datos del dashboard..." 
       subtitle="Obteniendo información actualizada de Instagram" 
@@ -1242,6 +1380,16 @@ export default function Dashboard() {
               </div>
             </div>
       {renderThemeContent()}
+      
+      {/* Modal de Token */}
+      <TokenInputModal
+        isOpen={showTokenModal}
+        onSubmit={handleTokenSubmit}
+        onClose={handleTokenModalClose}
+        isLoading={validatingToken}
+        error={tokenError}
+        showCancelButton={false}
+      />
     </div>
   );
 } 

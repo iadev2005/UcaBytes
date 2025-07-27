@@ -16,7 +16,20 @@ app.use(express.json());
 
 // Endpoint para ejecutar scripts de actualización de datos
 app.post('/api/update-dashboard-data', (req, res) => {
-  console.log('Iniciando actualización de datos del dashboard...');
+  console.log('[DEBUG] === Endpoint update-dashboard-data llamado ===');
+  console.log('[DEBUG] Body recibido:', req.body);
+  
+  const { token } = req.body;
+  
+  if (!token) {
+    console.log('[ERROR] Token requerido para actualizar datos del dashboard');
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Token de Instagram requerido para actualizar los datos del dashboard' 
+    });
+  }
+  
+  console.log('[DEBUG] Iniciando actualización de datos del dashboard con token...');
   
   const demographicsScript = path.join(__dirname, 'python', 'track_demographics.py');
   const followerInsightsScript = path.join(__dirname, 'python', 'save_follower_insights.py');
@@ -30,56 +43,57 @@ app.post('/api/update-dashboard-data', (req, res) => {
   function checkCompletion() {
     if (demographicsCompleted && followerInsightsCompleted && instagramDetailsCompleted) {
       if (errors.length > 0) {
-        console.error('Errores durante la actualización:', errors);
+        console.error('[ERROR] Errores durante la actualización:', errors);
         res.status(500).json({ 
           success: false, 
           error: 'Error en la actualización de datos', 
           details: errors 
         });
       } else {
-        console.log('Actualización de datos completada exitosamente');
+        console.log('[DEBUG] Actualización de datos completada exitosamente');
         res.json({ success: true, message: 'Datos actualizados correctamente' });
       }
     }
   }
   
   // Ejecutar script de demografía
-  execFile('python', [demographicsScript], { cwd: path.dirname(demographicsScript) }, (error, stdout, stderr) => {
+  console.log('[DEBUG] Ejecutando track_demographics.py...');
+  execFile('python', [demographicsScript, token], { cwd: path.dirname(demographicsScript) }, (error, stdout, stderr) => {
     demographicsCompleted = true;
     if (error) {
-      console.error('Error ejecutando track_demographics.py:', error, stderr);
+      console.error('[ERROR] Error ejecutando track_demographics.py:', error, stderr);
       errors.push(`Error en demografía: ${error.message}`);
     } else {
-      console.log('track_demographics.py completado exitosamente');
+      console.log('[DEBUG] track_demographics.py completado exitosamente');
     }
     checkCompletion();
   });
   
   // Ejecutar script de follower insights
-  execFile('python', [followerInsightsScript], { cwd: path.dirname(followerInsightsScript) }, (error, stdout, stderr) => {
+  console.log('[DEBUG] Ejecutando save_follower_insights.py...');
+  execFile('python', [followerInsightsScript, token], { cwd: path.dirname(followerInsightsScript) }, (error, stdout, stderr) => {
     followerInsightsCompleted = true;
     if (error) {
-      console.error('Error ejecutando save_follower_insights.py:', error, stderr);
+      console.error('[ERROR] Error ejecutando save_follower_insights.py:', error, stderr);
       errors.push(`Error en follower insights: ${error.message}`);
     } else {
-      console.log('save_follower_insights.py completado exitosamente');
+      console.log('[DEBUG] save_follower_insights.py completado exitosamente');
     }
     checkCompletion();
   });
   
   // Ejecutar script de detalles de Instagram
-  execFile('python', [instagramDetailsScript], { cwd: path.dirname(instagramDetailsScript) }, (error, stdout, stderr) => {
+  console.log('[DEBUG] Ejecutando save_instagram_details.py...');
+  execFile('python', [instagramDetailsScript, token], { cwd: path.dirname(instagramDetailsScript) }, (error, stdout, stderr) => {
     instagramDetailsCompleted = true;
     if (error) {
-      console.error('Error ejecutando save_instagram_details.py:', error, stderr);
+      console.error('[ERROR] Error ejecutando save_instagram_details.py:', error, stderr);
       errors.push(`Error en detalles de Instagram: ${error.message}`);
     } else {
-      console.log('save_instagram_details.py completado exitosamente');
+      console.log('[DEBUG] save_instagram_details.py completado exitosamente');
     }
     checkCompletion();
   });
-  
-
 });
 
 // Endpoint para obtener el histórico de seguidores
