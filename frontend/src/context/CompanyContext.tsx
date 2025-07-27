@@ -1,25 +1,27 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { getCompanyData } from '../supabase/data'; // Assuming this function fetches company data
+import { getCompany } from '../supabase/data';
+import { client } from '../supabase/client';
 
 interface CompanyData {
-  name: string;
-  phone: string;
-  address: string;
+  id: number;
   email: string;
+  nombrecomercial: string;
   rif: string;
-  nameSocial: string;
-  type: string;
-  description: string;
+  razonsocial: string;
+  descripcion: string;
   avatar: string;
-  profileImage: string | null;
+  direccion: string;
+  fecha_fundacion: string;
+  telefono: string;
 }
 
 interface CompanyContextType {
-  companyData: CompanyData;
+  companyData: CompanyData | null;
   updateCompanyData: (data: Partial<CompanyData>) => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
+  companyLoading: boolean;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -37,42 +39,41 @@ interface CompanyProviderProps {
 }
 
 export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) => {
-
-  const [companyData, setCompanyData] = useState<CompanyData>({
-    name: 'Nombre Empresa',
-    type: 'Empresa de Tecnología',
-    description: 'Somos una empresa comprometida con la excelencia y la innovación. Nuestra misión es brindar soluciones de calidad que satisfagan las necesidades de nuestros clientes, contribuyendo al crecimiento y desarrollo del sector empresarial.',
-    avatar: 'https://ui-avatars.com/api/?name=Usuario&background=8B5CF6&color=fff&size=128&bold=true',
-    profileImage: 'https://ui-avatars.com/api/?name=Usuario&background=8B5CF6&color=fff&size=128&bold=true',
-    phone: '123-456-7890',
-    address: '123 Calle Principal, Ciudad, País',
-    email: '',
-    rif: '',
-    nameSocial: '',
-  });
-
+  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [companyLoading,setCompanyLoading] = useState(true);
+  const [companyLoading, setCompanyLoading] = useState(true);
 
-
-  //funcióin para obtener los datos de la emprsa 
-  const fetchDataCompany = async (email: string) => {
-    try {
+  useEffect(() => {
+    const fetchCompany = async () => {
       setCompanyLoading(true);
-      const data = await getCompanyData(email);
-
-      if (data) {
-        setCompanyData(data);0
-      } else {
-        console.error('No company data found');
+      try {
+        const { data: sessionData } = await client.auth.getSession();
+        const email = sessionData?.session?.user?.email;
+        if (email) {
+          const { data, error } = await getCompany(email);
+          if (error) {
+            console.error('Error fetching company:', error);
+            setCompanyData(null);
+          } else if (data && data.length > 0) {
+            setCompanyData(data[0]);
+          } else {
+            setCompanyData(null);
+          }
+        } else {
+          setCompanyData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching company data:', error);
+        setCompanyData(null);
+      } finally {
+        setCompanyLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching company data:', error);
-    }
-  }
+    };
+    fetchCompany();
+  }, []);
 
   const updateCompanyData = (data: Partial<CompanyData>) => {
-    setCompanyData(prev => ({ ...prev, ...data }));
+    setCompanyData(prev => prev ? { ...prev, ...data } : prev);
   };
 
   return (
@@ -80,7 +81,8 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
       companyData,
       updateCompanyData,
       isEditing,
-      setIsEditing
+      setIsEditing,
+      companyLoading
     }}>
       {children}
     </CompanyContext.Provider>
