@@ -49,8 +49,8 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl p-4 md:p-3 sm:p-2 w-full max-w-xs h-[320px] flex flex-col">
-      <h2 className="text-sm font-bold text-center mb-2">Mira tus eventos</h2>
+    <div className="bg-white rounded-3xl shadow-xl p-4 md:p-3 sm:p-2 w-full max-w-xs h-[280px] overflow-hidden flex flex-col">
+      <h2 className="text-sm font-bold text-center">Mira tus eventos</h2>
       <div className="flex justify-between items-center mb-2">
         <button
           onClick={prevMonth}
@@ -64,8 +64,8 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
           disabled={month === 11 && year === today.getFullYear() + 1}
         >&gt;</button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2 w-full flex-1">
-        {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i} className="font-semibold text-gray-600">{d}</div>)}
+      <div className="grid grid-cols-7 gap-[1px] text-center text-xs mb-1 w-full">
+        {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i}>{d}</div>)}
         {daysArray.map((day, i) => {
           const dateObj = day ? new Date(year, month, day) : null;
           const dateKey = dateObj ? dateObj.toISOString().slice(0, 10) : "";
@@ -78,7 +78,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                     setSelected(day);
                     onDateClick(new Date(year, month, day));
                   }}
-                  className={`w-full aspect-square rounded-full text-xs transition-all flex items-center justify-center
+                  className={`w-full aspect-square rounded-full text-xs transition-all
                     ${day === selected ? "bg-[var(--color-secondary-300)] border-2 border-[var(--color-secondary-400)] font-bold" : ""}
                     ${day === today.getDate() && month === today.getMonth() && year === today.getFullYear() && day !== selected ? "bg-gray-200 font-bold" : ""}
                     hover:bg-[var(--color-secondary-100)] cursor-pointer
@@ -86,7 +86,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
                 >
                   {day}
                   {tieneEvento && (
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-1 w-1.5 h-1.5 rounded-full bg-[var(--color-secondary-400)]"></span>
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-2 w-1 h-1 rounded-full bg-[var(--color-secondary-400)]"></span>
                   )}
                 </button>
               ) : (
@@ -271,8 +271,8 @@ export default function Home() {
   const plannerTasksByPriority = (prio: string) => plannerTasks.filter(t => t.prioridad === prio).slice(0, 2);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-5 items-center relative overflow-hidden">
-      <h1 className="text-4xl md:text-3xl sm:text-2xl font-bold mb-5">¡Bienvenido al Panel de Control!</h1>
+    <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-8 items-center relative overflow-hidden">
+      <h1 className="text-4xl md:text-3xl sm:text-2xl font-bold mb-8">¡Bienvenido al Panel de Control!</h1>
 
       <div className="grid [grid-template-columns:2fr_min-content_0.8fr] gap-8 w-full max-w-5xl flex-1 justify-start z-10">
         <div className="flex flex-col gap-4 flex-1 justify-start h-[70vh]">
@@ -292,43 +292,40 @@ export default function Home() {
                 <AutomationIcon className="text-[var(--color-secondary-400)] w-5 h-5" />
                 <h2 className="text-lg font-bold">Acceso Rápido</h2>
               </div>
-              <div className="grid grid-cols-2 gap-3 w-full min-h-[180px] justify-items-center items-center">
+              <div className="grid grid-cols-2 gap-2 w-full min-h-[160px] justify-items-center">
                 {accesos.map((acceso, i) => (
                   <div
                     key={i}
-                    className={`relative w-20 h-20 ${dragIndex === i ? 'z-20 scale-105' : ''} ${dragOverIndex === i ? 'opacity-50' : ''}`}
+                    className={`relative w-20 h-20 ${dragIndex === i ? 'z-20' : ''}`}
                     draggable={dragIndex === i}
                     onDragStart={dragIndex === i ? () => handleDragStart(i) : undefined}
                     onDragOver={dragIndex !== null && dragIndex !== i ? (e) => { e.preventDefault(); handleDragOver(i); } : undefined}
                     onDrop={dragIndex !== null && dragIndex !== i ? () => handleDrop(i) : undefined}
                     onDragEnd={dragIndex === i ? handleDragEnd : undefined}
-                    style={{ cursor: dragIndex === i ? 'grabbing' : 'default' }}
+                    style={{ cursor: dragIndex === i ? 'grab' : 'default' }}
                   >
-                    <button 
-                      className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-xs flex items-center justify-center hover:scale-105 transition-all duration-200 shadow-md cursor-pointer relative overflow-hidden"
+                    <button className="w-full h-full rounded-2xl bg-[var(--color-secondary-500)] text-white font-bold text-xs flex items-center justify-center hover:scale-105 transition-transform shadow-md cursor-pointer"
                       onClick={() => handleAccesoClick(acceso)}
-                      disabled={dragIndex === i}
                     >
-                      <span className="block text-center leading-tight break-words px-1">{acceso}</span>
+                      <span className="block text-center leading-tight break-words">{acceso}</span>
                     </button>
                     <button
-                      className="absolute top-1 right-1 p-1 transition-colors cursor-pointer hover:bg-white/20 rounded-full"
+                      className="absolute top-2 right-0 p-0 transition-colors cursor-pointer"
                       onClick={() => setOpenKebab(openKebab === i ? null : i)}
                       tabIndex={0}
-                      aria-label="Opciones de acceso rápido"
                     >
-                      <KebabIcon width={14} height={14} color="#fff" />
+                      <KebabIcon width={16} height={16} color="#fff" />
                     </button>
                     {openKebab === i && (
-                      <div className="absolute right-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-24 flex flex-col">
+                      <div className="absolute right-0 top-6 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-24 flex flex-col">
                         <button
-                          className="px-3 py-1.5 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer text-xs transition-colors"
+                          className="px-3 py-1.5 text-left text-red-600 hover:bg-red-50 rounded-t-lg cursor-pointer text-xs"
                           onClick={() => eliminarAcceso(i)}
                         >
                           Eliminar
                         </button>
                         <button
-                          className="px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer text-xs transition-colors"
+                          className="px-3 py-1.5 text-left text-gray-700 hover:bg-gray-100 rounded-b-lg cursor-pointer text-xs"
                           onClick={() => activarArrastrar(i)}
                         >
                           Arrastrar
@@ -340,9 +337,8 @@ export default function Home() {
                 {accesos.length < 4 && (
                   <button
                     onClick={() => setModalOpen(true)}
-                    className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-all duration-200 flex items-center justify-center cursor-pointer"
+                    className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-300 text-xl text-gray-400 hover:bg-gray-100 hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                     title="Agregar acceso rápido"
-                    aria-label="Agregar nuevo acceso rápido"
                   >
                     +
                   </button>

@@ -303,7 +303,7 @@ export default function Perfil() {
                     {/* About Us Card */}
                     <motion.div 
                         whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-                        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 h-96"
+                        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 h-80"
                     >
                         <div className="flex items-center gap-3 mb-6">
                             <h2 className="text-2xl font-bold text-gray-800">
@@ -311,7 +311,7 @@ export default function Perfil() {
                             </h2>
                         </div>
                         
-                        <div className="rounded-xl p-6 h-64">
+                        <div className="rounded-xl p-6 h-48">
                             {isEditing ? (
                                 <textarea 
                                     value={formData.description}
@@ -333,7 +333,7 @@ export default function Perfil() {
                     {/* Payment Methods Card */}
                     <motion.div 
                         whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-                        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 h-96"
+                        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 h-80"
                     >
                         <div className="flex items-center gap-3 mb-6">
                             <h2 className="text-2xl font-bold text-gray-800">
