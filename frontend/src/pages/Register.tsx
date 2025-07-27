@@ -130,14 +130,33 @@ export default function Register() {
         setPopupMessage('');
 
         try {
-            const { data, error } = await client.auth.signUp({
+            console.log(email,password)
+            const { error:ErrorRegister } = await client.auth.signUp({
                 email,
                 password
             });
-
-            if (error) {
-                throw error;
+            if (ErrorRegister) {
+                throw ErrorRegister;
             }
+            
+            console.log(email,address,name,phone)
+            //guardamos los datos de la empresa 
+            const { data, error:errorCompany} = await client
+            .from('empresas')
+            .insert(
+                {email: email,
+                nombrecomercial: name,
+                direccion: address,
+                telefono: phone}
+            )
+            .select()
+
+            console.log(data)
+
+            if(errorCompany) {  
+                throw errorCompany;
+            }
+              
 
             setPopupMessage('Usuario registrado correctamente. Revisa tu correo electrónico para confirmar tu cuenta.');
             setShowPopup(true);
@@ -148,6 +167,7 @@ export default function Register() {
             }, 2000);
 
         } catch (error: unknown) {
+            console.error(error)
             let errorMessage = 'Error al registrar el usuario. Inténtalo de nuevo.';
 
             if (error instanceof AuthApiError) {
