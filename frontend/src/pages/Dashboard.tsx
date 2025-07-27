@@ -1230,7 +1230,7 @@ export default function Dashboard() {
                     key={theme.value}
                     onClick={() => setSelectedTheme(theme.value)}
                     className={cn(
-                      'px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap',
+                      'px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap cursor-pointer',
                       selectedTheme === theme.value
                         ? 'bg-[var(--color-primary-600)] text-white'
                         : 'bg-gray-100 text-[var(--color-primary-700)] hover:bg-[var(--color-primary-100)] hover:text-[var(--color-primary-900)]'
