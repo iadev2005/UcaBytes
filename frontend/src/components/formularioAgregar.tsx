@@ -28,6 +28,7 @@ type Servicio = {
   nombre_servicio: string;
   descripcion_servicio: string;
   precio_servicio: string;
+  plazo?: string;
 };
 
 type Props = {
@@ -55,7 +56,7 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
     }
   );
   const [servicio, setServicio] = useState<Servicio>(
-    initialServicio || { nombre_servicio: '', descripcion_servicio: '', precio_servicio: '' }
+    initialServicio || { nombre_servicio: '', descripcion_servicio: '', precio_servicio: '', plazo: '' }
   );
   const [imgPreview, setImgPreview] = useState<string | null>(initialProducto?.image || null);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +132,7 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
       onAddServicio(servicio);
       onClose();
       if (!isEditMode) {
-        setServicio({ nombre_servicio: '', descripcion_servicio: '', precio_servicio: '' });
+        setServicio({ nombre_servicio: '', descripcion_servicio: '', precio_servicio: '', plazo: '' });
       }
     }
   };
@@ -189,6 +190,7 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
       <input className="border rounded px-3 py-2 cursor-text" placeholder="Nombre del servicio" name="nombre_servicio" value={servicio.nombre_servicio} onChange={handleServicioChange} />
       <textarea className="border rounded px-3 py-2 cursor-text" placeholder="Descripción del servicio" name="descripcion_servicio" value={servicio.descripcion_servicio} onChange={handleServicioChange} />
       <input className="border rounded px-3 py-2 cursor-text" placeholder="Precio del servicio" name="precio_servicio" type="number" min="0" step="0.01" value={servicio.precio_servicio} onChange={handleServicioChange} />
+      <input className="border rounded px-3 py-2 cursor-text" placeholder="Fecha de vencimiento (opcional)" name="plazo" type="date" value={servicio.plazo} onChange={handleServicioChange} />
       <button type="submit" className="px-4 py-2 rounded bg-[#D8315B] hover:bg-[#b71e44] text-white cursor-pointer">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
     </form>
   );

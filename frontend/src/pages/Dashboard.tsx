@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
 import { cn } from '../lib/utils';
-import { getSalesByCompany, getProductsByCompany } from '../supabase/data';
+import { getSalesByCompany, getProductsByCompany, getServicesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 interface FollowerData {
@@ -219,9 +219,18 @@ export default function Dashboard() {
         setProductosData([]);
       }
 
-      // Por ahora, mantener servicios y empleados como arrays vacíos
-      // ya que no tenemos esas funciones en Supabase aún
-      setServiciosData([]);
+      // Cargar servicios desde Supabase
+      const serviciosResult = await getServicesByCompany(companyData.id);
+      if (serviciosResult.success) {
+        setServiciosData(serviciosResult.data || []);
+        console.log('✅ Servicios cargados desde Supabase:', serviciosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando servicios:', serviciosResult.error);
+        setServiciosData([]);
+      }
+
+      // Por ahora, mantener empleados como array vacío
+      // ya que no tenemos esa función en Supabase aún
       setEmpleadosData([]);
       
     } catch (error) {
@@ -497,34 +506,24 @@ export default function Dashboard() {
     if (!serviciosData.length) return { totalServicios: 0, ingresosServicios: 0, clientesUnicos: 0, serviciosMensuales: [], serviciosPorTipo: [] };
 
     const totalServicios = serviciosData.length;
-    const ingresosServicios = serviciosData.reduce((total, servicio) => total + (servicio.total || 0), 0);
-    const clientesUnicos = new Set(serviciosData.map(servicio => servicio.cliente?.nombre || 'Cliente sin nombre')).size;
+    // Para servicios, calculamos el valor total basado en el precio de cada servicio
+    const ingresosServicios = serviciosData.reduce((total, servicio) => total + (servicio.precio || 0), 0);
+    // Como no tenemos datos de clientes para servicios individuales, usamos el total de servicios
+    const clientesUnicos = totalServicios; // Simulación: cada servicio representa un cliente potencial
 
-    // Agrupar servicios por mes
-    const serviciosPorMes = serviciosData.reduce((acc, servicio) => {
-      const fecha = new Date(servicio.fechaServicio || new Date());
-      const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
-      if (!acc[mes]) acc[mes] = { servicios: 0, ingresos: 0 };
-      acc[mes].servicios += 1;
-      acc[mes].ingresos += servicio.total || 0;
-      return acc;
-    }, {} as Record<string, { servicios: number; ingresos: number }>);
+    // Agrupar servicios por mes (usando la fecha actual ya que no tenemos fechas de venta)
+    const mesActual = new Date().toLocaleDateString('es-ES', { month: 'short' });
+    const serviciosMensuales = [{
+      mes: mesActual,
+      servicios: totalServicios,
+      ingresos: ingresosServicios
+    }];
 
-    const serviciosMensuales = Object.entries(serviciosPorMes).map(([mes, data]) => ({
-      mes,
-      servicios: (data as any).servicios,
-      ingresos: (data as any).ingresos
-    }));
-
-    // Procesar servicios por tipo usando los campos correctos
+    // Procesar servicios por tipo usando la estructura de Supabase
     const serviciosPorTipo = serviciosData.reduce((acc, servicio) => {
-      if (servicio.servicios && Array.isArray(servicio.servicios)) {
-        servicio.servicios.forEach((serv: any) => {
-          const tipo = serv.nombre_servicio || 'Servicio General';
-          if (!acc[tipo]) acc[tipo] = 0;
-          acc[tipo] += (serv.cantidad as number) || 1;
-        });
-      }
+      const tipo = servicio.nombre || 'Servicio General';
+      if (!acc[tipo]) acc[tipo] = 0;
+      acc[tipo] += 1; // Contamos cada servicio como 1
       return acc;
     }, {} as Record<string, number>);
 

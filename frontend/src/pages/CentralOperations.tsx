@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { getProductsByCompany, createSale, getSalesByCompany } from '../supabase/data';
+import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 const mockEmpleados = [
@@ -94,49 +94,7 @@ const mockProductos = [
   },
 ];
 
-// Mock services data - usando el mismo formato que ProductsServices.tsx
-const mockServicios = [
-  {
-    nombre_servicio: 'Mantenimiento de Computadoras',
-    descripcion_servicio: 'Servicio completo de mantenimiento preventivo y correctivo para computadoras',
-    precio_servicio: '1500'
-  },
-  {
-    nombre_servicio: 'Instalación de Software',
-    descripcion_servicio: 'Instalación y configuración de software especializado',
-    precio_servicio: '800'
-  },
-  {
-    nombre_servicio: 'Recuperación de Datos',
-    descripcion_servicio: 'Servicio de recuperación de datos perdidos o eliminados',
-    precio_servicio: '2500'
-  },
-  {
-    nombre_servicio: 'Configuración de Red',
-    descripcion_servicio: 'Configuración e instalación de redes WiFi y cableadas',
-    precio_servicio: '1200'
-  },
-  {
-    nombre_servicio: 'Reparación de Impresoras',
-    descripcion_servicio: 'Servicio técnico especializado en impresoras y escáneres',
-    precio_servicio: '900'
-  },
-  {
-    nombre_servicio: 'Consultoría IT',
-    descripcion_servicio: 'Asesoramiento en tecnología y optimización de sistemas',
-    precio_servicio: '2000'
-  },
-  {
-    nombre_servicio: 'Backup y Seguridad',
-    descripcion_servicio: 'Implementación de sistemas de backup y seguridad informática',
-    precio_servicio: '1800'
-  },
-  {
-    nombre_servicio: 'Desarrollo Web',
-    descripcion_servicio: 'Desarrollo de sitios web y aplicaciones web personalizadas',
-    precio_servicio: '3500'
-  }
-];
+// Los servicios se cargarán desde Supabase
 
 const metodosPago = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Transferencia', 'PayPal'];
 
@@ -221,6 +179,15 @@ interface ServicioVenta {
   pagado: boolean;
 }
 
+interface SupabaseServicio {
+  id_empresa: number;
+  nro_servicio: number;
+  nombre: string;
+  descripcion: string;
+  plazo?: string;
+  precio: number;
+}
+
 export default function CentralOperations() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
@@ -240,7 +207,7 @@ export default function CentralOperations() {
   const [editTexto, setEditTexto] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [empleados, setEmpleados] = useState(mockEmpleados.map(e => ({ ...e, pagado: false })));
+  const [empleados, setEmpleados] = useState(mockEmpleados);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEditarEmpleado, setModalEditarEmpleado] = useState(false);
   const [empleadoEditando, setEmpleadoEditando] = useState<number | null>(null);
@@ -252,6 +219,7 @@ export default function CentralOperations() {
   const [productos, setProductos] = useState<ProductoVenta[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(false);
   const [loadingVentas, setLoadingVentas] = useState(false);
+  const [loadingServicios, setLoadingServicios] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
 
   // Función para obtener la fecha actual en formato YYYY-MM-DD
@@ -284,7 +252,7 @@ export default function CentralOperations() {
   // Services state
   const [ventasServicios, setVentasServicios] = useState<ServicioVenta[]>([]);
   const [modalServicioOpen, setModalServicioOpen] = useState(false);
-  const [servicios, setServicios] = useState(mockServicios);
+  const [servicios, setServicios] = useState<SupabaseServicio[]>([]);
   const [nuevaServicioVenta, setNuevaServicioVenta] = useState({
     servicios: [] as Servicio[],
     cliente: {
@@ -630,17 +598,17 @@ export default function CentralOperations() {
     const cantidad = typeof cantidadServicio === 'string' ? parseInt(cantidadServicio) || 1 : cantidadServicio;
     if (cantidad <= 0) return;
     
-    const servicio = servicios.find(s => s.nombre_servicio === servicioSeleccionado);
+    const servicio = servicios.find(s => s.nombre === servicioSeleccionado);
     if (!servicio) return;
 
-    const servicioExistente = nuevaServicioVenta.servicios.find(s => s.nombre_servicio === servicio.nombre_servicio);
+    const servicioExistente = nuevaServicioVenta.servicios.find(s => s.nombre_servicio === servicio.nombre);
     
     if (servicioExistente) {
       setNuevaServicioVenta({
         ...nuevaServicioVenta,
         servicios: nuevaServicioVenta.servicios.map(s => 
-          s.nombre_servicio === servicio.nombre_servicio 
-            ? { ...s, cantidad: (s.cantidad || 0) + cantidad, subtotal: ((s.cantidad || 0) + cantidad) * parseFloat(s.precio_servicio) }
+          s.nombre_servicio === servicio.nombre 
+            ? { ...s, cantidad: (s.cantidad || 0) + cantidad, subtotal: ((s.cantidad || 0) + cantidad) * servicio.precio }
             : s
         )
       });
@@ -648,9 +616,11 @@ export default function CentralOperations() {
       setNuevaServicioVenta({
         ...nuevaServicioVenta,
         servicios: [...nuevaServicioVenta.servicios, {
-          ...servicio,
+          nombre_servicio: servicio.nombre,
+          descripcion_servicio: servicio.descripcion,
+          precio_servicio: servicio.precio.toString(),
           cantidad: cantidad,
-          subtotal: parseFloat(servicio.precio_servicio) * cantidad
+          subtotal: servicio.precio * cantidad
         }]
       });
     }
@@ -818,11 +788,35 @@ export default function CentralOperations() {
     }
   };
 
+  // Cargar servicios desde Supabase
+  const loadServicios = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingServicios(true);
+    try {
+      const result = await getServicesByCompany(companyData.id);
+      console.log('📊 Resultado de carga de servicios:', result);
+      if (result.success) {
+        setServicios(result.data || []);
+        console.log('✅ Servicios cargados desde Supabase:', result.data);
+      } else {
+        console.error('❌ Error cargando servicios:', result.error);
+        setServicios([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando servicios:', error);
+      setServicios([]);
+    } finally {
+      setLoadingServicios(false);
+    }
+  };
+
   // Cargar productos cuando se inicializa el componente
   useEffect(() => {
     if (companyData?.id) {
       loadProductos();
       loadVentas();
+      loadServicios();
     }
   }, [companyData?.id]);
 
@@ -1282,8 +1276,8 @@ export default function CentralOperations() {
                     <h4 className="font-semibold text-[var(--color-primary-600)] mb-2">Servicios</h4>
                     <div className="space-y-1">
                       {servicioVenta.servicios.map((servicio) => (
-                        <div key={servicio.nombre_servicio} className="flex justify-between text-sm">
-                          <span className="flex-1 mr-2">{servicio.nombre_servicio} x{servicio.cantidad}</span>
+                                        <div key={servicio.nombre_servicio} className="flex justify-between text-sm">
+                  <span className="flex-1 mr-2">{servicio.nombre_servicio} x{servicio.cantidad}</span>
                           <span className="font-medium whitespace-nowrap">${(servicio.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                         </div>
                       ))}
@@ -1853,9 +1847,9 @@ export default function CentralOperations() {
                     >
                       <option value="">Seleccionar servicio...</option>
                       {servicios.map(servicio => (
-                        <option key={servicio.nombre_servicio} value={servicio.nombre_servicio}>
-                          {servicio.nombre_servicio} - ${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')}
-                        </option>
+                                        <option key={servicio.nro_servicio} value={servicio.nombre}>
+                  {servicio.nombre} - ${servicio.precio.toLocaleString('es-MX')}
+                </option>
                       ))}
                     </select>
                     <div className="flex gap-2">

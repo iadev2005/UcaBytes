@@ -395,3 +395,134 @@ export async function uploadImage(file: File, fileName: string) {
     return { success: false, message: 'Error subiendo imagen.' };
   }
 }
+
+// Obtener servicios por empresa
+export async function getServicesByCompany(id_empresa: number) {
+  try {
+    const { data, error } = await client
+      .from('servicios')
+      .select('*')
+      .eq('id_empresa', id_empresa)
+      .order('nro_servicio', { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (error) {
+    console.error('Error obteniendo servicios:', error);
+    return { success: false, error: 'Error interno del servidor' };
+  }
+}
+
+// Crear un nuevo servicio
+export async function createService({
+  nombre,
+  descripcion,
+  plazo,
+  precio,
+  id_empresa
+}: {
+  nombre: string;
+  descripcion: string;
+  plazo?: string;
+  precio: number;
+  id_empresa: number;
+}) {
+  try {
+    // Obtener el siguiente número de servicio para esta empresa
+    const { data: maxService, error: maxError } = await client
+      .from('servicios')
+      .select('nro_servicio')
+      .eq('id_empresa', id_empresa)
+      .order('nro_servicio', { ascending: false })
+      .limit(1);
+
+    const nextServiceNumber = maxService && maxService.length > 0 ? maxService[0].nro_servicio + 1 : 1;
+
+    // Insertar el nuevo servicio
+    const { data, error } = await client
+      .from('servicios')
+      .insert([
+        {
+          id_empresa,
+          nro_servicio: nextServiceNumber,
+          nombre,
+          descripcion,
+          plazo: plazo ? new Date(plazo) : null,
+          precio
+        }
+      ])
+      .select();
+
+    if (error) {
+      return { success: false, message: 'No se pudo crear el servicio: ' + error.message };
+    }
+
+    return { success: true, data: data[0], message: 'Servicio creado exitosamente' };
+  } catch (error) {
+    console.error('Error creando servicio:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
+
+// Actualizar un servicio existente
+export async function updateService({
+  id_empresa,
+  nro_servicio,
+  nombre,
+  descripcion,
+  plazo,
+  precio
+}: {
+  id_empresa: number;
+  nro_servicio: number;
+  nombre: string;
+  descripcion: string;
+  plazo?: string;
+  precio: number;
+}) {
+  try {
+    const { data, error } = await client
+      .from('servicios')
+      .update({
+        nombre,
+        descripcion,
+        plazo: plazo ? new Date(plazo) : null,
+        precio
+      })
+      .eq('id_empresa', id_empresa)
+      .eq('nro_servicio', nro_servicio)
+      .select();
+
+    if (error) {
+      return { success: false, message: 'No se pudo actualizar el servicio: ' + error.message };
+    }
+
+    return { success: true, data: data[0], message: 'Servicio actualizado exitosamente' };
+  } catch (error) {
+    console.error('Error actualizando servicio:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
+
+// Eliminar un servicio
+export async function deleteService(id_empresa: number, nro_servicio: number) {
+  try {
+    const { error } = await client
+      .from('servicios')
+      .delete()
+      .eq('id_empresa', id_empresa)
+      .eq('nro_servicio', nro_servicio);
+
+    if (error) {
+      return { success: false, message: 'No se pudo eliminar el servicio: ' + error.message };
+    }
+
+    return { success: true, message: 'Servicio eliminado exitosamente' };
+  } catch (error) {
+    console.error('Error eliminando servicio:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
