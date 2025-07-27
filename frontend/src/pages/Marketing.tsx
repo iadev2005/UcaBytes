@@ -1,4 +1,5 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import WebsiteBuilder from '../components/marketing/WebsiteBuilder';
 import InstagramAssistant from '../components/marketing/InstagramAssistant';
 import LoadingScreen from '../components/marketing/LoadingScreen';
@@ -7,10 +8,38 @@ import { GlobeIcon } from '../icons';
 
 export default function Marketing() {
   const { isSidebarCollapsed } = useContext(SidebarCollapseContext);
+  const [searchParams] = useSearchParams();
   const [showBuilder, setShowBuilder] = useState(false);
   const [showInstagramAssistant, setShowInstagramAssistant] = useState(false);
   const [instagramPosts, setInstagramPosts] = useState(null);
   const [loadingInstagram, setLoadingInstagram] = useState(false);
+
+  // Manejar parámetros de URL para acceso rápido
+  useEffect(() => {
+    const urlAction = searchParams.get('action');
+    
+    if (urlAction === 'asistente-instagram') {
+      // Cargar automáticamente el asistente de Instagram
+      const loadInstagramAssistant = async () => {
+        setLoadingInstagram(true);
+        try {
+          const res = await fetch('http://localhost:3001/api/instagram/fetch-posts', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            setInstagramPosts(data.posts);
+            setShowInstagramAssistant(true);
+          } else {
+            alert('Error al obtener publicaciones de Instagram');
+          }
+        } catch (e) {
+          alert('Error de red o backend');
+        }
+        setLoadingInstagram(false);
+      };
+      
+      loadInstagramAssistant();
+    }
+  }, [searchParams]);
 
   if (loadingInstagram) {
     return <LoadingScreen />;

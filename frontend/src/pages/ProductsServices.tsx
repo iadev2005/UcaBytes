@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
 
@@ -82,6 +83,7 @@ const mockServicios = [
 const categorias = ['Todos', 'Electrónicos', 'Accesorios', 'Almacenamiento', 'Software'];
 
 export default function ProductsServices() {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'productos' | 'servicios'>('productos');
   const [cat, setCat] = useState('Todos');
   const [modalOpen, setModalOpen] = useState(false);
@@ -115,6 +117,21 @@ export default function ProductsServices() {
       setServicios(JSON.parse(serviciosGuardados));
     }
   }, []);
+
+  // Manejar parámetros de URL para acceso rápido
+  useEffect(() => {
+    const urlTab = searchParams.get('tab');
+    const urlAction = searchParams.get('action');
+    
+    if (urlTab) {
+      setTab(urlTab as 'productos' | 'servicios');
+    }
+    
+    if (urlAction === 'agregar' && urlTab === 'productos') {
+      setEditProducto(null);
+      setModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Handlers para agregar
   const handleAddProducto = (producto: any) => {

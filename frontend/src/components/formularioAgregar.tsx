@@ -108,17 +108,17 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Columna 1: campos */}
           <div className="flex flex-col gap-4">
-            <input className="border rounded px-3 py-2" placeholder="ID del producto" name="id_producto" value={producto.id_producto} onChange={handleChange} />
-            <input className="border rounded px-3 py-2" placeholder="Nombre del producto" name="nombre_producto" value={producto.nombre_producto} onChange={handleChange} />
-            <textarea className="border rounded px-3 py-2" placeholder="Descripción del producto" name="descripcion_producto" value={producto.descripcion_producto} onChange={handleChange} />
-            <input className="border rounded px-3 py-2" placeholder="Precio del producto" name="precio_producto" type="number" min="0" step="0.01" value={producto.precio_producto} onChange={handleChange} />
-            <input className="border rounded px-3 py-2" placeholder="Categoría del producto" name="categoria_producto" value={producto.categoria_producto} onChange={handleChange} />
-            <input className="border rounded px-3 py-2" placeholder="Stock del producto" name="stock_producto" type="number" min="0" value={producto.stock_producto} onChange={handleChange} />
+            <input className="border rounded px-3 py-2 cursor-text" placeholder="ID del producto" name="id_producto" value={producto.id_producto} onChange={handleChange} />
+            <input className="border rounded px-3 py-2 cursor-text" placeholder="Nombre del producto" name="nombre_producto" value={producto.nombre_producto} onChange={handleChange} />
+            <textarea className="border rounded px-3 py-2 cursor-text" placeholder="Descripción del producto" name="descripcion_producto" value={producto.descripcion_producto} onChange={handleChange} />
+            <input className="border rounded px-3 py-2 cursor-text" placeholder="Precio del producto" name="precio_producto" type="number" min="0" step="0.01" value={producto.precio_producto} onChange={handleChange} />
+            <input className="border rounded px-3 py-2 cursor-text" placeholder="Categoría del producto" name="categoria_producto" value={producto.categoria_producto} onChange={handleChange} />
+            <input className="border rounded px-3 py-2 cursor-text" placeholder="Stock del producto" name="stock_producto" type="number" min="0" value={producto.stock_producto} onChange={handleChange} />
           </div>
           {/* Columna 2: imagen */}
           <div className="flex flex-col items-center justify-center gap-4 mt-4 md:mt-0">
             <label className="block mb-1 font-medium">Imagen del producto</label>
-            <input className="border rounded px-3 py-2 w-full" type="file" name="imagen_producto" accept="image/*" onChange={handleImage} />
+            <input className="border rounded px-3 py-2 w-full cursor-pointer" type="file" name="imagen_producto" accept="image/*" onChange={handleImage} />
             {imgPreview ? (
               <img src={imgPreview} alt="preview" className="mt-2 w-32 h-32 md:w-40 md:h-40 object-cover rounded-xl border" />
             ) : (
@@ -126,7 +126,7 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
             )}
           </div>
         </div>
-        <button type="submit" className="px-4 py-2 rounded self-end bg-[#D8315B] hover:bg-[#b71e44] text-white mt-4">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
+        <button type="submit" className="px-4 py-2 rounded self-end bg-[#D8315B] hover:bg-[#b71e44] text-white mt-4 cursor-pointer">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
       </form>
     );
   }
@@ -135,10 +135,10 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold mb-2">{isEditMode ? 'Editar servicio' : 'Agregar servicio'}</h2>
       {error && <div className="text-red-500 text-sm">{error}</div>}
-      <input className="border rounded px-3 py-2" placeholder="Nombre del servicio" name="nombre_servicio" value={servicio.nombre_servicio} onChange={handleServicioChange} />
-      <textarea className="border rounded px-3 py-2" placeholder="Descripción del servicio" name="descripcion_servicio" value={servicio.descripcion_servicio} onChange={handleServicioChange} />
-      <input className="border rounded px-3 py-2" placeholder="Precio del servicio" name="precio_servicio" type="number" min="0" step="0.01" value={servicio.precio_servicio} onChange={handleServicioChange} />
-      <button type="submit" className="px-4 py-2 rounded bg-[#D8315B] hover:bg-[#b71e44] text-white">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
+      <input className="border rounded px-3 py-2 cursor-text" placeholder="Nombre del servicio" name="nombre_servicio" value={servicio.nombre_servicio} onChange={handleServicioChange} />
+      <textarea className="border rounded px-3 py-2 cursor-text" placeholder="Descripción del servicio" name="descripcion_servicio" value={servicio.descripcion_servicio} onChange={handleServicioChange} />
+      <input className="border rounded px-3 py-2 cursor-text" placeholder="Precio del servicio" name="precio_servicio" type="number" min="0" step="0.01" value={servicio.precio_servicio} onChange={handleServicioChange} />
+      <button type="submit" className="px-4 py-2 rounded bg-[#D8315B] hover:bg-[#b71e44] text-white cursor-pointer">{isEditMode ? 'Guardar cambios' : 'Guardar'}</button>
     </form>
   );
 };

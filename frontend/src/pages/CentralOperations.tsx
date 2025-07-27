@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
 
 const mockEmpleados = [
@@ -189,6 +190,7 @@ interface ServicioVenta {
 }
 
 export default function CentralOperations() {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
   const [cat, setCat] = useState('Todos');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -269,6 +271,22 @@ export default function CentralOperations() {
     telefono: '',
     cantidad: '',
   });
+
+  // Manejar parámetros de URL para acceso rápido
+  useEffect(() => {
+    const urlTab = searchParams.get('tab');
+    const urlAction = searchParams.get('action');
+    
+    if (urlTab) {
+      setTab(urlTab as 'empleados' | 'tareas' | 'ventas' | 'servicios');
+    }
+    
+    if (urlAction === 'nueva' && urlTab === 'ventas') {
+      setModalVentaOpen(true);
+    } else if (urlAction === 'agregar' && urlTab === 'empleados') {
+      setModalOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (isInitialized) {

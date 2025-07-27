@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
-import { KebabIcon, DashboardIcon, MegaphoneIcon, AutomationIcon } from "../icons";
+import { KebabIcon, MegaphoneIcon, AutomationIcon } from "../icons";
 
 // Tipos para eventos y props
 interface CalendarProps {
@@ -101,6 +102,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
   const [accesos, setAccesos] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('accesos_rapidos');
@@ -143,7 +145,7 @@ export default function Home() {
     }
   }, [eventosPorFecha]);
 
-  const accesosDisponibles: string[] = ["Ventas", "Inventario", "Facturación", "Marketing"];
+  const accesosDisponibles: string[] = ["Nueva Venta", "Agregar Producto", "Agregar Empleado", "Crear Post", "Ver Métricas", "Configurar Pagos"];
   const agregarAcceso = (acceso: string) => {
     if (acceso && !accesos.includes(acceso) && accesos.length < 4) {
       setAccesos([...accesos, acceso]);
@@ -221,8 +223,29 @@ export default function Home() {
 
   // Handler para cuando se hace click en un acceso rápido
   const handleAccesoClick = (acceso: string) => {
-    // Aquí puedes agregar navegación o lógica personalizada
-    console.log('Acceso rápido clickeado:', acceso);
+    // Navegación a funciones específicas con parámetros
+    switch (acceso) {
+      case "Nueva Venta":
+        navigate("/app/central-operations?tab=ventas&action=nueva");
+        break;
+      case "Agregar Producto":
+        navigate("/app/products-services?tab=productos&action=agregar");
+        break;
+      case "Agregar Empleado":
+        navigate("/app/central-operations?tab=empleados&action=agregar");
+        break;
+      case "Crear Post":
+        navigate("/app/marketing?action=asistente-instagram");
+        break;
+      case "Ver Métricas":
+        navigate("/app/dashboard?section=metricas");
+        break;
+      case "Configurar Pagos":
+        navigate("/app/perfil?section=pagos");
+        break;
+      default:
+        console.log('Acceso rápido clickeado:', acceso);
+    }
   };
 
   const eventosFecha: string[] = selectedDate ? eventosPorFecha[selectedDate.toISOString().slice(0, 10)] || [] : [];
