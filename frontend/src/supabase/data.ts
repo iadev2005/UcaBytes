@@ -139,3 +139,78 @@ export async function getProductsByCompany(id_empresa: number) {
     return { success: false, data: [], error: err };
   }
 }
+
+
+/*
+LINK PARA SUBIR FOTOS AL STORAGE 
+
+https://UcaBytes.supabase.co/storage/v1/object/public/avatars/mi_avatar.jpg
+
+import { createClient } from '@supabase/supabase-js'
+import { v4 as uuidv4 } from 'uuid'
+
+// Configuración del cliente Supabase
+const supabase = createClient('https://UcaBytes.supabase.co', 'TU_ANON_KEY')
+
+// Función para subir avatar
+async function uploadAvatar(file: File, empresaId: number) {
+  try {
+    // Generar nombre único para el archivo
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${uuidv4()}.${fileExt}`
+    const filePath = `avatars/${fileName}`
+
+    // Subir archivo al Storage
+    const { data, error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      throw uploadError
+    }
+
+    // Actualizar registro de Empresa con el nombre del archivo
+    const { error: updateError } = await supabase
+      .from('Empresas')
+      .update({ avatar: fileName })
+      .eq('id', empresaId)
+
+    if (updateError) {
+      throw updateError
+    }
+
+    // Obtener URL pública del avatar
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath)
+
+    return publicUrl
+  } catch (error) {
+    console.error('Error uploading avatar:', error)
+    return null
+  }
+}
+
+// Ejemplo de uso en un componente React
+function AvatarUpload() {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const empresaId = 123 // ID de la empresa obtenido de tu contexto
+      const avatarUrl = await uploadAvatar(file, empresaId)
+      if (avatarUrl) {
+        // Actualizar UI con la nueva URL del avatar
+      }
+    }
+  }
+
+  return (
+    <input 
+      type="file" 
+      accept="image/*" 
+      onChange={handleFileUpload} 
+    />
+  )
+}
+
+*/
