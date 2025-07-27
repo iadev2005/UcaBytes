@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 type Producto = {
   id_producto: string;
-  rif_pyme: string;
   nombre_producto: string;
   descripcion_producto: string;
   precio_producto: string;
@@ -32,7 +31,6 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
   const [producto, setProducto] = useState<Producto>(
     initialProducto || {
       id_producto: '',
-      rif_pyme: '',
       nombre_producto: '',
       descripcion_producto: '',
       precio_producto: '',
@@ -85,7 +83,7 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
       onClose();
       if (!isEditMode) {
         setProducto({
-          id_producto: '', rif_pyme: '', nombre_producto: '', descripcion_producto: '', precio_producto: '', categoria_producto: '', stock_producto: '', imagen_producto: '',
+          id_producto: '', nombre_producto: '', descripcion_producto: '', precio_producto: '', categoria_producto: '', stock_producto: '', imagen_producto: '',
         });
         setImgPreview(null);
       }
@@ -111,7 +109,6 @@ const FormAdd: React.FC<Props> = ({ activeTab, onAddProducto, onAddServicio, onC
           {/* Columna 1: campos */}
           <div className="flex flex-col gap-4">
             <input className="border rounded px-3 py-2" placeholder="ID del producto" name="id_producto" value={producto.id_producto} onChange={handleChange} />
-            <input className="border rounded px-3 py-2" placeholder="RIF de la pyme" name="rif_pyme" value={producto.rif_pyme} onChange={handleChange} />
             <input className="border rounded px-3 py-2" placeholder="Nombre del producto" name="nombre_producto" value={producto.nombre_producto} onChange={handleChange} />
             <textarea className="border rounded px-3 py-2" placeholder="Descripción del producto" name="descripcion_producto" value={producto.descripcion_producto} onChange={handleChange} />
             <input className="border rounded px-3 py-2" placeholder="Precio del producto" name="precio_producto" type="number" min="0" step="0.01" value={producto.precio_producto} onChange={handleChange} />
