@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany } from '../supabase/data';
+import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany, findExistingClient, findClientByCI, getClientsByCompany, createServiceSale, getServiceSalesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
+import { client } from '../supabase/client';
 
 const mockEmpleados = [
   { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, foto: '', pagado: false }
@@ -151,7 +152,9 @@ interface Servicio {
 }
 
 interface Cliente {
+  ci?: string;
   nombre: string;
+  apellido?: string;
   email: string;
   telefono: string;
   direccion: string;
@@ -221,6 +224,9 @@ export default function CentralOperations() {
   const [loadingVentas, setLoadingVentas] = useState(false);
   const [loadingServicios, setLoadingServicios] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
+  const [clientesExistentes, setClientesExistentes] = useState<any[]>([]);
+  const [clienteEncontrado, setClienteEncontrado] = useState<any | null>(null);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
 
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
@@ -234,7 +240,9 @@ export default function CentralOperations() {
   const [nuevaVenta, setNuevaVenta] = useState({
     productos: [] as Producto[],
     cliente: {
+      ci: '',
       nombre: '',
+      apellido: '',
       email: '',
       telefono: '',
       direccion: ''
@@ -538,7 +546,9 @@ export default function CentralOperations() {
       setNuevaVenta({
         productos: [],
         cliente: {
+          ci: '',
           nombre: '',
+          apellido: '',
           email: '',
           telefono: '',
           direccion: ''
@@ -656,40 +666,64 @@ export default function CentralOperations() {
     return nuevaServicioVenta.servicios.reduce((total, servicio) => total + (servicio.subtotal || 0), 0);
   };
 
-  const handleCrearServicioVenta = (e: React.FormEvent) => {
+  const handleCrearServicioVenta = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nuevaServicioVenta.servicios.length === 0) return;
     if (!nuevaServicioVenta.cliente.nombre.trim()) return;
 
-    const servicioVentaCompleta: ServicioVenta = {
-      id: Date.now(),
-      ...nuevaServicioVenta,
-      total: calcularTotalServicios(),
-      fechaServicio: new Date(nuevaServicioVenta.fechaServicio).toISOString(),
-      fechaPago: nuevaServicioVenta.fechaPago ? new Date(nuevaServicioVenta.fechaPago).toISOString() : undefined,
-      pagado: !!nuevaServicioVenta.fechaPago
-    };
+    if (!companyData?.id) {
+      alert('Error: No se pudo identificar la empresa');
+      return;
+    }
 
+    try {
+      const result = await createServiceSale({
+        cliente: nuevaServicioVenta.cliente,
+        servicios: nuevaServicioVenta.servicios.map(servicio => ({
+          nombre_servicio: servicio.nombre_servicio,
+          descripcion_servicio: servicio.descripcion_servicio,
+          precio_servicio: servicio.precio_servicio,
+          cantidad: servicio.cantidad || 1
+        })),
+        metodoPago: nuevaServicioVenta.metodoPago,
+        fechaServicio: nuevaServicioVenta.fechaServicio,
+        fechaPago: nuevaServicioVenta.fechaPago || undefined,
+        total: calcularTotalServicios(),
+        id_empresa: companyData.id
+      });
 
-    setVentasServicios([servicioVentaCompleta, ...ventasServicios]);
-    
-    // Reset form
-    setNuevaServicioVenta({
-      servicios: [],
-      cliente: {
-        nombre: '',
-        email: '',
-        telefono: '',
-        direccion: ''
-      },
-      metodoPago: 'Efectivo',
-      fechaServicio: new Date().toISOString().split('T')[0],
-      fechaPago: '',
-      total: 0,
-      pagado: false
-    });
-    
-    setModalServicioOpen(false);
+      if (result.success) {
+        // Recargar las ventas de servicios desde Supabase
+        await loadVentasServicios();
+        
+        // Reset form
+        setNuevaServicioVenta({
+          servicios: [],
+          cliente: {
+            ci: '',
+            nombre: '',
+            apellido: '',
+            email: '',
+            telefono: '',
+            direccion: ''
+          },
+          metodoPago: 'Efectivo',
+          fechaServicio: new Date().toISOString().split('T')[0],
+          fechaPago: '',
+          total: 0,
+          pagado: false
+        });
+        
+        setModalServicioOpen(false);
+        setSaleSuccess('Venta de servicios creada exitosamente');
+        setTimeout(() => setSaleSuccess(''), 3000);
+      } else {
+        alert('Error al crear la venta de servicios: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error creando venta de servicios:', error);
+      alert('Error interno al crear la venta de servicios');
+    }
   };
 
   const eliminarServicioVenta = (servicioVentaId: number) => {
@@ -811,12 +845,146 @@ export default function CentralOperations() {
     }
   };
 
+  // Cargar ventas de servicios desde Supabase
+  const loadVentasServicios = async () => {
+    if (!companyData?.id) return;
+    
+    try {
+      const result = await getServiceSalesByCompany(companyData.id);
+      if (result.success && result.data) {
+        setVentasServicios(result.data);
+        console.log('✅ Ventas de servicios cargadas desde Supabase:', result.data.length);
+      } else {
+        console.error('Error cargando ventas de servicios:', result.error);
+        setVentasServicios([]);
+      }
+    } catch (error) {
+      console.error('Error cargando ventas de servicios:', error);
+      setVentasServicios([]);
+    }
+  };
+
+  // Cargar clientes existentes desde Supabase
+  const loadClientesExistentes = async () => {
+    if (!companyData?.id) {
+      console.log('⚠️ No hay companyData.id disponible para cargar clientes');
+      return;
+    }
+    
+    console.log('🔄 Cargando clientes existentes para empresa:', companyData.id);
+    try {
+      const result = await getClientsByCompany(companyData.id);
+      console.log('📊 Resultado de carga de clientes:', result);
+      if (result.success) {
+        setClientesExistentes(result.data || []);
+        console.log('✅ Clientes cargados desde Supabase:', result.data?.length || 0);
+        console.log('👥 Lista de clientes:', result.data);
+        console.log('🔍 Detalle de clientes:');
+        result.data?.forEach((cliente, index) => {
+          console.log(`  ${index + 1}. ${cliente.nombre} ${cliente.apellido} - ${cliente.email || cliente.telefono} (CI: ${cliente.ci})`);
+        });
+      } else {
+        console.error('❌ Error cargando clientes:', result.error);
+        setClientesExistentes([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando clientes:', error);
+      setClientesExistentes([]);
+    }
+  };
+
+  // Función de debugging para verificar clientes en la base de datos
+  const debugClientes = async () => {
+    if (!companyData?.id) {
+      console.log('⚠️ No hay companyData.id disponible');
+      return;
+    }
+    
+    console.log('🔍 === DEBUG CLIENTES ===');
+    console.log('🏢 ID de empresa:', companyData.id);
+    
+    try {
+      // Verificar si hay clientes en la tabla clientesempresa
+      const { data: clientesEmpresa, error: errorCE } = await client
+        .from('clientesempresa')
+        .select('*')
+        .eq('id_empresa', companyData.id);
+      
+      console.log('📋 Clientes en clientesempresa:', clientesEmpresa);
+      console.log('❌ Error clientesempresa:', errorCE);
+      
+      // Verificar si hay clientes en la tabla clientes
+      const { data: todosClientes, error: errorClientes } = await client
+        .from('clientes')
+        .select('*');
+      
+      console.log('👥 Todos los clientes en la BD:', todosClientes);
+      console.log('❌ Error clientes:', errorClientes);
+      
+    } catch (error) {
+      console.error('❌ Error en debug:', error);
+    }
+  };
+
+  // Buscar cliente existente por email o teléfono
+  const buscarClienteExistente = async (email?: string, telefono?: string) => {
+    if (!email && !telefono) return;
+    
+    setBuscandoCliente(true);
+    try {
+      const result = await findExistingClient(email, telefono);
+      if (result.success && result.data) {
+        setClienteEncontrado(result.data);
+        console.log('✅ Cliente encontrado:', result.data);
+        return result.data;
+      } else {
+        setClienteEncontrado(null);
+        console.log('ℹ️ Cliente no encontrado');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error buscando cliente:', error);
+      setClienteEncontrado(null);
+      return null;
+    } finally {
+      setBuscandoCliente(false);
+    }
+  };
+
+  // Aplicar datos de cliente encontrado
+  const aplicarClienteEncontrado = (cliente: any, esVenta: boolean = true) => {
+    const clienteData = {
+      ci: cliente.ci,
+      nombre: cliente.nombre,
+      apellido: cliente.apellido || '',
+      email: cliente.email || '',
+      telefono: cliente.telefono || '',
+      direccion: ''
+    };
+
+    if (esVenta) {
+      setNuevaVenta({
+        ...nuevaVenta,
+        cliente: clienteData
+      });
+    } else {
+      setNuevaServicioVenta({
+        ...nuevaServicioVenta,
+        cliente: clienteData
+      });
+    }
+    
+    setClienteEncontrado(null);
+  };
+
   // Cargar productos cuando se inicializa el componente
   useEffect(() => {
     if (companyData?.id) {
       loadProductos();
       loadVentas();
       loadServicios();
+      loadVentasServicios();
+      loadClientesExistentes();
     }
   }, [companyData?.id]);
 
@@ -886,7 +1054,12 @@ export default function CentralOperations() {
             >
               Nueva Venta
             </button>
-
+            <button
+              className="bg-blue-500 text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-600 transition-colors w-full sm:w-auto cursor-pointer"
+              onClick={debugClientes}
+            >
+              Debug Clientes
+            </button>
           </div>
         </div>
       )}
@@ -1501,7 +1674,91 @@ export default function CentralOperations() {
               {/* Información del cliente */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Información del Cliente</h3>
+                
+                {/* Búsqueda de cliente existente */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">Seleccionar Cliente Existente</h4>
+                  
+                  {/* Desplegable de clientes existentes */}
+                  <div className="mb-3">
+                    <select
+                      className="w-full rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        const clienteId = e.target.value;
+                        if (clienteId) {
+                          const cliente = clientesExistentes.find(c => c.ci === clienteId);
+                          if (cliente) {
+                            aplicarClienteEncontrado(cliente, true);
+                          }
+                        }
+                      }}
+                      value=""
+                    >
+                      <option value="">Seleccionar cliente existente...</option>
+                      {clientesExistentes.map(cliente => (
+                        <option key={cliente.ci} value={cliente.ci}>
+                          {cliente.nombre} {cliente.apellido} - {cliente.email || cliente.telefono}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="text-xs text-blue-600 mb-2">O buscar por email/teléfono:</div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      type="email" 
+                      placeholder="Email del cliente"
+                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        if (e.target.value) {
+                          buscarClienteExistente(e.target.value);
+                        }
+                      }}
+                    />
+                    <input 
+                      type="tel" 
+                      placeholder="Teléfono del cliente"
+                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        if (e.target.value) {
+                          buscarClienteExistente(undefined, e.target.value);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Mostrar cliente encontrado */}
+                  {clienteEncontrado && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <p className="text-sm text-green-800 mb-1">
+                        <strong>Cliente encontrado:</strong> {clienteEncontrado.nombre} {clienteEncontrado.apellido}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => aplicarClienteEncontrado(clienteEncontrado, true)}
+                        className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                      >
+                        Usar este cliente
+                      </button>
+                    </div>
+                  )}
+                  
+                  {buscandoCliente && (
+                    <p className="text-xs text-blue-600 mt-1">Buscando cliente...</p>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Cédula de Identidad</span>
+                    <input 
+                      type="text" 
+                      value={nuevaVenta.cliente.ci || ''} 
+                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, ci: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      placeholder="Ej: V-12345678"
+                    />
+                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Nombre *</span>
                     <input 
@@ -1510,6 +1767,15 @@ export default function CentralOperations() {
                       onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, nombre: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                       required 
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Apellido</span>
+                    <input 
+                      type="text" 
+                      value={nuevaVenta.cliente.apellido || ''} 
+                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, apellido: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
                   <label className="flex flex-col gap-1">
@@ -1750,7 +2016,91 @@ export default function CentralOperations() {
               {/* Información del cliente */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Información del Cliente</h3>
+                
+                {/* Búsqueda de cliente existente */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">Seleccionar Cliente Existente</h4>
+                  
+                  {/* Desplegable de clientes existentes */}
+                  <div className="mb-3">
+                    <select
+                      className="w-full rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        const clienteId = e.target.value;
+                        if (clienteId) {
+                          const cliente = clientesExistentes.find(c => c.ci === clienteId);
+                          if (cliente) {
+                            aplicarClienteEncontrado(cliente, false);
+                          }
+                        }
+                      }}
+                      value=""
+                    >
+                      <option value="">Seleccionar cliente existente...</option>
+                      {clientesExistentes.map(cliente => (
+                        <option key={cliente.ci} value={cliente.ci}>
+                          {cliente.nombre} {cliente.apellido} - {cliente.email || cliente.telefono}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="text-xs text-blue-600 mb-2">O buscar por email/teléfono:</div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input 
+                      type="email" 
+                      placeholder="Email del cliente"
+                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        if (e.target.value) {
+                          buscarClienteExistente(e.target.value);
+                        }
+                      }}
+                    />
+                    <input 
+                      type="tel" 
+                      placeholder="Teléfono del cliente"
+                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        if (e.target.value) {
+                          buscarClienteExistente(undefined, e.target.value);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Mostrar cliente encontrado */}
+                  {clienteEncontrado && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <p className="text-sm text-green-800 mb-1">
+                        <strong>Cliente encontrado:</strong> {clienteEncontrado.nombre} {clienteEncontrado.apellido}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => aplicarClienteEncontrado(clienteEncontrado, false)}
+                        className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                      >
+                        Usar este cliente
+                      </button>
+                    </div>
+                  )}
+                  
+                  {buscandoCliente && (
+                    <p className="text-xs text-blue-600 mt-1">Buscando cliente...</p>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Cédula de Identidad</span>
+                    <input 
+                      type="text" 
+                      value={nuevaServicioVenta.cliente.ci || ''} 
+                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, ci: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      placeholder="Ej: V-12345678"
+                    />
+                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Nombre *</span>
                     <input 
@@ -1759,6 +2109,15 @@ export default function CentralOperations() {
                       onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, nombre: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                       required 
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Apellido</span>
+                    <input 
+                      type="text" 
+                      value={nuevaServicioVenta.cliente.apellido || ''} 
+                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, apellido: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
                   <label className="flex flex-col gap-1">
