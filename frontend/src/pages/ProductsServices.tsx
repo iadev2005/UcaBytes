@@ -2,87 +2,87 @@ import { useState } from "react";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
 
-// Mock data para productos y servicios
-const mockProductos = [
-  { 
-    id_producto: '1', 
-    rif_pyme: 'J-12345678-9', 
-    nombre_producto: 'Laptop HP Pavilion', 
-    descripcion_producto: 'Laptop de alto rendimiento para trabajo y gaming',
-    precio_producto: '25000', 
-    categoria_producto: 'Electrónicos',
-    stock_producto: '15',
-    imagen_producto: ''
-  },
-  { 
-    id_producto: '2', 
-    rif_pyme: 'J-12345678-9', 
-    nombre_producto: 'Mouse Inalámbrico', 
-    descripcion_producto: 'Mouse ergonómico con conexión inalámbrica',
-    precio_producto: '500', 
-    categoria_producto: 'Accesorios',
-    stock_producto: '50',
-    imagen_producto: ''
-  },
-  { 
-    id_producto: '3', 
-    rif_pyme: 'J-12345678-9', 
-    nombre_producto: 'Teclado Mecánico', 
-    descripcion_producto: 'Teclado mecánico con switches Cherry MX',
-    precio_producto: '1200', 
-    categoria_producto: 'Accesorios',
-    stock_producto: '25',
-    imagen_producto: ''
-  },
-  { 
-    id_producto: '4', 
-    rif_pyme: 'J-12345678-9', 
-    nombre_producto: 'Monitor 24"', 
-    descripcion_producto: 'Monitor LED de 24 pulgadas Full HD',
-    precio_producto: '3500', 
-    categoria_producto: 'Electrónicos',
-    stock_producto: '10',
-    imagen_producto: ''
-  },
-  { 
-    id_producto: '5', 
-    rif_pyme: 'J-12345678-9', 
-    nombre_producto: 'Auriculares Bluetooth', 
-    descripcion_producto: 'Auriculares inalámbricos con cancelación de ruido',
-    precio_producto: '800', 
-    categoria_producto: 'Accesorios',
-    stock_producto: '30',
-    imagen_producto: ''
-  }
-];
+// Eliminar mockProductos y mockServicios
+// const mockProductos = [
+//   { 
+//     id_producto: '1', 
+//     rif_pyme: 'J-12345678-9', 
+//     nombre_producto: 'Laptop HP Pavilion', 
+//     descripcion_producto: 'Laptop de alto rendimiento para trabajo y gaming',
+//     precio_producto: '25000', 
+//     categoria_producto: 'Electrónicos',
+//     stock_producto: '15',
+//     imagen_producto: ''
+//   },
+//   { 
+//     id_producto: '2', 
+//     rif_pyme: 'J-12345678-9', 
+//     nombre_producto: 'Mouse Inalámbrico', 
+//     descripcion_producto: 'Mouse ergonómico con conexión inalámbrica',
+//     precio_producto: '500', 
+//     categoria_producto: 'Accesorios',
+//     stock_producto: '50',
+//     imagen_producto: ''
+//   },
+//   { 
+//     id_producto: '3', 
+//     rif_pyme: 'J-12345678-9', 
+//     nombre_producto: 'Teclado Mecánico', 
+//     descripcion_producto: 'Teclado mecánico con switches Cherry MX',
+//     precio_producto: '1200', 
+//     categoria_producto: 'Accesorios',
+//     stock_producto: '25',
+//     imagen_producto: ''
+//   },
+//   { 
+//     id_producto: '4', 
+//     rif_pyme: 'J-12345678-9', 
+//     nombre_producto: 'Monitor 24"', 
+//     descripcion_producto: 'Monitor LED de 24 pulgadas Full HD',
+//     precio_producto: '3500', 
+//     categoria_producto: 'Electrónicos',
+//     stock_producto: '10',
+//     imagen_producto: ''
+//   },
+//   { 
+//     id_producto: '5', 
+//     rif_pyme: 'J-12345678-9', 
+//     nombre_producto: 'Auriculares Bluetooth', 
+//     descripcion_producto: 'Auriculares inalámbricos con cancelación de ruido',
+//     precio_producto: '800', 
+//     categoria_producto: 'Accesorios',
+//     stock_producto: '30',
+//     imagen_producto: ''
+//   }
+// ];
 
-const mockServicios = [
-  {
-    nombre_servicio: 'Mantenimiento de Computadoras',
-    descripcion_servicio: 'Servicio completo de mantenimiento preventivo y correctivo para computadoras',
-    precio_servicio: '1500'
-  },
-  {
-    nombre_servicio: 'Instalación de Software',
-    descripcion_servicio: 'Instalación y configuración de software especializado',
-    precio_servicio: '800'
-  },
-  {
-    nombre_servicio: 'Recuperación de Datos',
-    descripcion_servicio: 'Servicio de recuperación de datos perdidos o eliminados',
-    precio_servicio: '2500'
-  },
-  {
-    nombre_servicio: 'Configuración de Red',
-    descripcion_servicio: 'Configuración e instalación de redes WiFi y cableadas',
-    precio_servicio: '1200'
-  },
-  {
-    nombre_servicio: 'Reparación de Impresoras',
-    descripcion_servicio: 'Servicio técnico especializado en impresoras y escáneres',
-    precio_servicio: '900'
-  }
-];
+// const mockServicios = [
+//   {
+//     nombre_servicio: 'Mantenimiento de Computadoras',
+//     descripcion_servicio: 'Servicio completo de mantenimiento preventivo y correctivo para computadoras',
+//     precio_servicio: '1500'
+//   },
+//   {
+//     nombre_servicio: 'Instalación de Software',
+//     descripcion_servicio: 'Instalación y configuración de software especializado',
+//     precio_servicio: '800'
+//   },
+//   {
+//     nombre_servicio: 'Recuperación de Datos',
+//     descripcion_servicio: 'Servicio de recuperación de datos perdidos o eliminados',
+//     precio_servicio: '2500'
+//   },
+//   {
+//     nombre_servicio: 'Configuración de Red',
+//     descripcion_servicio: 'Configuración e instalación de redes WiFi y cableadas',
+//     precio_servicio: '1200'
+//   },
+//   {
+//     nombre_servicio: 'Reparación de Impresoras',
+//     descripcion_servicio: 'Servicio técnico especializado en impresoras y escáneres',
+//     precio_servicio: '900'
+//   }
+// ];
 
 const categorias = ['Todos', 'Electrónicos', 'Accesorios', 'Almacenamiento', 'Software'];
 
@@ -90,8 +90,9 @@ export default function ProductsServices() {
   const [tab, setTab] = useState<'productos' | 'servicios'>('productos');
   const [cat, setCat] = useState('Todos');
   const [modalOpen, setModalOpen] = useState(false);
-  const [productos, setProductos] = useState(mockProductos);
-  const [servicios, setServicios] = useState(mockServicios);
+  // Inicializar productos y servicios como arrays vacíos para datos reales
+  const [productos, setProductos] = useState<any[]>([]);
+  const [servicios, setServicios] = useState<any[]>([]);
   const [editProducto, setEditProducto] = useState<any | null>(null);
   const [editServicio, setEditServicio] = useState<any | null>(null);
 
@@ -263,58 +264,41 @@ export default function ProductsServices() {
       {/* Lista de productos */}
       {tab === 'productos' && (
         <div className="flex flex-col gap-4">
-          {productosFiltrados.length === 0 ? (
+          {productos.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay productos en esta categoría</p>
               <p>Haz clic en "Agregar producto" para comenzar</p>
             </div>
           ) : (
-            productosFiltrados.map((producto) => (
-              <div key={producto.id_producto} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
+            productos.map((item) => (
+              <div key={item.id} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-[var(--color-primary-700)]">
-                      {producto.nombre_producto}
+                      {item.productos?.nombre}
                     </h3>
-                    <p className="text-sm text-gray-500 mb-2">{producto.descripcion_producto}</p>
+                    <p className="text-sm text-gray-500 mb-2">{item.productos?.descripcion}</p>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                        {producto.categoria_producto}
+                        {item.productos?.categoria}
                       </span>
                       <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)]">
-                        ID: {producto.id_producto}
+                        ID: {item.productos?.id}
                       </span>
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-xl sm:text-2xl font-bold text-[var(--color-secondary-600)]">
-                      ${parseFloat(producto.precio_producto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      ${Number(item.precio_venta ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-gray-500">Stock: {producto.stock_producto} unidades</p>
+                    <p className="text-sm text-gray-500">
+                      Stock: {Number(item.cantidad_actual ?? 0)} unidades
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">RIF: {producto.rif_pyme}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditProducto(producto);
-                        setModalOpen(true);
-                      }}
-                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => eliminarProducto(producto.id_producto)}
-                      className="bg-[var(--color-secondary-400)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-500)] transition-colors"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
+                  <img src={item.productos?.image} alt={item.productos?.nombre} className="w-24 h-24 object-cover rounded-lg border" />
+                  {/* ...botones de editar/eliminar... */}
                 </div>
               </div>
             ))
