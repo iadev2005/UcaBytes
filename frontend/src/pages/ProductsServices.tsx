@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
 
@@ -6,7 +7,6 @@ import Modal from '../components/Modal';
 const mockProductos = [
   { 
     id_producto: '1', 
-    rif_pyme: 'J-12345678-9', 
     nombre_producto: 'Laptop HP Pavilion', 
     descripcion_producto: 'Laptop de alto rendimiento para trabajo y gaming',
     precio_producto: '25000', 
@@ -16,7 +16,6 @@ const mockProductos = [
   },
   { 
     id_producto: '2', 
-    rif_pyme: 'J-12345678-9', 
     nombre_producto: 'Mouse Inalámbrico', 
     descripcion_producto: 'Mouse ergonómico con conexión inalámbrica',
     precio_producto: '500', 
@@ -26,7 +25,6 @@ const mockProductos = [
   },
   { 
     id_producto: '3', 
-    rif_pyme: 'J-12345678-9', 
     nombre_producto: 'Teclado Mecánico', 
     descripcion_producto: 'Teclado mecánico con switches Cherry MX',
     precio_producto: '1200', 
@@ -36,7 +34,6 @@ const mockProductos = [
   },
   { 
     id_producto: '4', 
-    rif_pyme: 'J-12345678-9', 
     nombre_producto: 'Monitor 24"', 
     descripcion_producto: 'Monitor LED de 24 pulgadas Full HD',
     precio_producto: '3500', 
@@ -46,7 +43,6 @@ const mockProductos = [
   },
   { 
     id_producto: '5', 
-    rif_pyme: 'J-12345678-9', 
     nombre_producto: 'Auriculares Bluetooth', 
     descripcion_producto: 'Auriculares inalámbricos con cancelación de ruido',
     precio_producto: '800', 
@@ -87,6 +83,7 @@ const mockServicios = [
 const categorias = ['Todos', 'Electrónicos', 'Accesorios', 'Almacenamiento', 'Software'];
 
 export default function ProductsServices() {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'productos' | 'servicios'>('productos');
   const [cat, setCat] = useState('Todos');
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,6 +91,47 @@ export default function ProductsServices() {
   const [servicios, setServicios] = useState(mockServicios);
   const [editProducto, setEditProducto] = useState<any | null>(null);
   const [editServicio, setEditServicio] = useState<any | null>(null);
+
+  // Guardar productos en localStorage
+  useEffect(() => {
+    localStorage.setItem('productos', JSON.stringify(productos));
+  }, [productos]);
+
+  // Cargar productos del localStorage
+  useEffect(() => {
+    const productosGuardados = localStorage.getItem('productos');
+    if (productosGuardados) {
+      setProductos(JSON.parse(productosGuardados));
+    }
+  }, []);
+
+  // Guardar servicios en localStorage
+  useEffect(() => {
+    localStorage.setItem('servicios', JSON.stringify(servicios));
+  }, [servicios]);
+
+  // Cargar servicios del localStorage
+  useEffect(() => {
+    const serviciosGuardados = localStorage.getItem('servicios');
+    if (serviciosGuardados) {
+      setServicios(JSON.parse(serviciosGuardados));
+    }
+  }, []);
+
+  // Manejar parámetros de URL para acceso rápido
+  useEffect(() => {
+    const urlTab = searchParams.get('tab');
+    const urlAction = searchParams.get('action');
+    
+    if (urlTab) {
+      setTab(urlTab as 'productos' | 'servicios');
+    }
+    
+    if (urlAction === 'agregar' && urlTab === 'productos') {
+      setEditProducto(null);
+      setModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Handlers para agregar
   const handleAddProducto = (producto: any) => {
@@ -150,7 +188,7 @@ export default function ProductsServices() {
           ].map(({ key, label }, index, arr) => (
             <button
               key={key}
-              className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 ${
+              className={`flex-1 py-2 text-sm md:text-xl font-bold transition-all duration-200 cursor-pointer ${
                 tab === key
                   ? 'bg-[var(--color-primary-600)] text-white shadow-inner'
                   : 'bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]'
@@ -168,7 +206,7 @@ export default function ProductsServices() {
       {tab === 'productos' && (
         <div className="flex items-center justify-between mb-6">
           <button
-            className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors"
+            className="bg-[var(--color-secondary-500)] text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
             onClick={() => {
               setEditProducto(null);
               setModalOpen(true);
@@ -177,7 +215,7 @@ export default function ProductsServices() {
             Agregar producto
           </button>
           <select
-            className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+            className="border border-gray-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)] cursor-pointer"
             value={cat}
             onChange={e => setCat(e.target.value)}
           >
@@ -189,7 +227,7 @@ export default function ProductsServices() {
       {tab === 'servicios' && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <button
-            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto"
+            className="bg-[var(--color-secondary-500)] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold shadow hover:bg-[var(--color-secondary-600)] transition-colors w-full sm:w-auto cursor-pointer"
             onClick={() => {
               setEditServicio(null);
               setModalOpen(true);
@@ -272,6 +310,23 @@ export default function ProductsServices() {
             productosFiltrados.map((producto) => (
               <div key={producto.id_producto} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                  {/* Imagen del producto */}
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
+                    {producto.imagen_producto ? (
+                      <img 
+                        src={producto.imagen_producto} 
+                        alt={producto.nombre_producto}
+                        className="w-full h-full object-cover rounded-lg border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-[var(--color-primary-700)]">
                       {producto.nombre_producto}
@@ -290,30 +345,24 @@ export default function ProductsServices() {
                     <p className="text-xl sm:text-2xl font-bold text-[var(--color-secondary-600)]">
                       ${parseFloat(producto.precio_producto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-gray-500">Stock: {producto.stock_producto} unidades</p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">RIF: {producto.rif_pyme}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditProducto(producto);
-                        setModalOpen(true);
-                      }}
-                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => eliminarProducto(producto.id_producto)}
-                      className="bg-[var(--color-secondary-400)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-500)] transition-colors"
-                    >
-                      Eliminar
-                    </button>
+                    <p className="text-sm text-gray-500 mb-2">Stock: {producto.stock_producto} unidades</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditProducto(producto);
+                          setModalOpen(true);
+                        }}
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => eliminarProducto(producto.id_producto)}
+                        className="bg-[var(--color-secondary-400)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-500)] transition-colors cursor-pointer"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -363,13 +412,13 @@ export default function ProductsServices() {
                         setEditServicio(servicio);
                         setModalOpen(true);
                       }}
-                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors"
+                      className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => eliminarServicio(servicio.nombre_servicio)}
-                      className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                      className="bg-[var(--color-secondary-400)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-500)] transition-colors cursor-pointer"
                     >
                       Eliminar
                     </button>

@@ -31,6 +31,35 @@ const GENDER_COLORS: { [key: string]: string } = {
   U: '#808080'   // Gris para No especificado
 };
 
+// Label personalizado para pie charts de productos y servicios
+const renderCustomPieLabel = ({
+  cx, cy, midAngle, innerRadius, outerRadius, percent, index, nombre, tipo, porcentaje
+}: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.15;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  // Usar nombre o tipo según el gráfico
+  const labelText = nombre || tipo || '';
+  const texto = `${labelText.length > 10 ? labelText.slice(0, 10) + '...' : labelText} ${porcentaje !== undefined ? porcentaje + '%' : ''}`;
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#4F46E5"
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize={11}
+      fontWeight={500}
+      style={{ pointerEvents: 'none' }}
+    >
+      {texto}
+    </text>
+  );
+};
+
 export default function Dashboard() {
   const [followersData, setFollowersData] = useState<FollowerData[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +70,219 @@ export default function Dashboard() {
   const [demographics, setDemographics] = useState<DemographicsData | null>(null);
   const [currentFollowers, setCurrentFollowers] = useState(0);
   const [selectedTheme, setSelectedTheme] = useState('marketing');
+  const [reachData, setReachData] = useState(0);
+  const [impressionsData, setImpressionsData] = useState(0);
+  
+  // Estados para datos de operaciones centrales
+  const [ventasData, setVentasData] = useState<any[]>([]);
+  const [serviciosData, setServiciosData] = useState<any[]>([]);
+  const [empleadosData, setEmpleadosData] = useState<any[]>([]);
+  const [productosData, setProductosData] = useState<any[]>([]);
+
+  // Cargar datos de operaciones centrales
+  useEffect(() => {
+    const cargarDatosOperaciones = () => {
+      try {
+        // Cargar ventas
+        const ventasGuardadas = localStorage.getItem('ventas');
+        if (ventasGuardadas) {
+          const ventas = JSON.parse(ventasGuardadas);
+          setVentasData(ventas);
+        }
+
+        // Cargar servicios
+        const serviciosGuardados = localStorage.getItem('ventasServicios');
+        if (serviciosGuardados) {
+          const servicios = JSON.parse(serviciosGuardados);
+          setServiciosData(servicios);
+        }
+
+        // Cargar empleados
+        const empleadosGuardados = localStorage.getItem('empleados');
+        if (empleadosGuardados) {
+          const empleados = JSON.parse(empleadosGuardados);
+          setEmpleadosData(empleados);
+        }
+
+        // Cargar productos (desde ProductsServices)
+        const productosGuardados = localStorage.getItem('productos');
+        if (productosGuardados) {
+          const productos = JSON.parse(productosGuardados);
+          setProductosData(productos);
+        }
+
+        // Cargar servicios del catálogo (desde ProductsServices)
+        const serviciosCatalogoGuardados = localStorage.getItem('servicios');
+        if (serviciosCatalogoGuardados) {
+          const serviciosCatalogo = JSON.parse(serviciosCatalogoGuardados);
+          // Aquí podrías usar serviciosCatalogo si necesitas datos del catálogo de servicios
+        }
+      } catch (error) {
+        console.error('Error al cargar datos de operaciones centrales:', error);
+      }
+    };
+
+    cargarDatosOperaciones();
+  }, []);
+
+  // Funciones para procesar datos reales
+  const procesarDatosVentas = () => {
+    if (!ventasData.length) return { totalVentas: 0, ventasMes: 0, clientesUnicos: 0, ticketPromedio: 0, ventasMensuales: [], productosVendidos: [] };
+
+    const totalVentas = ventasData.reduce((total, venta) => total + (venta.total || 0), 0);
+    const ventasMes = ventasData.filter(venta => {
+      const fechaVenta = new Date(venta.fechaVenta || new Date());
+      const ahora = new Date();
+      return fechaVenta.getMonth() === ahora.getMonth() && fechaVenta.getFullYear() === ahora.getFullYear();
+    }).reduce((total, venta) => total + (venta.total || 0), 0);
+
+    const clientesUnicos = new Set(ventasData.map(venta => venta.cliente?.nombre || 'Cliente sin nombre')).size;
+    const ticketPromedio = totalVentas / ventasData.length;
+
+    // Agrupar ventas por mes
+    const ventasPorMes = ventasData.reduce((acc, venta) => {
+      const fecha = new Date(venta.fechaVenta || new Date());
+      const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
+      if (!acc[mes]) acc[mes] = 0;
+      acc[mes] += venta.total || 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const ventasMensuales = Object.entries(ventasPorMes).map(([mes, total]) => ({
+      mes,
+      ventas: total
+    }));
+
+    // Procesar productos vendidos usando los campos correctos
+    const productosVendidos = ventasData.reduce((acc, venta) => {
+      if (venta.productos && Array.isArray(venta.productos)) {
+        venta.productos.forEach((prod: any) => {
+          const nombre = prod.nombre_producto || 'Producto sin nombre';
+          if (!acc[nombre]) acc[nombre] = 0;
+          acc[nombre] += (prod.cantidad as number) || 1;
+        });
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalProductosVendidos = Object.values(productosVendidos).reduce((a, b) => (a as number) + (b as number), 0) as number;
+    const productosVendidosArray = Object.entries(productosVendidos).map(([nombre, cantidad]) => ({
+      nombre,
+      cantidad,
+      porcentaje: Math.round(((cantidad as number) / totalProductosVendidos) * 100)
+    }));
+
+    return { totalVentas, ventasMes, clientesUnicos, ticketPromedio, ventasMensuales, productosVendidos: productosVendidosArray };
+  };
+
+  const procesarDatosServicios = () => {
+    if (!serviciosData.length) return { totalServicios: 0, ingresosServicios: 0, clientesUnicos: 0, serviciosMensuales: [], serviciosPorTipo: [] };
+
+    const totalServicios = serviciosData.length;
+    const ingresosServicios = serviciosData.reduce((total, servicio) => total + (servicio.total || 0), 0);
+    const clientesUnicos = new Set(serviciosData.map(servicio => servicio.cliente?.nombre || 'Cliente sin nombre')).size;
+
+    // Agrupar servicios por mes
+    const serviciosPorMes = serviciosData.reduce((acc, servicio) => {
+      const fecha = new Date(servicio.fechaServicio || new Date());
+      const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
+      if (!acc[mes]) acc[mes] = { servicios: 0, ingresos: 0 };
+      acc[mes].servicios += 1;
+      acc[mes].ingresos += servicio.total || 0;
+      return acc;
+    }, {} as Record<string, { servicios: number; ingresos: number }>);
+
+    const serviciosMensuales = Object.entries(serviciosPorMes).map(([mes, data]) => ({
+      mes,
+      servicios: (data as any).servicios,
+      ingresos: (data as any).ingresos
+    }));
+
+    // Procesar servicios por tipo usando los campos correctos
+    const serviciosPorTipo = serviciosData.reduce((acc, servicio) => {
+      if (servicio.servicios && Array.isArray(servicio.servicios)) {
+        servicio.servicios.forEach((serv: any) => {
+          const tipo = serv.nombre_servicio || 'Servicio General';
+          if (!acc[tipo]) acc[tipo] = 0;
+          acc[tipo] += (serv.cantidad as number) || 1;
+        });
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const serviciosPorTipoArray = Object.entries(serviciosPorTipo).map(([tipo, cantidad]) => ({
+      tipo,
+      cantidad,
+      porcentaje: Math.round(((cantidad as number) / totalServicios) * 100)
+    }));
+
+    return { totalServicios, ingresosServicios, clientesUnicos, serviciosMensuales, serviciosPorTipo: serviciosPorTipoArray };
+  };
+
+  const procesarDatosEmpleados = () => {
+    if (!empleadosData.length) return { 
+      totalEmpleados: 0, 
+      salarioPromedio: 0, 
+      empleadosPorCategoria: [], 
+      empleadosPagados: 0,
+      empleadosNuevos: 0,
+      empleadosActuales: 0
+    };
+
+    const totalEmpleados = empleadosData.length;
+    const salarioPromedio = empleadosData.reduce((total, emp) => total + (emp.salario || 0), 0) / totalEmpleados;
+    const empleadosPagados = empleadosData.filter(emp => emp.pagado).length;
+    
+    // Simular empleados nuevos vs actuales (en un sistema real esto vendría de fechas de contratación)
+    const empleadosNuevos = totalEmpleados > 1 ? Math.floor(totalEmpleados * 0.3) : 0; // 30% nuevos, mínimo 0
+    const empleadosActuales = totalEmpleados - empleadosNuevos;
+
+    // Agrupar empleados por categoría usando el campo correcto
+    const empleadosPorCategoria = empleadosData.reduce((acc, emp) => {
+      const categoria = emp.categoria || 'Sin categoría';
+      if (!acc[categoria]) acc[categoria] = 0;
+      acc[categoria] += 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const empleadosPorCategoriaArray = Object.entries(empleadosPorCategoria).map(([categoria, cantidad]) => ({
+      categoria,
+      cantidad: Number(cantidad)
+    }));
+
+    return { 
+      totalEmpleados, 
+      salarioPromedio, 
+      empleadosPorCategoria: empleadosPorCategoriaArray, 
+      empleadosPagados,
+      empleadosNuevos,
+      empleadosActuales
+    };
+  };
+
+  const procesarDatosProductos = () => {
+    if (!productosData.length) return { totalProductos: 0, valorInventario: 0, productosPorCategoria: [] };
+
+    const totalProductos = productosData.length;
+    const valorInventario = productosData.reduce((total, prod) => {
+      return total + (parseFloat(prod.precio_producto || '0') * parseInt(prod.stock_producto || '0'));
+    }, 0);
+
+    // Agrupar productos por categoría usando el campo correcto
+    const productosPorCategoria = productosData.reduce((acc, prod) => {
+      const categoria = prod.categoria_producto || 'Sin categoría';
+      if (!acc[categoria]) acc[categoria] = 0;
+      acc[categoria] += 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const productosPorCategoriaArray = Object.entries(productosPorCategoria).map(([categoria, cantidad]) => ({
+      categoria,
+      cantidad
+    }));
+
+    return { totalProductos, valorInventario, productosPorCategoria: productosPorCategoriaArray };
+  };
 
   useEffect(() => {
     const updateAndFetchData = async () => {
@@ -49,7 +291,6 @@ export default function Dashboard() {
         setError(null);
         
         // Primero ejecutar los scripts para actualizar los datos
-        console.log('Ejecutando scripts de actualización...');
         const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
           method: 'POST',
         });
@@ -57,16 +298,16 @@ export default function Dashboard() {
         if (!updateResponse.ok) {
           throw new Error('Error al actualizar los datos');
         }
-        
-        console.log('Scripts ejecutados exitosamente, cargando datos...');
         setDataUpdating(false);
         setLoading(true);
         
         // Ahora cargar los datos actualizados
-        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse] = await Promise.all([
+        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
           fetch('http://localhost:3001/api/demographics'),
           fetch('http://localhost:3001/api/follower-insights'),
-          fetch('http://localhost:3001/api/instagram-details')
+          fetch('http://localhost:3001/api/instagram-details'),
+          fetch('http://localhost:3001/api/reach-insights'),
+          fetch('http://localhost:3001/api/impressions-insights')
         ]);
         
         if (!followerInsightsResponse.ok) {
@@ -76,6 +317,8 @@ export default function Dashboard() {
         const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
         const followerInsightsJson = await followerInsightsResponse.json();
         const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
+        const reachJson = reachResponse.ok ? await reachResponse.json() : null;
+        const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
         
         // Procesar datos de follower insights para el histograma (obligatorio)
         let processedFollowersData = [];
@@ -153,7 +396,26 @@ export default function Dashboard() {
           if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
             totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
             setCurrentFollowers(totalFollowersFromDetails);
-            console.log('Total real de seguidores desde Instagram Details:', totalFollowersFromDetails);
+          }
+        }
+
+        // Procesar datos de alcance (reach)
+        if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
+          const reachValues = reachJson.data[0].values;
+          if (reachValues.length > 0) {
+            const latestReach = reachValues[reachValues.length - 1].value;
+            setReachData(latestReach);
+          }
+        }
+
+
+
+        // Procesar datos de impresiones
+        if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
+          const impressionsValues = impressionsJson.data[0].values;
+          if (impressionsValues.length > 0) {
+            const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
+            setImpressionsData(latestImpressions);
           }
         }
 
@@ -204,7 +466,6 @@ export default function Dashboard() {
             }
           }
           
-          console.log('Datos demográficos procesados:', processedDemographics);
           setDemographics(processedDemographics);
         }
 
@@ -219,7 +480,7 @@ export default function Dashboard() {
     };
 
     updateAndFetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const radialData = [
     {
@@ -258,8 +519,6 @@ export default function Dashboard() {
     }
 
     const finalData = data.sort((a, b) => b.value - a.value);
-    console.log('Datos del gráfico de edad:', finalData);
-    console.log('Total de seguidores usado para porcentajes:', currentFollowers);
     return finalData;
   })() : [];
 
@@ -341,6 +600,31 @@ export default function Dashboard() {
       case 'marketing':
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
+            
+            {/* Métricas principales */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Seguidores Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{currentFollowers.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">+{growthPercentage >= 0 ? '+' : ''}{growthPercentage}% vs ayer</p>
+              </div>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Crecimiento</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">{growthPercentage >= 0 ? '+' : ''}{growthPercentage}%</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Desde {firstDate}</p>
+              </div>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Alcance</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{reachData.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Últimos 30 días</p>
+              </div>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Impresiones</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">{impressionsData.toLocaleString()}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Últimos 30 días</p>
+              </div>
+            </div>
+
             {/* Primera fila: Histograma y Crecimiento */}
             <div className="w-full flex flex-col md:flex-row gap-8 justify-center items-stretch">
               {/* Gráfico de barras */}
@@ -360,7 +644,10 @@ export default function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip 
+                        formatter={(value) => [`${value} seguidores`, 'Seguidores']}
+                        labelFormatter={(label) => `Fecha: ${label}`}
+                      />
                       <Bar dataKey="seguidores" fill="#8ecae6" radius={[6, 6, 0, 0]} barSize={30} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -449,14 +736,14 @@ export default function Dashboard() {
                             transform: 'translate(0, 0)',
                             lineHeight: '24px'
                           }}
-                          formatter={(value: string, entry: any) => {
+                          formatter={(_value: string, entry: any) => {
                             // Mostrar en la leyenda: "Rango - Cantidad"
                             const data = entry.payload;
                             return `${data.name} - ${data.count}`;
                           }}
                         />
                         <Tooltip
-                          formatter={(value: number, name: string, entry: any) => {
+                          formatter={(value: number, _name: string, entry: any) => {
                             const data = entry.payload;
                             return [
                               `${data.count} ${data.count === 1 ? 'seguidor' : 'seguidores'}`,
@@ -510,7 +797,7 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value, name, entry) => [
+                          formatter={(value, _name, entry) => [
                             `${value} seguidores (${entry.payload.percentage}%)`, 
                             'Cantidad'
                           ]}
@@ -522,7 +809,8 @@ export default function Dashboard() {
                           iconSize={12}
                           wrapperStyle={{
                             paddingLeft: '5px',
-                            lineHeight: '24px'
+                            lineHeight: '24px',
+                            fontSize: '12px'
                           }}
                         />
                       </PieChart>
@@ -590,62 +878,51 @@ export default function Dashboard() {
         );
 
       case 'ventas':
-        // Datos simulados para ventas
-        const ventasData = [
-          { mes: 'Ene', ventas: 45000, clientes: 23, productos: 156 },
-          { mes: 'Feb', ventas: 52000, clientes: 28, productos: 189 },
-          { mes: 'Mar', ventas: 48000, clientes: 25, productos: 167 },
-          { mes: 'Abr', ventas: 61000, clientes: 32, productos: 234 },
-          { mes: 'May', ventas: 55000, clientes: 29, productos: 198 },
-          { mes: 'Jun', ventas: 67000, clientes: 35, productos: 245 },
-          { mes: 'Jul', ventas: 72000, clientes: 38, productos: 267 },
-          { mes: 'Ago', ventas: 68000, clientes: 36, productos: 251 },
-          { mes: 'Sep', ventas: 75000, clientes: 40, productos: 278 },
-          { mes: 'Oct', ventas: 82000, clientes: 43, productos: 295 },
-          { mes: 'Nov', ventas: 78000, clientes: 41, productos: 283 },
-          { mes: 'Dic', ventas: 95000, clientes: 48, productos: 312 }
+        // Procesar datos reales de ventas
+        const datosVentas = procesarDatosVentas();
+        const datosProductos = procesarDatosProductos();
+
+        // Crear datos para gráficos basados en datos reales
+        const ventasChartData = datosVentas.ventasMensuales.length > 0 ? datosVentas.ventasMensuales : [
+          { mes: 'Sin datos', ventas: 0 }
         ];
 
-        const productosVendidos = [
-          { nombre: 'Laptops', cantidad: 45, porcentaje: 35 },
-          { nombre: 'Monitores', cantidad: 38, porcentaje: 29 },
-          { nombre: 'Teclados', cantidad: 25, porcentaje: 19 },
-          { nombre: 'Mouse', cantidad: 15, porcentaje: 12 },
-          { nombre: 'Otros', cantidad: 7, porcentaje: 5 }
-        ];
+        // Usar productos vendidos reales si existen, sino usar productos del inventario
+        const productosVendidos = datosVentas.productosVendidos.length > 0 ? datosVentas.productosVendidos : 
+          (datosProductos.productosPorCategoria.length > 0 ? datosProductos.productosPorCategoria.map(prod => ({
+            nombre: prod.categoria,
+            cantidad: prod.cantidad,
+            porcentaje: Math.round(((prod.cantidad as number) / datosProductos.totalProductos) * 100)
+          })) : [
+            { nombre: 'Sin productos', cantidad: 0, porcentaje: 0 }
+          ]);
 
-        const clientesPorRegion = [
-          { region: 'Caracas', clientes: 25, ventas: 45000 },
-          { region: 'Valencia', clientes: 18, ventas: 32000 },
-          { region: 'Maracaibo', clientes: 15, ventas: 28000 },
-          { region: 'Barquisimeto', clientes: 12, ventas: 22000 },
-          { region: 'Mérida', clientes: 8, ventas: 15000 }
-        ];
+
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-blue-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">Ventas Totales</h3>
-                <p className="text-3xl font-bold text-blue-600">$738,000</p>
-                <p className="text-sm text-blue-500 mt-1">+12.5% vs mes anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Ventas Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">${datosVentas.totalVentas.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">{ventasData.length} ventas registradas</p>
               </div>
-              <div className="bg-green-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-green-700 mb-2">Ventas del Mes</h3>
-                <p className="text-3xl font-bold text-green-600">$95,000</p>
-                <p className="text-sm text-green-500 mt-1">+8.3% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ventas del Mes</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosVentas.ventasMes.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Mes actual</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Clientes Nuevos</h3>
-                <p className="text-3xl font-bold text-purple-600">48</p>
-                <p className="text-sm text-purple-500 mt-1">+5 clientes este mes</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Clientes Únicos</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosVentas.clientesUnicos}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Clientes diferentes</p>
               </div>
-              <div className="bg-orange-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-orange-700 mb-2">Ticket Promedio</h3>
-                <p className="text-3xl font-bold text-orange-600">$1,979</p>
-                <p className="text-sm text-orange-500 mt-1">+2.1% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ticket Promedio</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosVentas.ticketPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Por venta</p>
               </div>
             </div>
 
@@ -655,11 +932,14 @@ export default function Dashboard() {
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Ventas Mensuales</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={ventasData}>
+                  <BarChart data={ventasChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']} />
+                    <Tooltip 
+                      formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
+                      labelFormatter={(label) => `Mes: ${label}`}
+                    />
                     <Bar dataKey="ventas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -675,47 +955,28 @@ export default function Dashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ nombre, porcentaje }) => `${nombre} ${porcentaje}%`}
+                      label={renderCustomPieLabel}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {productosVendidos.map((entry, index) => (
+                      {productosVendidos.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} unidades`, 'Cantidad']} />
+                    <Tooltip 
+                      formatter={(value, name) => [`${value} unidades`, name === 'cantidad' ? 'Cantidad' : 'Producto']}
+                      labelFormatter={(label) => `Producto: ${label}`}
+                      contentStyle={{
+                        fontSize: '12px',
+                        padding: '8px'
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Gráfico de clientes por región */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Clientes por Región</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={clientesPorRegion} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="region" type="category" width={100} />
-                    <Tooltip formatter={(value, name) => [name === 'clientes' ? `${value} clientes` : `$${value.toLocaleString()}`, name === 'clientes' ? 'Clientes' : 'Ventas']} />
-                    <Bar dataKey="clientes" fill="#10B981" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
 
-              {/* Gráfico de tendencia de clientes */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tendencia de Clientes</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={ventasData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value} clientes`, 'Clientes']} />
-                    <Bar dataKey="clientes" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
             </div>
           </div>
         );
@@ -723,69 +984,51 @@ export default function Dashboard() {
 
 
       case 'servicios':
-        // Datos simulados para servicios
-        const serviciosData = [
-          { mes: 'Ene', servicios: 45, ingresos: 22500, clientes: 38 },
-          { mes: 'Feb', servicios: 52, ingresos: 26000, clientes: 42 },
-          { mes: 'Mar', servicios: 48, ingresos: 24000, clientes: 40 },
-          { mes: 'Abr', servicios: 61, ingresos: 30500, clientes: 48 },
-          { mes: 'May', servicios: 55, ingresos: 27500, clientes: 44 },
-          { mes: 'Jun', servicios: 67, ingresos: 33500, clientes: 52 },
-          { mes: 'Jul', servicios: 72, ingresos: 36000, clientes: 56 },
-          { mes: 'Ago', servicios: 68, ingresos: 34000, clientes: 54 },
-          { mes: 'Sep', servicios: 75, ingresos: 37500, clientes: 58 },
-          { mes: 'Oct', servicios: 82, ingresos: 41000, clientes: 62 },
-          { mes: 'Nov', servicios: 78, ingresos: 39000, clientes: 60 },
-          { mes: 'Dic', servicios: 95, ingresos: 47500, clientes: 68 }
+        // Procesar datos reales de servicios
+        const datosServicios = procesarDatosServicios();
+
+        // Crear datos para gráficos basados en datos reales
+        const serviciosChartData = datosServicios.serviciosMensuales.length > 0 ? datosServicios.serviciosMensuales : [
+          { mes: 'Sin datos', servicios: 0, ingresos: 0 }
         ];
 
-        const serviciosPorTipo = [
-          { tipo: 'Mantenimiento', cantidad: 35, porcentaje: 30 },
-          { tipo: 'Instalación', cantidad: 28, porcentaje: 24 },
-          { tipo: 'Reparación', cantidad: 25, porcentaje: 22 },
-          { tipo: 'Consultoría', cantidad: 18, porcentaje: 16 },
-          { tipo: 'Otros', cantidad: 8, porcentaje: 8 }
-        ];
+        // Usar servicios por tipo reales si existen
+        const serviciosPorTipo = datosServicios.serviciosPorTipo.length > 0 ? datosServicios.serviciosPorTipo : 
+          (datosServicios.totalServicios > 0 ? [
+            { tipo: 'Servicios Generales', cantidad: Math.ceil(datosServicios.totalServicios * 0.4), porcentaje: 40 },
+            { tipo: 'Mantenimiento', cantidad: Math.ceil(datosServicios.totalServicios * 0.3), porcentaje: 30 },
+            { tipo: 'Consultoría', cantidad: Math.ceil(datosServicios.totalServicios * 0.2), porcentaje: 20 },
+            { tipo: 'Otros', cantidad: Math.ceil(datosServicios.totalServicios * 0.1), porcentaje: 10 }
+          ] : [
+            { tipo: 'Sin servicios', cantidad: 0, porcentaje: 0 }
+          ]);
 
-        const clientesPorServicio = [
-          { servicio: 'Mantenimiento PC', clientes: 45, satisfaccion: 4.5 },
-          { servicio: 'Instalación Software', clientes: 32, satisfaccion: 4.3 },
-          { servicio: 'Reparación Hardware', clientes: 28, satisfaccion: 4.7 },
-          { servicio: 'Consultoría IT', clientes: 18, satisfaccion: 4.8 },
-          { servicio: 'Recuperación Datos', clientes: 15, satisfaccion: 4.6 }
-        ];
 
-        const tiempoPromedioServicios = [
-          { servicio: 'Mantenimiento', tiempo: 2.5, meta: 3.0, unidad: 'horas' },
-          { servicio: 'Instalación', tiempo: 4.2, meta: 5.0, unidad: 'horas' },
-          { servicio: 'Reparación', tiempo: 6.8, meta: 8.0, unidad: 'horas' },
-          { servicio: 'Consultoría', tiempo: 3.5, meta: 4.0, unidad: 'horas' }
-        ];
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-emerald-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-emerald-700 mb-2">Servicios Totales</h3>
-                <p className="text-3xl font-bold text-emerald-600">738</p>
-                <p className="text-sm text-emerald-500 mt-1">+15.2% vs año anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Servicios Totales</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosServicios.totalServicios}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Servicios registrados</p>
               </div>
-              <div className="bg-blue-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-blue-700 mb-2">Ingresos por Servicios</h3>
-                <p className="text-3xl font-bold text-blue-600">$369,000</p>
-                <p className="text-sm text-blue-500 mt-1">+12.8% vs año anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Ingresos por Servicios</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosServicios.ingresosServicios.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Total acumulado</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Clientes Atendidos</h3>
-                <p className="text-3xl font-bold text-purple-600">598</p>
-                <p className="text-sm text-purple-500 mt-1">+18.5% vs año anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Clientes Atendidos</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosServicios.clientesUnicos}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Clientes únicos</p>
               </div>
-              <div className="bg-orange-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-orange-700 mb-2">Satisfacción</h3>
-                <p className="text-3xl font-bold text-orange-600">4.6/5</p>
-                <p className="text-sm text-orange-500 mt-1">+0.2 vs año anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Promedio por Servicio</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosServicios.totalServicios > 0 ? (datosServicios.ingresosServicios / datosServicios.totalServicios).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Por servicio</p>
               </div>
             </div>
 
@@ -795,11 +1038,17 @@ export default function Dashboard() {
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servicios Mensuales</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={serviciosData}>
+                  <BarChart data={serviciosChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" />
                     <YAxis />
-                    <Tooltip formatter={(value, name) => [name === 'servicios' ? value : name === 'ingresos' ? `$${value.toLocaleString()}` : value, name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes']} />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        name === 'servicios' ? `${value} servicios` : name === 'ingresos' ? `$${value.toLocaleString()}` : `${value} clientes`, 
+                        name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes'
+                      ]}
+                      labelFormatter={(label) => `Mes: ${label}`}
+                    />
                     <Bar dataKey="servicios" fill="#10B981" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="ingresos" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -816,91 +1065,55 @@ export default function Dashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ tipo, porcentaje }) => `${tipo} ${porcentaje}%`}
+                      label={renderCustomPieLabel}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="cantidad"
                     >
-                      {serviciosPorTipo.map((entry, index) => (
+                      {serviciosPorTipo.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} servicios`, 'Cantidad']} />
+                    <Tooltip 
+                      formatter={(value, name) => [`${value} servicios`, name === 'cantidad' ? 'Cantidad' : 'Servicio']}
+                      labelFormatter={(label) => `Tipo: ${label}`}
+                      contentStyle={{
+                        fontSize: '12px',
+                        padding: '8px'
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Gráfico de clientes por servicio */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Clientes por Servicio</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={clientesPorServicio} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="servicio" type="category" width={150} />
-                    <Tooltip formatter={(value, name) => [name === 'clientes' ? `${value} clientes` : `${value}/5`, name === 'clientes' ? 'Clientes' : 'Satisfacción']} />
-                    <Bar dataKey="clientes" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
 
-              {/* Gráfico de tiempo promedio de servicios */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Tiempo Promedio de Servicios</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={tiempoPromedioServicios} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="servicio" type="category" width={120} />
-                    <Tooltip formatter={(value, name) => [name === 'tiempo' ? `${value} horas` : `${value} horas`, name === 'tiempo' ? 'Tiempo Real' : 'Meta']} />
-                    <Bar dataKey="tiempo" fill="#F59E0B" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+
+
             </div>
           </div>
         );
 
       case 'recursos':
-        // Datos simulados para recursos humanos
-        const empleadosData = [
-          { mes: 'Ene', total: 35, nuevos: 3, salidas: 1 },
-          { mes: 'Feb', total: 37, nuevos: 2, salidas: 0 },
-          { mes: 'Mar', total: 38, nuevos: 2, salidas: 1 },
-          { mes: 'Abr', total: 39, nuevos: 3, salidas: 2 },
-          { mes: 'May', total: 40, nuevos: 2, salidas: 1 },
-          { mes: 'Jun', total: 41, nuevos: 2, salidas: 1 },
-          { mes: 'Jul', total: 42, nuevos: 3, salidas: 2 },
-          { mes: 'Ago', total: 41, nuevos: 1, salidas: 2 },
-          { mes: 'Sep', total: 42, nuevos: 2, salidas: 1 },
-          { mes: 'Oct', total: 43, nuevos: 3, salidas: 2 },
-          { mes: 'Nov', total: 44, nuevos: 2, salidas: 1 },
-          { mes: 'Dic', total: 45, nuevos: 2, salidas: 1 }
+        // Procesar datos reales de recursos humanos
+        const datosEmpleados = procesarDatosEmpleados();
+
+        // Generar datos para gráficos basados en datos reales
+        const empleadosChartData = [
+          { 
+            mes: 'Actual', 
+            total: datosEmpleados.totalEmpleados, 
+            pagados: datosEmpleados.empleadosPagados
+          }
         ];
 
-        const empleadosPorEdad = [
-          { rango: '18-25', cantidad: 8, porcentaje: 18 },
-          { rango: '26-35', cantidad: 15, porcentaje: 33 },
-          { rango: '36-45', cantidad: 12, porcentaje: 27 },
-          { rango: '46-55', cantidad: 7, porcentaje: 16 },
-          { rango: '55+', cantidad: 3, porcentaje: 6 }
-        ];
-
-        const empleadosPorDeptoRRHH = [
-          { departamento: 'Administrativo', empleados: 8, salarioPromedio: 2500 },
-          { departamento: 'Ventas', empleados: 12, salarioPromedio: 2200 },
-          { departamento: 'Soporte', empleados: 6, salarioPromedio: 2000 },
-          { departamento: 'Desarrollo', empleados: 10, salarioPromedio: 3500 },
-          { departamento: 'Marketing', empleados: 5, salarioPromedio: 2300 },
-          { departamento: 'Finanzas', empleados: 4, salarioPromedio: 2800 }
-        ];
-
-        const satisfaccionEmpleados = [
-          { categoria: 'Muy Satisfecho', cantidad: 18, porcentaje: 40 },
-          { categoria: 'Satisfecho', cantidad: 15, porcentaje: 33 },
-          { categoria: 'Neutral', cantidad: 8, porcentaje: 18 },
-          { categoria: 'Insatisfecho', cantidad: 3, porcentaje: 7 },
-          { categoria: 'Muy Insatisfecho', cantidad: 1, porcentaje: 2 }
+        // Usar datos reales de empleados por departamento
+        const empleadosPorDeptoRRHH = datosEmpleados.empleadosPorCategoria.length > 0 ? datosEmpleados.empleadosPorCategoria.map(emp => ({
+          departamento: emp.categoria || 'Sin categoría',
+          empleados: Number(emp.cantidad) || 0
+        })) : [
+          { departamento: 'Administrativo', empleados: 2 },
+          { departamento: 'Ventas', empleados: 3 },
+          { departamento: 'Soporte', empleados: 1 }
         ];
 
         return (
@@ -908,107 +1121,74 @@ export default function Dashboard() {
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-pink-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-pink-700 mb-2">Total Empleados</h3>
-                <p className="text-3xl font-bold text-pink-600">45</p>
-                <p className="text-sm text-pink-500 mt-1">+2 este mes</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Total Empleados</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.totalEmpleados}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Empleados registrados</p>
               </div>
-              <div className="bg-cyan-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-cyan-700 mb-2">Nómina Mensual</h3>
-                <p className="text-3xl font-bold text-cyan-600">$108,500</p>
-                <p className="text-sm text-cyan-500 mt-1">+5.2% vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Nómina Mensual</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${(datosEmpleados.salarioPromedio * datosEmpleados.totalEmpleados).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Total mensual</p>
               </div>
-              <div className="bg-lime-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-lime-700 mb-2">Tasa de Rotación</h3>
-                <p className="text-3xl font-bold text-lime-600">2.2%</p>
-                <p className="text-sm text-lime-500 mt-1">-0.5% vs mes anterior</p>
+              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Empleados Pagados</h3>
+                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.empleadosPagados}</p>
+                <p className="text-sm text-[var(--color-primary-500)] mt-1">Nómina pagada</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-purple-700 mb-2">Satisfacción</h3>
-                <p className="text-3xl font-bold text-purple-600">4.2/5</p>
-                <p className="text-sm text-purple-500 mt-1">+0.3 vs mes anterior</p>
+              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Salario Promedio</h3>
+                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosEmpleados.salarioPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Por empleado</p>
               </div>
             </div>
 
             {/* Gráficos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Gráfico de crecimiento de empleados */}
+              {/* Gráfico de empleados */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Crecimiento de Empleados</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosData}>
+                  <BarChart data={empleadosChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" />
                     <YAxis />
-                    <Tooltip formatter={(value, name) => [value, name === 'total' ? 'Total' : name === 'nuevos' ? 'Nuevos' : 'Salidas']} />
+                    <Tooltip 
+                      formatter={(value, name) => {
+                        const labels = {
+                          total: 'Total',
+                          pagados: 'Pagados'
+                        };
+                        return [`${value} empleados`, labels[name as keyof typeof labels] || name];
+                      }}
+                      labelFormatter={(label) => `Período: ${label}`}
+                    />
                     <Bar dataKey="total" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="nuevos" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="salidas" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="pagados" fill="#F59E0B" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Gráfico de empleados por edad */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribución por Edad</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={empleadosPorEdad}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ rango, cantidad }) => `${rango} (${cantidad})`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {empleadosPorEdad.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#EC4899', '#06B6D4', '#84CC16', '#F59E0B', '#8B5CF6'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} empleados`, 'Cantidad']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+
 
               {/* Gráfico de empleados por departamento */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados por Departamento</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosPorDeptoRRHH} layout="horizontal">
+                  <BarChart data={empleadosPorDeptoRRHH}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="departamento" type="category" width={120} />
-                    <Tooltip formatter={(value, name) => [name === 'empleados' ? `${value} empleados` : `$${value}`, name === 'empleados' ? 'Empleados' : 'Salario Promedio']} />
-                    <Bar dataKey="empleados" fill="#06B6D4" radius={[0, 4, 4, 0]} />
+                    <XAxis dataKey="departamento" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`${value} empleados`, 'Empleados']}
+                      labelFormatter={(label) => `Departamento: ${label}`}
+                    />
+                    <Bar dataKey="empleados" fill="#06B6D4" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Gráfico de satisfacción de empleados */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Satisfacción de Empleados</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={satisfaccionEmpleados}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ categoria, porcentaje }) => `${categoria} ${porcentaje}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {satisfaccionEmpleados.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#10B981', '#84CC16', '#F59E0B', '#EF4444', '#991B1B'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} empleados`, 'Cantidad']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+
             </div>
           </div>
         );
@@ -1050,7 +1230,7 @@ export default function Dashboard() {
                     key={theme.value}
                     onClick={() => setSelectedTheme(theme.value)}
                     className={cn(
-                      'px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap',
+                      'px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap cursor-pointer',
                       selectedTheme === theme.value
                         ? 'bg-[var(--color-primary-600)] text-white'
                         : 'bg-gray-100 text-[var(--color-primary-700)] hover:bg-[var(--color-primary-100)] hover:text-[var(--color-primary-900)]'

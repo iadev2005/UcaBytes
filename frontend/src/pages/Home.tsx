@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
-import { KebabIcon, DashboardIcon, MegaphoneIcon, AutomationIcon } from "../icons";
+import { KebabIcon, MegaphoneIcon, AutomationIcon } from "../icons";
 
 // Tipos para eventos y props
 interface CalendarProps {
@@ -101,6 +102,7 @@ function Calendar({ onDateClick, eventosPorFecha }: CalendarProps) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
   const [accesos, setAccesos] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('accesos_rapidos');
@@ -143,7 +145,7 @@ export default function Home() {
     }
   }, [eventosPorFecha]);
 
-  const accesosDisponibles: string[] = ["Ventas", "Inventario", "Facturación", "Marketing"];
+  const accesosDisponibles: string[] = ["Nueva Venta", "Agregar Producto", "Agregar Empleado", "Crear Post", "Ver Métricas", "Configurar Pagos"];
   const agregarAcceso = (acceso: string) => {
     if (acceso && !accesos.includes(acceso) && accesos.length < 4) {
       setAccesos([...accesos, acceso]);
@@ -221,8 +223,29 @@ export default function Home() {
 
   // Handler para cuando se hace click en un acceso rápido
   const handleAccesoClick = (acceso: string) => {
-    // Aquí puedes agregar navegación o lógica personalizada
-    console.log('Acceso rápido clickeado:', acceso);
+    // Navegación a funciones específicas con parámetros
+    switch (acceso) {
+      case "Nueva Venta":
+        navigate("/app/central-operations?tab=ventas&action=nueva");
+        break;
+      case "Agregar Producto":
+        navigate("/app/products-services?tab=productos&action=agregar");
+        break;
+      case "Agregar Empleado":
+        navigate("/app/central-operations?tab=empleados&action=agregar");
+        break;
+      case "Crear Post":
+        navigate("/app/marketing?action=asistente-instagram");
+        break;
+      case "Ver Métricas":
+        navigate("/app/dashboard?section=metricas");
+        break;
+      case "Configurar Pagos":
+        navigate("/app/perfil?section=pagos");
+        break;
+      default:
+        console.log('Acceso rápido clickeado:', acceso);
+    }
   };
 
   const eventosFecha: string[] = selectedDate ? eventosPorFecha[selectedDate.toISOString().slice(0, 10)] || [] : [];
@@ -278,8 +301,7 @@ export default function Home() {
         <div className="flex flex-col gap-4 flex-1 justify-start h-[70vh]">
           <div className="bg-white rounded-3xl shadow-2xl p-4 md:p-3 sm:p-2 border border-[var(--color-primary-100)] animate-fade-in-up">
             <div className="flex items-center gap-2 mb-2">
-              <DashboardIcon className="text-[var(--color-primary-400)] w-5 h-5" />
-              <h2 className="text-lg font-bold">Resumen de Ciclo o Progreso</h2>
+              <h2 className="text-lg font-bold px-5">Resumen de Ciclo o Progreso</h2>
             </div>
             <div className="flex items-center justify-center h-16 text-sm text-gray-400">
               No hay datos para mostrar.
@@ -384,7 +406,7 @@ export default function Home() {
             </div>
 
             <div className="bg-white rounded-3xl shadow-2xl p-5 border border-gray-200 w-full animate-fade-in-up">
-              <h2 className="text-xl font-bold mb-2">To-Do List:</h2>
+              <h2 className="text-xl font-bold mb-2">Por hacer:</h2>
               <hr className="border-t border-gray-300 mb-4" />
               {prioridades.map(prio => {
                 const tasks = plannerTasksByPriority(prio);
