@@ -20,10 +20,11 @@ export default function TopInfo() {
   const fullDate = `${day}-${month}-${year}`;
 
   const getAvatarSrc = () => {
-    if (companyData.profileImage) {
-      return companyData.profileImage;
+    if (companyData && companyData.avatar) {
+      return companyData.avatar;
     }
-    return companyData.avatar;
+    // Imagen por defecto si no hay avatar
+    return 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128&bold=true';
   };
 
   return (
@@ -42,7 +43,7 @@ export default function TopInfo() {
       {/* Derecha: Empresa y avatar */}
       <Link to="/app/perfil" className="flex items-center gap-4 cursor-pointer group px-3 py-1 rounded-lg hover:bg-[var(--color-primary-50)] transition-colors" style={{ textDecoration: 'none' }}>
         <span className="font-semibold text-xl text-[var(--color-primary-700)] leading-tight whitespace-nowrap">
-          {companyData.name}
+          {companyData?.nombrecomercial || 'Nombre Empresa'}
         </span>
         <img 
           src={getAvatarSrc()} 
