@@ -1,14 +1,37 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ReturnIcon } from '../icons/Return';
+import { client } from '../supabase/client'; 
+import { useState } from 'react';
 
 export default function Login() {
-    const navigate = useNavigate();
-    const handleSubmit = (e: React.FormEvent) => {
+    const navigate = useNavigate()
+
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       // Aquí iría la lógica real de autenticación
-      localStorage.setItem('auth', 'true');
-      navigate('/app');
+      try{
+        
+        const { data, error } = await client.auth.signInWithPassword({
+          email,
+          password
+        });
+        console.log(data)
+  
+        //si existe el error nos vamos a catch
+        if (error) {
+            throw error;
+        }
+
+        //en caso de que no haya error, redirigimos al usuario a la página de inicio
+        navigate('/app');
+      }catch (error) {
+        console.error('Error during login:', error);
+        // Aquí podrías manejar el error, mostrar un mensaje al usuario, etc.
+      }
+
     };
     return (
       <div className="min-h-screen flex flex-col lg:flex-row">
@@ -42,6 +65,8 @@ export default function Login() {
                   type="text" 
                   placeholder="Ingresa tu correo o usuario" 
                   required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
                 />
               </div>
@@ -55,6 +80,8 @@ export default function Login() {
                   type="password" 
                   placeholder="Ingresa tu contraseña" 
                   required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 sm:px-5 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2463] focus:border-transparent placeholder-gray-400 text-sm sm:text-base"
                 />
               </div>

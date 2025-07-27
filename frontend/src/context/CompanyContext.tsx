@@ -35,8 +35,8 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
     name: 'Nombre Empresa',
     type: 'Empresa de Tecnología',
     description: 'Somos una empresa comprometida con la excelencia y la innovación. Nuestra misión es brindar soluciones de calidad que satisfagan las necesidades de nuestros clientes, contribuyendo al crecimiento y desarrollo del sector empresarial.',
-    avatar: 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128',
-    profileImage: null
+    avatar: 'https://ui-avatars.com/api/?name=Usuario&background=8B5CF6&color=fff&size=128&bold=true',
+    profileImage: 'https://ui-avatars.com/api/?name=Usuario&background=8B5CF6&color=fff&size=128&bold=true'
   });
 
   const [isEditing, setIsEditing] = useState(false);

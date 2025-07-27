@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { NotificationIcon } from '../icons/Notification';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCompany } from '../context/CompanyContext';
@@ -29,16 +28,13 @@ export default function TopInfo() {
 
   return (
     <motion.div
-      className="w-full flex items-center justify-between px-6 bg-white border-b border-[var(--color-primary-100)] h-[70px] min-h-[50px] sticky top-0 z-20"
+      className="w-full flex items-center justify-between px-10 bg-white border-b border-[var(--color-primary-100)] h-[70px] min-h-[50px] sticky top-0 z-20"
       initial={{ opacity: 0, y: -30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Izquierda: Notificación, hora y fecha */}
       <div className="flex items-center gap-6">
-        <button className="w-12 h-12 bg-[var(--color-primary-100)] rounded-lg flex items-center justify-center shadow hover:bg-[var(--color-primary-200)] transition-colors">
-          <NotificationIcon className="w-7 h-7 text-[var(--color-primary-600)]" />
-        </button>
         <span className="font-mono text-xl text-[var(--color-primary-700)]">{time}</span>
         <span className="text-lg text-[var(--color-primary-400)]">{fullDate}</span>
       </div>
