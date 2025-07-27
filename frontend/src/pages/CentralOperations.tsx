@@ -157,7 +157,6 @@ interface Cliente {
   apellido?: string;
   email: string;
   telefono: string;
-  direccion: string;
 }
 
 interface Venta {
@@ -225,8 +224,6 @@ export default function CentralOperations() {
   const [loadingServicios, setLoadingServicios] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
   const [clientesExistentes, setClientesExistentes] = useState<any[]>([]);
-  const [clienteEncontrado, setClienteEncontrado] = useState<any | null>(null);
-  const [buscandoCliente, setBuscandoCliente] = useState(false);
 
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
@@ -244,8 +241,7 @@ export default function CentralOperations() {
       nombre: '',
       apellido: '',
       email: '',
-      telefono: '',
-      direccion: ''
+      telefono: ''
     },
     metodoPago: 'Efectivo',
     fechaVenta: getCurrentDate(),
@@ -264,10 +260,11 @@ export default function CentralOperations() {
   const [nuevaServicioVenta, setNuevaServicioVenta] = useState({
     servicios: [] as Servicio[],
     cliente: {
+      ci: '',
       nombre: '',
+      apellido: '',
       email: '',
-      telefono: '',
-      direccion: ''
+      telefono: ''
     },
     metodoPago: 'Efectivo',
     fechaServicio: getCurrentDate(),
@@ -926,31 +923,6 @@ export default function CentralOperations() {
     }
   };
 
-  // Buscar cliente existente por email o teléfono
-  const buscarClienteExistente = async (email?: string, telefono?: string) => {
-    if (!email && !telefono) return;
-    
-    setBuscandoCliente(true);
-    try {
-      const result = await findExistingClient(email, telefono);
-      if (result.success && result.data) {
-        setClienteEncontrado(result.data);
-        console.log('✅ Cliente encontrado:', result.data);
-        return result.data;
-      } else {
-        setClienteEncontrado(null);
-        console.log('ℹ️ Cliente no encontrado');
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Error buscando cliente:', error);
-      setClienteEncontrado(null);
-      return null;
-    } finally {
-      setBuscandoCliente(false);
-    }
-  };
-
   // Aplicar datos de cliente encontrado
   const aplicarClienteEncontrado = (cliente: any, esVenta: boolean = true) => {
     const clienteData = {
@@ -958,8 +930,7 @@ export default function CentralOperations() {
       nombre: cliente.nombre,
       apellido: cliente.apellido || '',
       email: cliente.email || '',
-      telefono: cliente.telefono || '',
-      direccion: ''
+      telefono: cliente.telefono || ''
     };
 
     if (esVenta) {
@@ -973,8 +944,6 @@ export default function CentralOperations() {
         cliente: clienteData
       });
     }
-    
-    setClienteEncontrado(null);
   };
 
   // Cargar productos cuando se inicializa el componente
@@ -1703,49 +1672,7 @@ export default function CentralOperations() {
                     </select>
                   </div>
 
-                  <div className="text-xs text-blue-600 mb-2">O buscar por email/teléfono:</div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      type="email" 
-                      placeholder="Email del cliente"
-                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      onChange={e => {
-                        if (e.target.value) {
-                          buscarClienteExistente(e.target.value);
-                        }
-                      }}
-                    />
-                    <input 
-                      type="tel" 
-                      placeholder="Teléfono del cliente"
-                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      onChange={e => {
-                        if (e.target.value) {
-                          buscarClienteExistente(undefined, e.target.value);
-                        }
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Mostrar cliente encontrado */}
-                  {clienteEncontrado && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <p className="text-sm text-green-800 mb-1">
-                        <strong>Cliente encontrado:</strong> {clienteEncontrado.nombre} {clienteEncontrado.apellido}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => aplicarClienteEncontrado(clienteEncontrado, true)}
-                        className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                      >
-                        Usar este cliente
-                      </button>
-                    </div>
-                  )}
-                  
-                  {buscandoCliente && (
-                    <p className="text-xs text-blue-600 mt-1">Buscando cliente...</p>
-                  )}
+
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -2045,49 +1972,7 @@ export default function CentralOperations() {
                     </select>
                   </div>
 
-                  <div className="text-xs text-blue-600 mb-2">O buscar por email/teléfono:</div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input 
-                      type="email" 
-                      placeholder="Email del cliente"
-                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      onChange={e => {
-                        if (e.target.value) {
-                          buscarClienteExistente(e.target.value);
-                        }
-                      }}
-                    />
-                    <input 
-                      type="tel" 
-                      placeholder="Teléfono del cliente"
-                      className="flex-1 rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      onChange={e => {
-                        if (e.target.value) {
-                          buscarClienteExistente(undefined, e.target.value);
-                        }
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Mostrar cliente encontrado */}
-                  {clienteEncontrado && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <p className="text-sm text-green-800 mb-1">
-                        <strong>Cliente encontrado:</strong> {clienteEncontrado.nombre} {clienteEncontrado.apellido}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => aplicarClienteEncontrado(clienteEncontrado, false)}
-                        className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                      >
-                        Usar este cliente
-                      </button>
-                    </div>
-                  )}
-                  
-                  {buscandoCliente && (
-                    <p className="text-xs text-blue-600 mt-1">Buscando cliente...</p>
-                  )}
+
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -2138,15 +2023,7 @@ export default function CentralOperations() {
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="font-semibold">Dirección</span>
-                    <input 
-                      type="text" 
-                      value={nuevaServicioVenta.cliente.direccion} 
-                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, direccion: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                    />
-                  </label>
+
                 </div>
               </div>
 
