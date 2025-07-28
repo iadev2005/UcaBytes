@@ -38,7 +38,7 @@ export default function TokenInputModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 transition-all duration-300 ease-in-out"
+    <div className="fixed inset-0 bg-[var(--color-background)] bg-opacity-95 flex items-center justify-center z-50 p-4 transition-all duration-300 ease-in-out"
          style={{ 
            marginLeft: isSidebarCollapsed ? '4rem' : '20rem',
            width: isSidebarCollapsed ? 'calc(100% - 4rem)' : 'calc(100% - 20rem)'
