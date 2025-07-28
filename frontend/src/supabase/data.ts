@@ -25,6 +25,7 @@ export async function updateCompany(id: number, data: {
   direccion: string;
   telefono: string;
   fecha_fundacion: string;
+  avatar?: string;
 }) {
   try {
     const { error } = await client
@@ -395,6 +396,205 @@ export async function uploadImage(file: File, fileName: string) {
   } catch (err) {
     console.error(err);
     return { success: false, message: 'Error subiendo imagen.' };
+  }
+}
+
+// Subir avatar de empresa como base64 optimizado
+export async function uploadAvatar(file: File, companyId: number) {
+  try {
+    return new Promise((resolve) => {
+      // Crear un canvas para redimensionar la imagen
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Redimensionar a un tamaño máximo de 200x200 píxeles
+        const maxSize = 200;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Dibujar la imagen redimensionada
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Convertir a base64 con calidad reducida para optimizar tamaño
+        const base64String = canvas.toDataURL('image/jpeg', 0.8);
+        resolve({ success: true, url: base64String });
+      };
+      
+      img.onerror = () => {
+        resolve({ success: false, message: 'Error procesando la imagen.' });
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => {
+        resolve({ success: false, message: 'Error leyendo el archivo.' });
+      };
+      reader.readAsDataURL(file);
+    });
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error procesando avatar.' };
+  }
+}
+
+// ===== FUNCIONES PARA DATOS DE PAGO MÓVIL Y BANCARIOS =====
+
+// Obtener datos bancarios de una empresa
+export async function getBankDataByCompany(id_empresa: number) {
+  try {
+    const { data, error } = await client
+      .from('datosbancarios')
+      .select(`
+        codigobanco,
+        nro_cuenta,
+        rif_cedula,
+        bancos (
+          codigo,
+          nombre
+        )
+      `)
+      .eq('id_empresa', id_empresa);
+
+    if (error) {
+      return { success: false, message: 'Error obteniendo datos bancarios: ' + error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error obteniendo datos bancarios.' };
+  }
+}
+
+// Obtener datos de pago móvil de una empresa
+export async function getMobilePaymentDataByCompany(id_empresa: number) {
+  try {
+    const { data, error } = await client
+      .from('pagomovil')
+      .select(`
+        codigobanco,
+        cedula_rif,
+        telefono,
+        bancos (
+          codigo,
+          nombre
+        )
+      `)
+      .eq('id_empresa', id_empresa);
+
+    if (error) {
+      return { success: false, message: 'Error obteniendo datos de pago móvil: ' + error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error obteniendo datos de pago móvil.' };
+  }
+}
+
+// Crear o actualizar datos bancarios
+export async function upsertBankData({
+  id_empresa,
+  codigobanco,
+  nro_cuenta,
+  rif_cedula
+}: {
+  id_empresa: number;
+  codigobanco: string;
+  nro_cuenta: string;
+  rif_cedula?: string;
+}) {
+  try {
+    const { data, error } = await client
+      .from('datosbancarios')
+      .upsert({
+        id_empresa,
+        codigobanco,
+        nro_cuenta,
+        rif_cedula
+      })
+      .select();
+
+    if (error) {
+      return { success: false, message: 'Error guardando datos bancarios: ' + error.message };
+    }
+
+    return { success: true, data: data[0], message: 'Datos bancarios guardados exitosamente' };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error guardando datos bancarios.' };
+  }
+}
+
+// Crear o actualizar datos de pago móvil
+export async function upsertMobilePaymentData({
+  id_empresa,
+  codigobanco,
+  cedula_rif,
+  telefono
+}: {
+  id_empresa: number;
+  codigobanco: string;
+  cedula_rif: string;
+  telefono: string;
+}) {
+  try {
+    const { data, error } = await client
+      .from('pagomovil')
+      .upsert({
+        id_empresa,
+        codigobanco,
+        cedula_rif,
+        telefono
+      })
+      .select();
+
+    if (error) {
+      return { success: false, message: 'Error guardando datos de pago móvil: ' + error.message };
+    }
+
+    return { success: true, data: data[0], message: 'Datos de pago móvil guardados exitosamente' };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error guardando datos de pago móvil.' };
+  }
+}
+
+// Obtener lista de bancos
+export async function getBanks() {
+  try {
+    const { data, error } = await client
+      .from('bancos')
+      .select('codigo, nombre')
+      .order('nombre');
+
+    if (error) {
+      return { success: false, message: 'Error obteniendo bancos: ' + error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error obteniendo bancos.' };
   }
 }
 

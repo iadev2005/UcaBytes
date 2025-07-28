@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCompany } from '../context/CompanyContext';
-import { updateCompany } from '../supabase/data';
+import { updateCompany, uploadAvatar } from '../supabase/data';
 
 export default function Settings() {
   // Todos los hooks deben ir aquí, antes de cualquier return condicional
   const { companyData, companyLoading, updateCompanyData } = useCompany();
   const [popup, setPopup] = useState<{ open: boolean; message: string; success: boolean }>({ open: false, message: '', success: false });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     rif: '',
     razonsocial: '',
@@ -42,6 +44,34 @@ export default function Settings() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handler para subir avatar
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !companyData) return;
+
+    setUploadingAvatar(true);
+    try {
+      const result = await uploadAvatar(file, companyData.id);
+      if (result.success && result.url) {
+        // Actualizar el avatar en la base de datos
+        const updateResult = await updateCompany(companyData.id, { ...form, avatar: result.url });
+        if (updateResult.success) {
+          updateCompanyData({ avatar: result.url });
+          setPopup({ open: true, message: 'Avatar actualizado con éxito!', success: true });
+        } else {
+          setPopup({ open: true, message: updateResult.message, success: false });
+        }
+      } else {
+        setPopup({ open: true, message: result.message || 'Error al subir el avatar', success: false });
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      setPopup({ open: true, message: 'Error al subir el avatar', success: false });
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   // Handler para aplicar cambios y mostrar popup
@@ -130,7 +160,37 @@ export default function Settings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Avatar</label>
-            <img src={companyData.avatar || 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128&bold=true'} alt="Avatar" className="w-20 h-20 rounded-full border border-gray-300 object-cover" />
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <img 
+                  src={companyData.avatar || 'https://ui-avatars.com/api/?name=Empresa&background=8B5CF6&color=fff&size=128&bold=true'} 
+                  alt="Avatar" 
+                  className="w-20 h-20 rounded-full border border-gray-300 object-cover" 
+                />
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-2 text-sm bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {uploadingAvatar ? 'Subiendo...' : 'Cambiar Avatar'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div className="mt-6 flex justify-end">
