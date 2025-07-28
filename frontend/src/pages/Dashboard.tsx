@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
+import TokenGuide from '../components/marketing/TokenGuide';
 import { cn } from '../lib/utils';
 
 interface FollowerData {
@@ -86,6 +87,7 @@ export default function Dashboard() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [validatingToken, setValidatingToken] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [showTokenGuide, setShowTokenGuide] = useState(false);
 
   // Función para cargar token guardado
   const loadSavedToken = async () => {
@@ -183,6 +185,10 @@ export default function Dashboard() {
       setShowTokenModal(false);
       setTokenError(null);
     }
+  };
+
+  const handleShowTokenGuide = () => {
+    setShowTokenGuide(true);
   };
 
   // Cargar datos de operaciones centrales
@@ -1389,6 +1395,12 @@ export default function Dashboard() {
         isLoading={validatingToken}
         error={tokenError}
         showCancelButton={false}
+        onShowGuide={handleShowTokenGuide}
+      />
+      
+      <TokenGuide
+        isOpen={showTokenGuide}
+        onClose={() => setShowTokenGuide(false)}
       />
     </div>
   );

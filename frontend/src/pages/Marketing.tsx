@@ -4,6 +4,7 @@ import WebsiteBuilder from '../components/marketing/WebsiteBuilder';
 import InstagramAssistant from '../components/marketing/InstagramAssistant';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
+import TokenGuide from '../components/marketing/TokenGuide';
 import { SidebarCollapseContext } from './Layout';
 import { GlobeIcon } from '../icons';
 
@@ -23,6 +24,7 @@ export default function Marketing() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [showTokenGuide, setShowTokenGuide] = useState(false);
 
   // Función para cargar token guardado
   const loadSavedToken = async () => {
@@ -111,6 +113,10 @@ export default function Marketing() {
     // Permitir cerrar el modal siempre
     setShowTokenModal(false);
     setTokenError(null);
+  };
+
+  const handleShowTokenGuide = () => {
+    setShowTokenGuide(true);
   };
 
   // Función para cargar posts después de validar el token
@@ -292,6 +298,12 @@ export default function Marketing() {
         onClose={handleTokenModalClose}
         isLoading={validatingToken}
         error={tokenError}
+        onShowGuide={handleShowTokenGuide}
+      />
+      
+      <TokenGuide
+        isOpen={showTokenGuide}
+        onClose={() => setShowTokenGuide(false)}
       />
     </div>
   );

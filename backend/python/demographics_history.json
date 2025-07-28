@@ -63,13 +63,13 @@
                   "dimension_values": [
                     "18-24"
                   ],
-                  "value": 65
+                  "value": 64
                 },
                 {
                   "dimension_values": [
                     "25-34"
                   ],
-                  "value": 45
+                  "value": 46
                 },
                 {
                   "dimension_values": [
@@ -137,33 +137,15 @@
                 },
                 {
                   "dimension_values": [
-                    "Thane, Maharashtra"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Burnaby, British Columbia"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Rio de Janeiro, Rio de Janeiro (state)"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Ibadan, Oyo State"
-                  ],
-                  "value": 2
-                },
-                {
-                  "dimension_values": [
                     "Kabuga, Kigali"
                   ],
                   "value": 4
+                },
+                {
+                  "dimension_values": [
+                    "Gunungsitoli, North Sumatra"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -179,9 +161,21 @@
                 },
                 {
                   "dimension_values": [
+                    "Rangpur, Rangpur Division"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
                     "Kolkata, West Bengal"
                   ],
                   "value": 2
+                },
+                {
+                  "dimension_values": [
+                    "Rancah, West Java"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -203,9 +197,15 @@
                 },
                 {
                   "dimension_values": [
-                    "Bekasi, West Java"
+                    "Nilambur, Kerala"
                   ],
-                  "value": 2
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Moscow, Moscow"
+                  ],
+                  "value": 1
                 },
                 {
                   "dimension_values": [
@@ -215,7 +215,7 @@
                 },
                 {
                   "dimension_values": [
-                    "Phnom Penh, Phnom Penh"
+                    "Pretoria, Gauteng"
                   ],
                   "value": 1
                 },
@@ -227,37 +227,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Danao City, Central Visayas"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
                     "Accra, Greater Accra Region"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Kalamáta, Peloponnese (region)"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Madhubani, Bihar"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "El Mourouj, Ben Arous Governorate"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Kalyan, Maharashtra"
+                    "Ikot Ekpene, Akwa Ibom State"
                   ],
                   "value": 1
                 },
@@ -269,7 +245,19 @@
                 },
                 {
                   "dimension_values": [
+                    "Ikwo, Ebonyi State"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
                     "Mitrovica, Kosovo"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Surakarta, Central Java"
                   ],
                   "value": 1
                 },
@@ -281,7 +269,13 @@
                 },
                 {
                   "dimension_values": [
-                    "Kuala Lumpur, Kuala Lumpur"
+                    "Imphal, Manipur"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Stockholm, Stockholm County"
                   ],
                   "value": 1
                 },
@@ -305,15 +299,9 @@
                 },
                 {
                   "dimension_values": [
-                    "Pindamonhangaba, São Paulo (state)"
+                    "Ilorin, Kwara State"
                   ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Rada`, Al Bayda Governorate"
-                  ],
-                  "value": 1
+                  "value": 2
                 },
                 {
                   "dimension_values": [
@@ -341,25 +329,25 @@
                 },
                 {
                   "dimension_values": [
-                    "Bhavnagar, Gujarat"
+                    "Dubai, Dubai"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Priuksumurdaun, Banten"
+                    "Mumbai, Maharashtra"
+                  ],
+                  "value": 3
+                },
+                {
+                  "dimension_values": [
+                    "Mahendragarh, Haryana"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Antananarivo, Analamanga"
-                  ],
-                  "value": 1
-                },
-                {
-                  "dimension_values": [
-                    "Shirpur, Maharashtra"
+                    "Balneário Camboriú, Santa Catarina"
                   ],
                   "value": 1
                 },
@@ -371,13 +359,25 @@
                 },
                 {
                   "dimension_values": [
-                    "Sirsa, Haryana"
+                    "Lonavala, Maharashtra"
                   ],
                   "value": 1
                 },
                 {
                   "dimension_values": [
-                    "Taiz, Taiz Governorate"
+                    "Erode, Tamil Nadu"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Lattakia, Latakia Governorate"
+                  ],
+                  "value": 1
+                },
+                {
+                  "dimension_values": [
+                    "Migori, Nyanza Province"
                   ],
                   "value": 1
                 }

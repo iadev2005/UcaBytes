@@ -173,7 +173,7 @@ export async function deleteProduct(id_producto: number) {
 export async function uploadImage(file: File, fileName: string) {
   try {
     const { data, error } = await client.storage
-      .from('product-images')
+      .from('images')
       .upload(fileName, file);
 
     if (error) {
@@ -182,12 +182,130 @@ export async function uploadImage(file: File, fileName: string) {
 
     // Obtener la URL pública de la imagen
     const { data: urlData } = client.storage
-      .from('product-images')
+      .from('images')
       .getPublicUrl(fileName);
 
     return { success: true, url: urlData.publicUrl };
   } catch (err) {
     console.error(err);
     return { success: false, message: 'Error subiendo imagen.' };
+  }
+}
+
+// Subir imagen de empresa a Supabase Storage y actualizar la base de datos
+export async function uploadCompanyImage(file: File, companyId: number) {
+  try {
+    // Generar nombre único para el archivo
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const fileName = `avatars/company-${companyId}-${timestamp}-${randomId}.${fileExtension}`;
+
+    // Subir archivo a Supabase Storage
+    const { data, error } = await client.storage
+      .from('images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      return { success: false, message: 'Error subiendo imagen: ' + error.message };
+    }
+
+    // Obtener la URL pública de la imagen
+    const { data: urlData } = client.storage
+      .from('images')
+      .getPublicUrl(fileName);
+
+    // Actualizar el campo imagen en la tabla empresas
+    const { error: updateError } = await client
+      .from('empresas')
+      .update({ imagen: fileName })
+      .eq('id', companyId);
+
+    if (updateError) {
+      return { success: false, message: 'Imagen subida pero no se pudo actualizar la base de datos: ' + updateError.message };
+    }
+
+    return { 
+      success: true, 
+      url: urlData.publicUrl,
+      fileName: fileName,
+      message: 'Imagen subida y guardada exitosamente'
+    };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error subiendo imagen de empresa.' };
+  }
+}
+
+// Obtener imagen de empresa desde Supabase Storage
+export async function getCompanyImage(companyId: number) {
+  try {
+    // Primero obtener el nombre del archivo desde la base de datos
+    const { data: companyData, error: companyError } = await client
+      .from('empresas')
+      .select('imagen')
+      .eq('id', companyId)
+      .single();
+
+    if (companyError || !companyData || !companyData.imagen) {
+      return { success: false, message: 'No se encontró imagen para esta empresa' };
+    }
+
+    // Obtener la URL pública de la imagen
+    const { data: urlData } = client.storage
+      .from('images')
+      .getPublicUrl(companyData.imagen);
+
+    return { 
+      success: true, 
+      url: urlData.publicUrl,
+      fileName: companyData.imagen
+    };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error obteniendo imagen de empresa.' };
+  }
+}
+
+// Eliminar imagen de empresa
+export async function deleteCompanyImage(companyId: number) {
+  try {
+    // Primero obtener el nombre del archivo desde la base de datos
+    const { data: companyData, error: companyError } = await client
+      .from('empresas')
+      .select('imagen')
+      .eq('id', companyId)
+      .single();
+
+    if (companyError || !companyData || !companyData.imagen) {
+      return { success: false, message: 'No se encontró imagen para eliminar' };
+    }
+
+    // Eliminar archivo de Supabase Storage
+    const { error: storageError } = await client.storage
+      .from('images')
+      .remove([companyData.imagen]);
+
+    if (storageError) {
+      return { success: false, message: 'Error eliminando archivo: ' + storageError.message };
+    }
+
+    // Actualizar la base de datos para limpiar el campo imagen
+    const { error: updateError } = await client
+      .from('empresas')
+      .update({ imagen: null })
+      .eq('id', companyId);
+
+    if (updateError) {
+      return { success: false, message: 'Archivo eliminado pero no se pudo actualizar la base de datos: ' + updateError.message };
+    }
+
+    return { success: true, message: 'Imagen eliminada exitosamente' };
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Error eliminando imagen de empresa.' };
   }
 }

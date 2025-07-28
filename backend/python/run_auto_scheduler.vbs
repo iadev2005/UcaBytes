@@ -4,7 +4,7 @@ Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 strPath = fso.GetParentFolderName(WScript.ScriptFullName)
-pythonCmd = "pythonw.exe """ & strPath & "\auto_scheduler.py"""
+pythonCmd = "python """ & strPath & "\auto_scheduler.py"""
 
 WshShell.Run pythonCmd, 0, False
 

@@ -2,6 +2,7 @@ import argparse
 import sys
 import json
 import time
+import os
 from graphAPI import extract_instagram_id, make_api_request, set_token
 
 def create_video_container(instagram_id, video_url, caption=None):
@@ -55,10 +56,50 @@ def main():
         creation_id = container_response['id']
         print(f"Contenedor de video creado con ID: {creation_id}")
         
-        # Si se proporciona scheduled_time, no publicar inmediatamente
+        # Si se proporciona scheduled_time, guardar en scheduled_posts.json
         if args.scheduled_time:
             print(f"Video programado para: {args.scheduled_time}")
-            print(json.dumps({'success': True, 'creation_id': creation_id}))
+            
+            # Guardar en scheduled_posts.json
+            print("[DEBUG] Guardando en scheduled_posts.json...")
+            scheduled_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scheduled_posts.json')
+            
+            posts = []
+            if os.path.exists(scheduled_path):
+                try:
+                    with open(scheduled_path, 'r', encoding='utf-8') as f:
+                        posts = json.load(f)
+                except Exception as e:
+                    print(f"[WARNING] Error leyendo archivo existente: {e}")
+                    posts = []
+            
+            # Agregar el nuevo video programado
+            new_post = {
+                'instagram_id': instagram_id,
+                'creation_id': creation_id,
+                'scheduled_time': args.scheduled_time,
+                'caption': args.caption,
+                'video_url': args.video_url,
+                'media_type': 'REELS',
+                'is_video': True
+            }
+            
+            posts.append(new_post)
+            
+            # Guardar el archivo
+            try:
+                with open(scheduled_path, 'w', encoding='utf-8') as f:
+                    json.dump(posts, f, indent=2, ensure_ascii=False)
+                print(f"[DEBUG] Video programado guardado exitosamente")
+            except Exception as e:
+                print(f"[ERROR] Error guardando archivo: {e}")
+                result = {'success': False, 'error': f'Error guardando programación: {str(e)}'}
+                print(json.dumps(result))
+                sys.exit(1)
+            
+            # Enviar respuesta de éxito
+            result = {'success': True, 'creation_id': creation_id, 'scheduled_time': args.scheduled_time}
+            print(json.dumps(result))
             return
         
         # Paso 2: Publicar el video con reintentos
