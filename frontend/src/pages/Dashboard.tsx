@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
 import { cn } from '../lib/utils';
-import { getSalesByCompany, getProductsByCompany, getServicesByCompany } from '../supabase/data';
+import { getSalesByCompany, getProductsByCompany, getServicesByCompany, getEmployeesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 interface FollowerData {
@@ -229,9 +229,15 @@ export default function Dashboard() {
         setServiciosData([]);
       }
 
-      // Por ahora, mantener empleados como array vacío
-      // ya que no tenemos esa función en Supabase aún
-      setEmpleadosData([]);
+      // Cargar empleados desde Supabase
+      const empleadosResult = await getEmployeesByCompany(companyData.id);
+      if (empleadosResult.success) {
+        setEmpleadosData(empleadosResult.data || []);
+        console.log('✅ Empleados cargados desde Supabase:', empleadosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando empleados:', empleadosResult.error);
+        setEmpleadosData([]);
+      }
       
     } catch (error) {
       console.error('❌ Error cargando datos de Supabase:', error);
@@ -550,8 +556,16 @@ export default function Dashboard() {
     const salarioPromedio = empleadosData.reduce((total, emp) => total + (emp.salario || 0), 0) / totalEmpleados;
     const empleadosPagados = empleadosData.filter(emp => emp.pagado).length;
     
-    // Simular empleados nuevos vs actuales (en un sistema real esto vendría de fechas de contratación)
-    const empleadosNuevos = totalEmpleados > 1 ? Math.floor(totalEmpleados * 0.3) : 0; // 30% nuevos, mínimo 0
+    // Calcular empleados nuevos vs actuales basado en fecha de ingreso
+    const fechaActual = new Date();
+    const seisMesesAtras = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 6, fechaActual.getDate());
+    
+    const empleadosNuevos = empleadosData.filter(emp => {
+      if (!emp.fecha_ingreso) return false;
+      const fechaIngreso = new Date(emp.fecha_ingreso);
+      return fechaIngreso >= seisMesesAtras;
+    }).length;
+    
     const empleadosActuales = totalEmpleados - empleadosNuevos;
 
     // Agrupar empleados por categoría usando el campo correcto
@@ -1251,6 +1265,67 @@ export default function Dashboard() {
 
 
             </div>
+
+            {/* Tabla de empleados */}
+            {empleadosData.length > 0 && (
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Lista de Empleados</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Empleado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Cargo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Departamento</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Salario</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha Ingreso</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Contacto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {empleadosData.slice(0, 10).map((emp, index) => (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                                {emp.nombre.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{emp.nombre}</div>
+                                <div className="text-xs text-gray-500">{emp.ci}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700">{emp.puesto}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {emp.categoria}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-medium text-gray-900">
+                            ${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {emp.fecha_ingreso ? new Date(emp.fecha_ingreso).toLocaleDateString('es-MX') : 'No especificada'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-xs">
+                              <div className="text-gray-600">{emp.email}</div>
+                              <div className="text-gray-500">{emp.telefono}</div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {empleadosData.length > 10 && (
+                    <div className="text-center py-4 text-sm text-gray-500">
+                      Mostrando 10 de {empleadosData.length} empleados
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -1281,7 +1356,7 @@ export default function Dashboard() {
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
             
             {/* Métricas principales */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
                 <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Total Empleados</h3>
                 <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.totalEmpleados}</p>
@@ -1292,48 +1367,44 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${(datosEmpleados.salarioPromedio * datosEmpleados.totalEmpleados).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
                 <p className="text-sm text-[var(--color-secondary-500)] mt-1">Total mensual</p>
               </div>
-              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Empleados Pagados</h3>
-                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.empleadosPagados}</p>
-                <p className="text-sm text-[var(--color-primary-500)] mt-1">Nómina pagada</p>
+              <div className="bg-green-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-green-700 mb-2">Empleados Nuevos</h3>
+                <p className="text-3xl font-bold text-green-600">{datosEmpleados.empleadosNuevos}</p>
+                <p className="text-sm text-green-500 mt-1">Últimos 6 meses</p>
               </div>
-              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Salario Promedio</h3>
-                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosEmpleados.salarioPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Por empleado</p>
+              <div className="bg-blue-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-blue-700 mb-2">Salario Promedio</h3>
+                <p className="text-3xl font-bold text-blue-600">${datosEmpleados.salarioPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-blue-500 mt-1">Por empleado</p>
+              </div>
+            </div>
+
+            {/* Métricas secundarias */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-orange-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-orange-700 mb-2">Empleados Actuales</h3>
+                <p className="text-3xl font-bold text-orange-600">{datosEmpleados.empleadosActuales}</p>
+                <p className="text-sm text-orange-500 mt-1">Más de 6 meses</p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-purple-700 mb-2">Departamentos</h3>
+                <p className="text-3xl font-bold text-purple-600">{datosEmpleados.empleadosPorCategoria.length}</p>
+                <p className="text-sm text-purple-500 mt-1">Categorías activas</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-red-700 mb-2">Tasa de Crecimiento</h3>
+                <p className="text-3xl font-bold text-red-600">
+                  {datosEmpleados.totalEmpleados > 0 ? 
+                    ((datosEmpleados.empleadosNuevos / datosEmpleados.totalEmpleados) * 100).toFixed(1) : '0'}%
+                </p>
+                <p className="text-sm text-red-500 mt-1">Nuevos vs total</p>
               </div>
             </div>
 
             {/* Gráficos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Gráfico de empleados */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value, name) => {
-                        const labels = {
-                          total: 'Total',
-                          pagados: 'Pagados'
-                        };
-                        return [`${value} empleados`, labels[name as keyof typeof labels] || name];
-                      }}
-                      labelFormatter={(label) => `Período: ${label}`}
-                    />
-                    <Bar dataKey="total" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="pagados" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-
-
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Gráfico de empleados por departamento */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] lg:col-span-2">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados por Departamento</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={empleadosPorDeptoRRHH}>
@@ -1349,7 +1420,29 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
 
-
+              {/* Gráfico de empleados nuevos vs actuales */}
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribución de Empleados</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Nuevos', value: datosEmpleados.empleadosNuevos, fill: '#10B981' },
+                        { name: 'Actuales', value: datosEmpleados.empleadosActuales, fill: '#F59E0B' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} empleados`, 'Cantidad']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         );
