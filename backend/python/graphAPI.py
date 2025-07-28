@@ -128,7 +128,7 @@ def create_instagram_post(instagram_id):
         print_json(publish_response)
         return publish_response
     else:
-        print("❌ No se pudo crear el contenedor de la publicación")
+        print("No se pudo crear el contenedor de la publicación")
         return None
 
 def load_scheduled_posts():
@@ -155,11 +155,11 @@ def schedule_instagram_post(instagram_id):
             scheduled_time = fecha_dt.timestamp()
             
             if scheduled_time <= time.time():
-                print("❌ La fecha debe ser futura. Por favor, intente de nuevo.")
+                print("La fecha debe ser futura. Por favor, intente de nuevo.")
                 continue
             break
         except ValueError:
-            print("❌ Formato de fecha incorrecto. Use DD/MM/YYYY HH:MM")
+            print("Formato de fecha incorrecto. Use DD/MM/YYYY HH:MM")
     
     print("\nCreando contenedor de la publicación...")
     container_params = {
@@ -190,7 +190,7 @@ def schedule_instagram_post(instagram_id):
         print("Puede cerrar este programa. El servicio post_scheduler.py se encargará de la publicación.")
         return container_response
     else:
-        print("❌ No se pudo crear el contenedor de la publicación")
+        print("No se pudo crear el contenedor de la publicación")
         return None
 
 def get_post_details(post_id):
@@ -235,11 +235,11 @@ def show_post_list_and_select(instagram_id):
                     return None
                 if 1 <= seleccion <= len(data['data']):
                     return data['data'][seleccion - 1]['id']
-                print("❌ Número no válido")
+                print("Número no válido")
             except ValueError:
-                print("❌ Por favor, ingrese un número válido")
+                print("Por favor, ingrese un número válido")
     else:
-        print("❌ No se encontraron publicaciones")
+        print("No se encontraron publicaciones")
         return None
 
 def print_json(data):
@@ -298,7 +298,7 @@ def get_follower_history():
             
             print(f"{date}: {followers} seguidores{variation}")
     else:
-        print("❌ No se encontró el archivo de histórico de seguidores")
+        print("No se encontró el archivo de histórico de seguidores")
 
 def show_menu():
     while True:
@@ -339,7 +339,7 @@ def show_menu():
                 data = get_instagram_details(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
         
         elif opcion == "4":
             print("\nObteniendo ID de Instagram Business...")
@@ -350,7 +350,7 @@ def show_menu():
                 data = create_instagram_post(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
 
         elif opcion == "5":
             print("\nObteniendo ID de Instagram Business...")
@@ -361,7 +361,7 @@ def show_menu():
                 data = schedule_instagram_post(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
         
         elif opcion == "6":
             posts = load_scheduled_posts()
@@ -384,7 +384,7 @@ def show_menu():
                 data = get_instagram_posts(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
         
         elif opcion == "8":
             print("\nObteniendo ID de Instagram Business...")
@@ -397,7 +397,7 @@ def show_menu():
                     data = get_post_details(post_id)
                     print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
 
         elif opcion == "9":
             print("\nObteniendo ID de Instagram Business...")
@@ -408,7 +408,7 @@ def show_menu():
                 data = get_follower_insights(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
 
         elif opcion == "10":
             print("\nObteniendo ID de Instagram Business...")
@@ -419,7 +419,7 @@ def show_menu():
                 data = get_follower_demographics(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
 
         elif opcion == "11":
             print("\nObteniendo ID de Instagram Business...")
@@ -430,7 +430,7 @@ def show_menu():
                 data = get_follower_demographics_by_age(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
 
         elif opcion == "12":
             print("\nObteniendo ID de Instagram Business...")
@@ -441,7 +441,7 @@ def show_menu():
                 data = get_follower_demographics_by_city(instagram_id)
                 print_json(data)
             else:
-                print("❌ No se encontró una cuenta de Instagram Business asociada")
+                print("No se encontró una cuenta de Instagram Business asociada")
         
         elif opcion == "13":
             get_follower_history()
@@ -451,7 +451,7 @@ def show_menu():
             break
         
         else:
-            print("\n❌ Opción no válida. Por favor, intente de nuevo.")
+            print("\nOpción no válida. Por favor, intente de nuevo.")
 
 if __name__ == "__main__":
     show_menu()

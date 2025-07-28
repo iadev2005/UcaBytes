@@ -1,201 +1,315 @@
-import { useState, useRef } from 'react';
-import { cn } from '../../lib/utils';
-import { storage } from '../../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import React, { useState, useRef } from 'react';
+import { client } from '../../supabase/client';
+import { uploadCompanyImage } from '../../supabase/data';
 
 interface ImageUploaderProps {
-  value: string;
-  onChange: (value: string) => void;
+  onUploadComplete: (urls: string[]) => void;
+  multiple?: boolean;
+  accept?: string;
+  maxFiles?: number;
   className?: string;
-  placeholder?: string;
+  manualUrls?: string[]; // URLs manuales para mostrar en preview
+  onRemoveManualUrl?: (index: number) => void; // Función para remover URL manual
+  isCompanyUpload?: boolean; // Indica si es para subir imagen de empresa
+  companyId?: number; // ID de la empresa (requerido si isCompanyUpload es true)
 }
 
-export default function ImageUploader({ value, onChange, className, placeholder = 'Imagen' }: ImageUploaderProps) {
+export default function ImageUploader({ 
+  onUploadComplete, 
+  multiple = true, 
+  accept = "image/*,video/*",
+  maxFiles = 10,
+  className = "",
+  manualUrls = [],
+  onRemoveManualUrl,
+  isCompanyUpload = false,
+  companyId
+}: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [previews, setPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
 
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      handleFile(file);
+    // Verificar si ya se alcanzó el límite
+    if (manualUrls.length >= maxFiles) {
+      alert(`Ya tienes ${maxFiles} archivos. No puedes agregar más.`);
+      return;
     }
+
+    const files = Array.from(e.dataTransfer.files);
+    await handleFiles(files);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFile(file);
-    }
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    await handleFiles(files);
   };
 
-  const handleFile = async (file: File) => {
-    // Subir a Firebase Storage y obtener URL pública
+  const handleFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    // Validar número máximo de archivos
+    if (!multiple && files.length > 1) {
+      alert('Solo puedes subir un archivo a la vez');
+      return;
+    }
+
+    // Verificar límite total de archivos (solo manuales)
+    const totalFiles = manualUrls.length;
+    if (totalFiles + files.length > maxFiles) {
+      alert(`Ya tienes ${totalFiles} archivos. Solo puedes agregar ${maxFiles - totalFiles} archivo${maxFiles - totalFiles > 1 ? 's' : ''} más.`);
+      return;
+    }
+
+    if (files.length > maxFiles) {
+      alert(`Puedes subir máximo ${maxFiles} archivos`);
+      return;
+    }
+
+    // Validar tipos de archivo
+    const validFiles = files.filter(file => {
+      const isValidImage = file.type.startsWith('image/');
+      const isValidVideo = file.type.startsWith('video/');
+      return isValidImage || isValidVideo;
+    });
+
+    if (validFiles.length !== files.length) {
+      alert('Algunos archivos no son imágenes o videos válidos');
+      return;
+    }
+
+    // Validar que se proporcione companyId si es upload de empresa
+    if (isCompanyUpload && !companyId) {
+      alert('Error: Se requiere el ID de la empresa para subir imágenes de empresa');
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress({});
+
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const storageRef = ref(storage, `imagenes/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      onChange(url);
-    } catch (err) {
-      alert('Error al subir la imagen. Intenta de nuevo.');
-      console.error(err);
+      const uploadedUrls: string[] = [];
+      const newPreviews: string[] = [];
+
+      for (const file of validFiles) {
+        // Crear preview
+        const preview = URL.createObjectURL(file);
+        newPreviews.push(preview);
+
+        if (isCompanyUpload && companyId) {
+          // Subir imagen de empresa
+          const result = await uploadCompanyImage(file, companyId);
+          
+          if (result.success && result.url) {
+            uploadedUrls.push(result.url);
+            setUploadProgress(prev => ({
+              ...prev,
+              [file.name]: 100
+            }));
+          } else {
+            throw new Error(`Error al subir ${file.name}: ${result.message}`);
+          }
+        } else {
+          // Subir archivo normal a uploads
+          const timestamp = Date.now();
+          const randomId = Math.random().toString(36).substring(2, 15);
+          const fileExtension = file.name.split('.').pop() || 'jpg';
+          const fileName = `avatars/${timestamp}-${randomId}.${fileExtension}`;
+
+          const { data, error } = await client.storage
+            .from('images')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (error) {
+            console.error('Error uploading file:', error);
+            throw new Error(`Error al subir ${file.name}: ${error.message}`);
+          }
+
+          // Obtener URL pública
+          const { data: urlData } = client.storage
+            .from('images')
+            .getPublicUrl(fileName);
+
+          if (urlData?.publicUrl) {
+            uploadedUrls.push(urlData.publicUrl);
+            setUploadProgress(prev => ({
+              ...prev,
+              [fileName]: 100
+            }));
+          }
+        }
+      }
+
+      // No agregar a previews internos, solo notificar al componente padre
+      onUploadComplete(uploadedUrls);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(`Error al subir archivos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
+      setUploading(false);
+      setUploadProgress({});
     }
   };
 
-  const handleUrlSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const url = formData.get('url') as string;
-    if (url) {
-      onChange(url);
-      setShowPreview(false);
-    }
+  const removeFile = (index: number) => {
+    const newPreviews = previews.filter((_, i) => i !== index);
+    setPreviews(newPreviews);
+    // También deberías remover la URL correspondiente del array de URLs
+    // Esto requeriría manejar las URLs en el componente padre
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={`w-full ${className}`}>
+      {/* Área de drag and drop */}
       <div
-        className={cn(
-          "relative group border-2 border-dashed rounded-lg transition-all",
-          isDragging ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50",
-          value ? "aspect-square" : "p-8"
-        )}
-        onDragOver={handleDragOver}
+        className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          isDragging
+            ? 'border-blue-500 bg-blue-50'
+            : manualUrls.length >= maxFiles
+            ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
+            : 'border-gray-300 hover:border-gray-400 bg-gray-50 cursor-pointer'
+        } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+        onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onClick={manualUrls.length >= maxFiles ? undefined : openFileDialog}
       >
-        {value ? (
-          <>
-            <img
-              src={value}
-              alt={placeholder}
-              className="w-full h-full object-cover rounded-lg"
-            />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-              <button
-                onClick={() => setShowPreview(true)}
-                className="p-2 bg-white rounded-full hover:bg-gray-100 cursor-pointer"
-                title="Cambiar imagen"
-              >
-                📝
-              </button>
-              <button
-                onClick={() => onChange('')}
-                className="p-2 bg-white rounded-full hover:bg-gray-100 cursor-pointer"
-                title="Eliminar imagen"
-              >
-                🗑
-              </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple={multiple}
+          accept={accept}
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={manualUrls.length >= maxFiles}
+        />
+
+        {uploading ? (
+          <div className="space-y-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="text-sm text-gray-600">Subiendo archivos...</p>
+          </div>
+        ) : (manualUrls.length > 0) ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {/* Mostrar solo URLs manuales */}
+              {manualUrls.map((url, index) => (
+                <div key={`manual-${index}`} className="relative group">
+                  {url.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i) ? (
+                    <video
+                      src={url}
+                      className="w-full h-24 object-cover rounded-lg"
+                      controls
+                    />
+                  ) : (
+                    <img
+                      src={url}
+                      alt={`URL ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="absolute top-1 left-1 bg-green-600 text-white text-xs px-1 py-0.5 rounded">
+                    URL
+                  </div>
+                  {onRemoveManualUrl && (
+                    <button
+                      onClick={() => onRemoveManualUrl(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-          </>
+            <p className="text-xs text-gray-500 text-center">
+              {manualUrls.length} archivo{manualUrls.length > 1 ? 's' : ''} seleccionado{manualUrls.length > 1 ? 's' : ''}
+            </p>
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center">
-            <div className="text-4xl mb-2">🖼</div>
-            <div className="text-sm font-medium mb-1">
-              Arrastra una imagen aquí o
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-sm text-primary hover:underline cursor-pointer"
-              >
-                selecciona un archivo
-              </button>
-              <span className="text-gray-400">|</span>
-              <button
-                onClick={() => setShowPreview(true)}
-                className="text-sm text-primary hover:underline cursor-pointer"
-              >
-                introduce URL
-              </button>
+          <div className="space-y-2">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              stroke="currentColor"
+              fill="none"
+              viewBox="0 0 48 48"
+            >
+              <path
+                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="text-sm text-gray-600">
+              <p className="font-medium">
+                {manualUrls.length >= maxFiles 
+                  ? 'Límite de archivos alcanzado' 
+                  : 'Arrastra archivos aquí o haz clic para seleccionar'
+                }
+              </p>
+              <p className="text-xs mt-1">
+                {manualUrls.length >= maxFiles
+                  ? `Ya tienes ${maxFiles} archivos seleccionados`
+                  : `Imágenes y videos (máximo ${maxFiles} archivos)`
+                }
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
 
-      {showPreview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Cambiar imagen</h3>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
 
-            <div className="space-y-4">
-              <form onSubmit={handleUrlSubmit} className="flex gap-2">
-                <input
-                  type="url"
-                  name="url"
-                  placeholder="https://ejemplo.com/imagen.jpg"
-                  className="flex-1 px-3 py-2 border rounded-md"
-                  defaultValue={value}
+      {/* Barra de progreso */}
+      {Object.keys(uploadProgress).length > 0 && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(uploadProgress).map(([fileName, progress]) => (
+            <div key={fileName} className="space-y-1">
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{fileName}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
                 />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-                >
-                  Guardar
-                </button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
-                  <div className="border-t border-gray-300" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="bg-white px-2 text-sm text-gray-500">o</span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={cn(
-                  "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
-                  isDragging ? "border-primary bg-primary/5" : "border-gray-300"
-                )}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="text-4xl mb-2">📁</div>
-                <div className="text-sm font-medium mb-1">
-                  Arrastra una imagen aquí o
-                </div>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-sm text-primary hover:underline cursor-pointer"
-                >
-                  selecciona un archivo
-                </button>
               </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
     </div>

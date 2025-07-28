@@ -2,6 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useEffect, useState } from 'react';
 import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
+import TokenGuide from '../components/marketing/TokenGuide';
 import { cn } from '../lib/utils';
 import { getSalesByCompany, getProductsByCompany, getServicesByCompany, getEmployeesByCompany } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
@@ -89,7 +90,7 @@ export default function Dashboard() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [validatingToken, setValidatingToken] = useState(false);
   const [initializing, setInitializing] = useState(true);
-
+  const [showTokenGuide, setShowTokenGuide] = useState(false);
   // Contexto de la empresa
   const { companyData } = useCompany();
 
@@ -189,6 +190,10 @@ export default function Dashboard() {
       setShowTokenModal(false);
       setTokenError(null);
     }
+  };
+
+  const handleShowTokenGuide = () => {
+    setShowTokenGuide(true);
   };
 
   // Cargar datos de operaciones centrales desde Supabase
@@ -1036,9 +1041,7 @@ export default function Dashboard() {
         const datosProductos = procesarDatosProductos();
 
         // Crear datos para gráficos basados en datos reales
-        const ventasChartData = datosVentas.ventasMensuales.length > 0 ? datosVentas.ventasMensuales : [
-          { mes: 'Sin datos', ventas: 0 }
-        ];
+        const ventasChartData = datosVentas.ventasMensuales.length > 0 ? datosVentas.ventasMensuales : [];
 
         // Usar productos vendidos reales si existen, sino usar productos del inventario
         const productosVendidos = datosVentas.productosVendidos.length > 0 ? datosVentas.productosVendidos : 
@@ -1046,9 +1049,7 @@ export default function Dashboard() {
             nombre: prod.categoria,
             cantidad: prod.cantidad,
             porcentaje: Math.round(((prod.cantidad as number) / datosProductos.totalProductos) * 100)
-          })) : [
-            { nombre: 'Sin productos', cantidad: 0, porcentaje: 0 }
-          ]);
+          })) : []);
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
@@ -1106,52 +1107,70 @@ export default function Dashboard() {
               {/* Gráfico de ventas mensuales */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Ventas Mensuales</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={ventasChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Bar dataKey="ventas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {ventasChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={ventasChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Bar dataKey="ventas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📊</div>
+                      <p className="text-gray-500 text-lg">No hay datos de ventas disponibles</p>
+                      <p className="text-gray-400 text-sm">Registra algunas ventas para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gráfico de productos más vendidos */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Productos Más Vendidos</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={productosVendidos}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomPieLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {productosVendidos.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value, name) => [`${value} unidades`, name === 'cantidad' ? 'Cantidad' : 'Producto']}
-                      labelFormatter={(label) => `Producto: ${label}`}
-                      contentStyle={{
-                        fontSize: '12px',
-                        padding: '8px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {productosVendidos.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={productosVendidos}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomPieLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="cantidad"
+                      >
+                        {productosVendidos.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value, name) => [`${value} unidades`, name === 'cantidad' ? 'Cantidad' : 'Producto']}
+                        labelFormatter={(label) => `Producto: ${label}`}
+                        contentStyle={{
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📦</div>
+                      <p className="text-gray-500 text-lg">No hay productos vendidos</p>
+                      <p className="text-gray-400 text-sm">Registra ventas con productos para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
-
-
             </div>
           </div>
         );
@@ -1163,20 +1182,10 @@ export default function Dashboard() {
         const datosServicios = procesarDatosServicios();
 
         // Crear datos para gráficos basados en datos reales
-        const serviciosChartData = datosServicios.serviciosMensuales.length > 0 ? datosServicios.serviciosMensuales : [
-          { mes: 'Sin datos', servicios: 0, ingresos: 0 }
-        ];
+        const serviciosChartData = datosServicios.serviciosMensuales.length > 0 ? datosServicios.serviciosMensuales : [];
 
         // Usar servicios por tipo reales si existen
-        const serviciosPorTipo = datosServicios.serviciosPorTipo.length > 0 ? datosServicios.serviciosPorTipo : 
-          (datosServicios.totalServicios > 0 ? [
-            { tipo: 'Servicios Generales', cantidad: Math.ceil(datosServicios.totalServicios * 0.4), porcentaje: 40 },
-            { tipo: 'Mantenimiento', cantidad: Math.ceil(datosServicios.totalServicios * 0.3), porcentaje: 30 },
-            { tipo: 'Consultoría', cantidad: Math.ceil(datosServicios.totalServicios * 0.2), porcentaje: 20 },
-            { tipo: 'Otros', cantidad: Math.ceil(datosServicios.totalServicios * 0.1), porcentaje: 10 }
-          ] : [
-            { tipo: 'Sin servicios', cantidad: 0, porcentaje: 0 }
-          ]);
+        const serviciosPorTipo = datosServicios.serviciosPorTipo.length > 0 ? datosServicios.serviciosPorTipo : [];
 
 
 
@@ -1212,58 +1221,74 @@ export default function Dashboard() {
               {/* Gráfico de servicios mensuales */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servicios Mensuales</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={serviciosChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value, name) => [
-                        name === 'servicios' ? `${value} servicios` : name === 'ingresos' ? `$${value.toLocaleString()}` : `${value} clientes`, 
-                        name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes'
-                      ]}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Bar dataKey="servicios" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="ingresos" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {serviciosChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={serviciosChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          name === 'servicios' ? `${value} servicios` : name === 'ingresos' ? `$${value.toLocaleString()}` : `${value} clientes`, 
+                          name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes'
+                        ]}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Bar dataKey="servicios" fill="#10B981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="ingresos" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">🔧</div>
+                      <p className="text-gray-500 text-lg">No hay datos de servicios disponibles</p>
+                      <p className="text-gray-400 text-sm">Registra algunos servicios para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gráfico de servicios por tipo */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servicios por Tipo</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={serviciosPorTipo}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomPieLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {serviciosPorTipo.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value, name) => [`${value} servicios`, name === 'cantidad' ? 'Cantidad' : 'Servicio']}
-                      labelFormatter={(label) => `Tipo: ${label}`}
-                      contentStyle={{
-                        fontSize: '12px',
-                        padding: '8px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {serviciosPorTipo.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={serviciosPorTipo}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomPieLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="cantidad"
+                      >
+                        {serviciosPorTipo.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value, name) => [`${value} servicios`, name === 'cantidad' ? 'Cantidad' : 'Servicio']}
+                        labelFormatter={(label) => `Tipo: ${label}`}
+                        contentStyle={{
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📋</div>
+                      <p className="text-gray-500 text-lg">No hay servicios registrados</p>
+                      <p className="text-gray-400 text-sm">Agrega algunos servicios para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
-
-
-
-
             </div>
 
             {/* Tabla de empleados */}
@@ -1346,11 +1371,7 @@ export default function Dashboard() {
         const empleadosPorDeptoRRHH = datosEmpleados.empleadosPorCategoria.length > 0 ? datosEmpleados.empleadosPorCategoria.map(emp => ({
           departamento: emp.categoria || 'Sin categoría',
           empleados: Number(emp.cantidad) || 0
-        })) : [
-          { departamento: 'Administrativo', empleados: 2 },
-          { departamento: 'Ventas', empleados: 3 },
-          { departamento: 'Soporte', empleados: 1 }
-        ];
+        })) : [];
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
@@ -1406,42 +1427,62 @@ export default function Dashboard() {
               {/* Gráfico de empleados por departamento */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] lg:col-span-2">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados por Departamento</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosPorDeptoRRHH}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="departamento" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`${value} empleados`, 'Empleados']}
-                      labelFormatter={(label) => `Departamento: ${label}`}
-                    />
-                    <Bar dataKey="empleados" fill="#06B6D4" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {empleadosPorDeptoRRHH.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={empleadosPorDeptoRRHH}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="departamento" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [`${value} empleados`, 'Empleados']}
+                        labelFormatter={(label) => `Departamento: ${label}`}
+                      />
+                      <Bar dataKey="empleados" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">👥</div>
+                      <p className="text-gray-500 text-lg">No hay empleados registrados</p>
+                      <p className="text-gray-400 text-sm">Agrega algunos empleados para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gráfico de empleados nuevos vs actuales */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribución de Empleados</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Nuevos', value: datosEmpleados.empleadosNuevos, fill: '#10B981' },
-                        { name: 'Actuales', value: datosEmpleados.empleadosActuales, fill: '#F59E0B' }
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} empleados`, 'Cantidad']} />
-                  </PieChart>
-                </ResponsiveContainer>
+                {datosEmpleados.totalEmpleados > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Nuevos', value: datosEmpleados.empleadosNuevos, fill: '#10B981' },
+                          { name: 'Actuales', value: datosEmpleados.empleadosActuales, fill: '#F59E0B' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} empleados`, 'Cantidad']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📊</div>
+                      <p className="text-gray-500 text-lg">No hay empleados</p>
+                      <p className="text-gray-400 text-sm">Agrega empleados para ver la distribución</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1512,6 +1553,12 @@ export default function Dashboard() {
         isLoading={validatingToken}
         error={tokenError}
         showCancelButton={false}
+        onShowGuide={handleShowTokenGuide}
+      />
+      
+      <TokenGuide
+        isOpen={showTokenGuide}
+        onClose={() => setShowTokenGuide(false)}
       />
     </div>
   );

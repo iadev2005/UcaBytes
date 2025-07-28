@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ImageUploader from './ImageUploader';
+import TokenGuide from './TokenGuide';
 
 interface InstagramAssistantProps {
   posts: any[] | null;
@@ -35,6 +37,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
   const [showAddPost, setShowAddPost] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>(['']); // Array de URLs de imágenes
   const [imagePreviews, setImagePreviews] = useState<string[]>([]); // Array de previews
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]); // URLs subidas a Supabase
   const [caption, setCaption] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -55,10 +58,12 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
   const [showStoryForm, setShowStoryForm] = useState(false);
   const [storyMediaUrl, setStoryMediaUrl] = useState('');
   const [storyPreview, setStoryPreview] = useState('');
+  const [storyUploadedUrl, setStoryUploadedUrl] = useState(''); // URL subida a Supabase para historias
   const [storyDate, setStoryDate] = useState('');
   const [storyTime, setStoryTime] = useState('');
   const [publishingStory, setPublishingStory] = useState(false);
   const [storyPublishMsg, setStoryPublishMsg] = useState<string | null>(null);
+  const [showTokenGuide, setShowTokenGuide] = useState(false);
   
 
 
@@ -370,6 +375,43 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
       reader.readAsDataURL(file);
     }
   };
+
+  // Función para manejar uploads completados desde Supabase
+  const handleUploadComplete = (urls: string[]) => {
+    // Agregar las URLs de Supabase a las existentes
+    setUploadedUrls(prev => [...prev, ...urls]);
+    
+    // Agregar cada URL subida a los inputs de URL
+    urls.forEach(url => {
+      setImageUrls(prev => {
+        // Si es la primera URL y hay un input vacío, reemplazarlo
+        if (prev.length === 1 && prev[0].trim() === '') {
+          return [url];
+        }
+        // Si no, agregar al final
+        return [...prev, url];
+      });
+      
+      setImagePreviews(prev => {
+        // Si es la primera URL y hay un preview vacío, reemplazarlo
+        if (prev.length === 1 && prev[0] === '') {
+          return [url];
+        }
+        // Si no, agregar al final
+        return [...prev, url];
+      });
+    });
+  };
+
+  // Función para manejar uploads de historias completados desde Supabase
+  const handleStoryUploadComplete = (urls: string[]) => {
+    if (urls.length > 0) {
+      setStoryUploadedUrl(urls[0]);
+      setStoryPreview(urls[0]);
+      // Actualizar storyMediaUrl para que aparezca en el input de URL
+      setStoryMediaUrl(urls[0]);
+    }
+  };
   const handleImageUrlChange = (index: number, value: string) => {
     const newUrls = [...imageUrls];
     newUrls[index] = value;
@@ -381,6 +423,12 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
   };
 
   const addImageUrl = () => {
+    // Verificar límite total de archivos (URLs manuales + URLs subidas)
+    const totalFiles = imageUrls.filter(url => url.trim() !== '').length + uploadedUrls.length;
+    if (totalFiles >= 10) {
+      alert('Ya tienes 10 archivos. No puedes agregar más.');
+      return;
+    }
     setImageUrls([...imageUrls, '']);
     setImagePreviews([...imagePreviews, '']);
   };
@@ -407,6 +455,8 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
     setLoadingScheduled(false);
   };
 
+
+
   const handleDeleteScheduled = async (creation_id: string) => {
     try {
       await fetch(`http://localhost:3001/api/instagram/scheduled-posts/${creation_id}`, { method: 'DELETE' });
@@ -417,15 +467,35 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
   };
 
   const handlePublish = async () => {
+    console.log('[DEBUG] handlePublish iniciado');
+    console.log('[DEBUG] imageUrls:', imageUrls);
+    console.log('[DEBUG] uploadedUrls:', uploadedUrls);
+    console.log('[DEBUG] caption:', caption);
+    
     setPublishing(true);
     setPublishMsg(null);
     
-    // Filtrar URLs válidas
-    const validUrls = imageUrls.filter(url => url.trim() !== '');
+    // Actualizar el token en el backend para que el auto_scheduler lo use
+    try {
+      await fetch(`http://localhost:3001/api/instagram/current-token?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log('[DEBUG] Token actualizado en el backend');
+    } catch (error) {
+      console.log('[DEBUG] Error actualizando token en backend:', error);
+      // Continuar aunque falle la actualización del token
+    }
+    
+    // Usar solo las URLs de imageUrls ya que ahora incluyen tanto manuales como subidas
+    const allUrls = imageUrls.filter(url => url.trim() !== '');
     const validPreviews = imagePreviews.filter(preview => preview !== '');
     
-    if (validUrls.length === 0 && validPreviews.length === 0) {
-      setPublishMsg('Debes ingresar al menos una URL de imagen o video.');
+    console.log('[DEBUG] allUrls filtradas:', allUrls);
+    console.log('[DEBUG] validPreviews:', validPreviews);
+    
+    if (allUrls.length === 0 && validPreviews.length === 0) {
+      setPublishMsg('Debes subir al menos una imagen o video o ingresar una URL.');
       setPublishing(false);
       return;
     }
@@ -450,7 +520,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
     
     try {
       // Detectar automáticamente si es video basándose en la URL
-      const firstUrl = validUrls[0] || validPreviews[0];
+      const firstUrl = allUrls[0] || validPreviews[0];
       const isVideo = firstUrl.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i) || 
                      firstUrl.includes('video') || 
                      firstUrl.includes('reel');
@@ -464,17 +534,17 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
       };
       
       // Verificar si es carrusel (múltiples URLs)
-      const isCarousel = validUrls.length > 1 || validPreviews.length > 1;
+      const isCarousel = allUrls.length > 1 || validPreviews.length > 1;
       
       if (isCarousel) {
         // Es un carrusel (puede ser mixto o solo imágenes)
-        const hasVideos = validUrls.some(url => 
+        const hasVideos = allUrls.some((url: string) => 
           url.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i) || 
           url.includes('video') || 
           url.includes('reel')
         );
         
-        const hasImages = validUrls.some(url => 
+        const hasImages = allUrls.some((url: string) => 
           !url.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i) && 
           !url.includes('video') && 
           !url.includes('reel')
@@ -483,15 +553,15 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
         if (hasVideos && hasImages) {
           // Carrusel mixto
           endpoint = 'http://localhost:3001/api/instagram/create-mixed-carousel';
-          body.media_urls = validUrls.filter(url => url.trim() !== '');
+          body.media_urls = allUrls.filter((url: string) => url.trim() !== '');
         } else if (hasVideos) {
           // Carrusel solo videos
           endpoint = 'http://localhost:3001/api/instagram/create-mixed-carousel';
-          body.media_urls = validUrls.filter(url => url.trim() !== '');
+          body.media_urls = allUrls.filter((url: string) => url.trim() !== '');
         } else {
           // Carrusel solo imágenes
           endpoint = 'http://localhost:3001/api/instagram/create-carousel';
-          body.image_urls = validUrls.filter(url => url.trim() !== '');
+          body.image_urls = allUrls.filter((url: string) => url.trim() !== '');
         }
       } else if (isVideo) {
         // Es un video individual
@@ -505,7 +575,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
       
       // Manejar programación si se especificó fecha y hora
       if (date && time) {
-        const isCarouselForScheduling = validUrls.length > 1 || validPreviews.length > 1;
+        const isCarouselForScheduling = allUrls.length > 1 || validPreviews.length > 1;
         
         if (isCarouselForScheduling) {
           endpoint = 'http://localhost:3001/api/instagram/schedule-carousel';
@@ -526,6 +596,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
       }
       
       console.log('[DEBUG] Frontend enviando:', { endpoint, body });
+      console.log('[DEBUG] Body stringificado:', JSON.stringify(body));
       
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -535,6 +606,12 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
       
       console.log('[DEBUG] Response status:', res.status);
       console.log('[DEBUG] Response ok:', res.ok);
+      console.log('[DEBUG] Response headers:', res.headers);
+      
+      if (!res.ok) {
+        console.log('[DEBUG] Error response text:', await res.text());
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
       
       const data = await res.json();
       console.log('[DEBUG] Response data:', data);
@@ -546,6 +623,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
         // Limpiar formulario
         setImageUrls(['']);
         setImagePreviews([]);
+        setUploadedUrls([]);
         setCaption('');
         setDate('');
         setTime('');
@@ -553,9 +631,11 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
         setPublishMsg(data.error || 'Error al publicar.');
       }
     } catch (e) {
+      console.error('[DEBUG] Error en handlePublish:', e);
       setPublishMsg('Error de red o backend.');
     }
     setPublishing(false);
+    console.log('[DEBUG] handlePublish finalizado');
   };
 
   const handleShowSuggestions = async () => {
@@ -676,9 +756,12 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
     console.log('[DEBUG] storyDate:', storyDate);
     console.log('[DEBUG] storyTime:', storyTime);
     
-    if (!storyMediaUrl.trim() && !storyPreview) {
-      console.log('[DEBUG] URL y preview vacíos, mostrando mensaje de error');
-      setStoryPublishMsg('Por favor ingresa una URL de imagen o video o arrastra un archivo');
+    // Usar URL manual si está disponible, sino usar URL de Supabase
+    const mediaUrlToUse = storyMediaUrl.trim() || storyUploadedUrl || storyPreview;
+    
+    if (!mediaUrlToUse) {
+      console.log('[DEBUG] No hay URL disponible, mostrando mensaje de error');
+      setStoryPublishMsg('Por favor sube una imagen/video o ingresa una URL');
       return;
     }
 
@@ -694,7 +777,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
     setStoryPublishMsg(null);
 
     try {
-      const mediaUrl = storyMediaUrl.trim() || storyPreview;
+      const mediaUrl = mediaUrlToUse;
       let endpoint = 'http://localhost:3001/api/instagram/create-story';
       let requestBody: any = {
         media_url: mediaUrl,
@@ -730,6 +813,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
         setStoryPublishMsg(isScheduled ? '¡Historia programada con éxito!' : '¡Historia publicada con éxito!');
         setStoryMediaUrl('');
         setStoryPreview('');
+        setStoryUploadedUrl('');
         setStoryDate('');
         setStoryTime('');
         // Recargar las historias después de publicar
@@ -1026,44 +1110,24 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
                 <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">
                   Medios {imageUrls.length > 1 ? '(Carrusel)' : ''}
                 </label>
-                <div
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-2 lg:px-3 py-4 lg:py-6 text-center cursor-pointer hover:border-[var(--color-primary-700)] transition-colors mb-2 bg-gray-50"
-                  onDrop={handleImageDrop}
-                  onDragOver={e => e.preventDefault()}
-                >
-                  {imagePreviews.length > 0 && imagePreviews.some(preview => preview && preview.trim() !== '') ? (
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {imagePreviews.map((preview, index) => (
-                        preview && preview.trim() !== '' && (
-                          <div key={index} className="relative">
-                            {isVideoUrl(imageUrls[index]) ? (
-                              <InstagramVideo 
-                                src={preview} 
-                                className="max-h-32 rounded" 
-                                showControls={true}
-                                isPreview={true}
-                                isDragArea={true}
-                              />
-                            ) : (
-                              <img src={preview} alt={`preview ${index + 1}`} className="max-h-32 rounded" />
-                            )}
-                            {imageUrls.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeImageUrl(index)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs lg:text-sm">Arrastra una imagen/video aquí o ingresa las URLs abajo</span>
-                  )}
-                </div>
+                
+                {/* Componente de upload con drag and drop a Supabase */}
+                <ImageUploader
+                  onUploadComplete={handleUploadComplete}
+                  multiple={true}
+                  accept="image/*,video/*"
+                  maxFiles={10}
+                  className="mb-4"
+                  manualUrls={imageUrls.filter(url => url.trim() !== '')}
+                  onRemoveManualUrl={(index) => {
+                    const newUrls = [...imageUrls];
+                    newUrls.splice(index, 1);
+                    setImageUrls(newUrls);
+                    const newPreviews = [...imagePreviews];
+                    newPreviews.splice(index, 1);
+                    setImagePreviews(newPreviews);
+                  }}
+                />
                 
                 {/* URLs de imágenes */}
                 {imageUrls.map((url, index) => (
@@ -1091,10 +1155,18 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
                 <button
                   type="button"
                   onClick={addImageUrl}
-                  className="w-full mt-2 bg-gray-100 text-gray-600 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer text-xs lg:text-sm"
+                  disabled={imageUrls.filter(url => url.trim() !== '').length + uploadedUrls.length >= 10}
+                  className={`w-full mt-2 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 flex items-center justify-center gap-2 cursor-pointer text-xs lg:text-sm transition-colors ${
+                    imageUrls.filter(url => url.trim() !== '').length + uploadedUrls.length >= 10
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 >
                   <span className="text-lg lg:text-xl font-bold">+</span>
-                  Agregar otra imagen/video
+                  {imageUrls.filter(url => url.trim() !== '').length + uploadedUrls.length >= 10
+                    ? 'Límite alcanzado (10 archivos)'
+                    : 'Agregar otra imagen/video'
+                  }
                 </button>
                 
                 {imageUrls.length > 1 && (
@@ -1174,37 +1246,32 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
             }}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Medio</label>
-                <div
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-3 py-6 text-center cursor-pointer hover:border-[var(--color-primary-700)] transition-colors mb-2 bg-gray-50"
-                  onDrop={handleStoryDrop}
-                  onDragOver={e => e.preventDefault()}
-                >
-                  {storyPreview ? (
-                    <div className="flex justify-center">
-                      {isVideoUrl(storyPreview) ? (
-                        <InstagramVideo 
-                          src={storyPreview} 
-                          className="max-h-32 rounded" 
-                          showControls={true}
-                          isPreview={true}
-                          isDragArea={true}
-                        />
-                      ) : (
-                        <img src={storyPreview} alt="preview" className="max-h-32 rounded" />
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">Arrastra una imagen/video aquí o ingresa la URL abajo</span>
-                  )}
-                </div>
                 
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]"
-                  placeholder="URL de imagen/video..."
-                  value={storyMediaUrl}
-                  onChange={(e) => handleStoryUrlChange(e.target.value)}
+                {/* Componente de upload con drag and drop a Supabase para historias */}
+                <ImageUploader
+                  onUploadComplete={handleStoryUploadComplete}
+                  multiple={false}
+                  accept="image/*,video/*"
+                  maxFiles={1}
+                  className="mb-4"
+                  manualUrls={storyMediaUrl ? [storyMediaUrl] : []}
+                  onRemoveManualUrl={() => {
+                    setStoryMediaUrl('');
+                    setStoryPreview('');
+                  }}
                 />
+                
+                {/* Campo para URL manual como alternativa */}
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-500 mb-1">O ingresa una URL manual:</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-700)]"
+                    placeholder="URL de imagen/video..."
+                    value={storyMediaUrl}
+                    onChange={(e) => handleStoryUrlChange(e.target.value)}
+                  />
+                </div>
               </div>
               
               <div className="flex gap-2">
@@ -1234,6 +1301,7 @@ export default function InstagramAssistant({ posts, isSidebarCollapsed, token }:
                   onClick={() => {
                     setStoryMediaUrl('');
                     setStoryPreview('');
+                    setStoryUploadedUrl('');
                     setStoryDate('');
                     setStoryTime('');
                     setStoryPublishMsg(null);
