@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import FormAdd from '../components/formularioAgregar';
 import Modal from '../components/Modal';
-import { getProductsByCompany, deleteProduct } from '../supabase/data';
+import { getProductsByCompany, deleteProduct, getServicesByCompany, createService, updateService, deleteService } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 
 // Eliminar mockProductos y mockServicios
@@ -123,24 +123,60 @@ export default function ProductsServices() {
         setLoading(false);
       }
     };
-
     loadProductos();
   }, [companyData?.id]);
 
-  // Recargar productos cuando se agrega uno nuevo
+  // Cargar servicios desde Supabase
+  useEffect(() => {
+    const loadServicios = async () => {
+      if (!companyData?.id) return;
+      
+      setLoading(true);
+      try {
+        const result = await getServicesByCompany(companyData.id);
+        if (result.success) {
+          setServicios(result.data || []);
+        } else {
+          console.error('Error cargando servicios:', result.error);
+          setServicios([]);
+        }
+      } catch (error) {
+        console.error('Error cargando servicios:', error);
+        setServicios([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadServicios();
+  }, [companyData?.id]);
+
   const reloadProductos = async () => {
     if (!companyData?.id) return;
     
-    setLoading(true);
     try {
       const result = await getProductsByCompany(companyData.id);
       if (result.success) {
         setProductos(result.data || []);
+      } else {
+        console.error('Error recargando productos:', result.error);
       }
     } catch (error) {
       console.error('Error recargando productos:', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const reloadServicios = async () => {
+    if (!companyData?.id) return;
+    
+    try {
+      const result = await getServicesByCompany(companyData.id);
+      if (result.success) {
+        setServicios(result.data || []);
+      } else {
+        console.error('Error recargando servicios:', result.error);
+      }
+    } catch (error) {
+      console.error('Error recargando servicios:', error);
     }
   };
 
@@ -165,9 +201,24 @@ export default function ProductsServices() {
     setModalOpen(false);
   };
 
-  const handleAddServicio = (servicio: any) => {
-    setServicios((prev) => [...prev, servicio]);
-    setModalOpen(false);
+  const handleAddServicio = async (servicio: any) => {
+    if (!companyData?.id) return;
+    
+    const result = await createService({
+      nombre: servicio.nombre_servicio,
+      descripcion: servicio.descripcion_servicio,
+      precio: parseFloat(servicio.precio_servicio),
+      plazo: servicio.plazo || undefined,
+      id_empresa: companyData.id
+    });
+
+    if (result.success) {
+      await reloadServicios(); // Recargar desde Supabase
+      setModalOpen(false);
+    } else {
+      console.error('Error creando servicio:', result.message);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
   };
 
   // Handler para editar producto
@@ -178,10 +229,26 @@ export default function ProductsServices() {
   };
 
   // Handler para editar servicio
-  const handleEditServicio = (servicioEditado: any) => {
-    setServicios((prev) => prev.map((s) => s.nombre_servicio === servicioEditado.nombre_servicio ? servicioEditado : s));
-    setEditServicio(null);
-    setModalOpen(false);
+  const handleEditServicio = async (servicioEditado: any) => {
+    if (!companyData?.id) return;
+    
+    const result = await updateService({
+      id_empresa: companyData.id,
+      nro_servicio: servicioEditado.nro_servicio,
+      nombre: servicioEditado.nombre_servicio,
+      descripcion: servicioEditado.descripcion_servicio,
+      precio: parseFloat(servicioEditado.precio_servicio),
+      plazo: servicioEditado.plazo || undefined
+    });
+
+    if (result.success) {
+      await reloadServicios(); // Recargar desde Supabase
+      setEditServicio(null);
+      setModalOpen(false);
+    } else {
+      console.error('Error actualizando servicio:', result.message);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
   };
 
   // Eliminar producto
@@ -199,8 +266,17 @@ export default function ProductsServices() {
   };
 
   // Eliminar servicio
-  const eliminarServicio = (nombre: string) => {
-    setServicios(servicios.filter(s => s.nombre_servicio !== nombre));
+  const eliminarServicio = async (id_empresa: number, nro_servicio: number) => {
+    const result = await deleteService(id_empresa, nro_servicio);
+    if (result.success) {
+      await reloadServicios(); // Recargar desde Supabase
+      setDeleteSuccess('Servicio eliminado exitosamente.');
+      setTimeout(() => setDeleteSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
+    } else {
+      console.error('Error eliminando servicio:', result.message);
+      setDeleteSuccess('Error al eliminar el servicio.');
+      setTimeout(() => setDeleteSuccess(null), 3000); // Limpiar mensaje después de 3 segundos
+    }
   };
 
   // Filtrar productos por categoría
@@ -328,7 +404,7 @@ export default function ProductsServices() {
           <div className="bg-white rounded-xl shadow p-4 border border-gray-200">
             <h3 className="text-sm font-semibold text-gray-600 mb-1">Precio Promedio</h3>
             <p className="text-xl sm:text-2xl font-bold text-[var(--color-secondary-600)]">
-              ${servicios.length > 0 ? (servicios.reduce((total, s) => total + parseFloat(s.precio_servicio), 0) / servicios.length).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
+              ${servicios.length > 0 ? (servicios.reduce((total, s) => total + parseFloat(s.precio), 0) / servicios.length).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}
             </p>
             <p className="text-xs text-gray-500">por servicio</p>
           </div>
@@ -426,42 +502,57 @@ export default function ProductsServices() {
       {/* Lista de servicios */}
       {tab === 'servicios' && (
         <div className="flex flex-col gap-4">
-          {servicios.length === 0 ? (
+          {loading ? (
+            <div className="text-center text-gray-400 py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary-600)] mx-auto mb-4"></div>
+              <p className="text-xl mb-2">Cargando servicios...</p>
+            </div>
+          ) : servicios.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay servicios registrados</p>
               <p>Haz clic en "Agregar servicio" para comenzar</p>
             </div>
           ) : (
             servicios.map((servicio) => (
-              <div key={servicio.nombre_servicio} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
+              <div key={`${servicio.id_empresa}-${servicio.nro_servicio}`} className="bg-white rounded-xl shadow p-4 sm:p-6 border border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-[var(--color-primary-700)]">
-                      {servicio.nombre_servicio}
+                      {servicio.nombre}
                     </h3>
-                    <p className="text-sm text-gray-500 mb-2">{servicio.descripcion_servicio}</p>
+                    <p className="text-sm text-gray-500 mb-2">{servicio.descripcion}</p>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[var(--color-primary-200)] text-[var(--color-primary-700)]">
-                        Servicio
+                        Servicio #{servicio.nro_servicio}
                       </span>
+                      {servicio.plazo && (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                          Vence: {new Date(servicio.plazo).toLocaleDateString('es-ES')}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-xl sm:text-2xl font-bold text-[var(--color-secondary-600)]">
-                      ${parseFloat(servicio.precio_servicio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      ${Number(servicio.precio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-gray-500">Precio por servicio</p>
+                    <p className="text-sm text-gray-500">
+                      Empresa ID: {servicio.id_empresa}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">Servicio disponible</span>
-                  </div>
+                  {/* Botones de editar/eliminar */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
-                        setEditServicio(servicio);
+                        setEditServicio({
+                          nro_servicio: servicio.nro_servicio,
+                          nombre_servicio: servicio.nombre,
+                          descripcion_servicio: servicio.descripcion,
+                          precio_servicio: servicio.precio.toString(),
+                          plazo: servicio.plazo ? new Date(servicio.plazo).toISOString().split('T')[0] : ''
+                        });
                         setModalOpen(true);
                       }}
                       className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors cursor-pointer"
@@ -469,8 +560,8 @@ export default function ProductsServices() {
                       Editar
                     </button>
                     <button
-                      onClick={() => eliminarServicio(servicio.nombre_servicio)}
-                      className="bg-[var(--color-secondary-400)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-500)] transition-colors cursor-pointer"
+                      onClick={() => eliminarServicio(servicio.id_empresa, servicio.nro_servicio)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors cursor-pointer"
                     >
                       Eliminar
                     </button>

@@ -1,19 +1,29 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { copyToClipboard, showCopyNotification } from '../lib/utils';
+import { 
+  updateCompany, 
+  uploadAvatar, 
+  getBankDataByCompany, 
+  getMobilePaymentDataByCompany, 
+  upsertBankData, 
+  upsertMobilePaymentData,
+  getBanks 
+} from '../supabase/data';
 
 export default function Perfil() {
     const { companyData, updateCompanyData, isEditing, setIsEditing } = useCompany();
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [popup, setPopup] = useState<{ open: boolean; message: string; success: boolean }>({ open: false, message: '', success: false });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Form data state
     const [formData, setFormData] = useState({
-        companyName: companyData.name,
-        companyType: companyData.type,
-        description: companyData.description,
+        description: '',
         paymentMethods: {
             creditCard: true,
             bankTransfer: true,
@@ -22,30 +32,114 @@ export default function Perfil() {
             cash: false
         },
         bankInfo: {
-            bankName: 'Banco Azteca',
-            accountNumber: '1234567890',
-            accountHolder: 'Nombre Empresa S.A. de C.V.',
+            bankCode: '',
+            bankName: '',
+            accountNumber: '',
+            accountHolder: '',
             accountType: 'Cuenta Corriente Empresarial'
         },
         mobilePaymentInfo: {
-            phoneNumber: '55-1234-5678',
-            rif: 'J-12345678-9',
-            bankName: 'Banco de Venezuela'
+            phoneNumber: '',
+            rif: '',
+            bankCode: '',
+            bankName: ''
         },
         contactInfo: {
-            paypalEmail: 'pagos@nombreempresa.com',
-            businessPhone: '55-9876-5432'
+            paypalEmail: '',
+            businessPhone: ''
         }
     });
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Cargar datos de la empresa y métodos de pago
+    useEffect(() => {
+        const loadData = async () => {
+            if (!companyData?.id) return;
+            
+            setLoading(true);
+            try {
+                // Cargar descripción desde companyData
+                setFormData(prev => ({
+                    ...prev,
+                    description: companyData.descripcion || '',
+                    contactInfo: {
+                        ...prev.contactInfo,
+                        businessPhone: companyData.telefono || ''
+                    }
+                }));
+
+                // Cargar datos bancarios
+                const bankResult = await getBankDataByCompany(companyData.id);
+                if (bankResult.success && bankResult.data && bankResult.data.length > 0) {
+                    const bankData = bankResult.data[0];
+                    setFormData(prev => ({
+                        ...prev,
+                        bankInfo: {
+                            bankCode: bankData.codigobanco,
+                            bankName: (bankData.bancos as any)?.nombre || '',
+                            accountNumber: bankData.nro_cuenta,
+                            accountHolder: companyData.razonsocial || '',
+                            accountType: 'Cuenta Corriente Empresarial'
+                        }
+                    }));
+                }
+
+                // Cargar datos de pago móvil
+                const mobileResult = await getMobilePaymentDataByCompany(companyData.id);
+                if (mobileResult.success && mobileResult.data && mobileResult.data.length > 0) {
+                    const mobileData = mobileResult.data[0];
+                    setFormData(prev => ({
+                        ...prev,
+                        mobilePaymentInfo: {
+                            phoneNumber: mobileData.telefono,
+                            rif: mobileData.cedula_rif,
+                            bankCode: mobileData.codigobanco,
+                            bankName: (mobileData.bancos as any)?.nombre || ''
+                        }
+                    }));
+                }
+
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [companyData]);
+
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                updateCompanyData({ profileImage: e.target?.result as string });
-            };
-            reader.readAsDataURL(file);
+        if (!file || !companyData) return;
+
+        setUploadingAvatar(true);
+        try {
+            const result = await uploadAvatar(file, companyData.id);
+            if ((result as any).success && (result as any).url) {
+                // Actualizar el avatar en la base de datos
+                const updateResult = await updateCompany(companyData.id, {
+                    rif: companyData.rif || '',
+                    razonsocial: companyData.razonsocial || '',
+                    descripcion: companyData.descripcion || '',
+                    direccion: companyData.direccion || '',
+                    telefono: companyData.telefono || '',
+                    fecha_fundacion: companyData.fecha_fundacion || '',
+                    avatar: (result as any).url
+                });
+                if (updateResult.success) {
+                    updateCompanyData({ avatar: (result as any).url });
+                    setPopup({ open: true, message: 'Avatar actualizado con éxito!', success: true });
+                } else {
+                    setPopup({ open: true, message: updateResult.message, success: false });
+                }
+            } else {
+                setPopup({ open: true, message: (result as any).message || 'Error al subir el avatar', success: false });
+            }
+        } catch (error) {
+            console.error('Error uploading avatar:', error);
+            setPopup({ open: true, message: 'Error al subir el avatar', success: false });
+        } finally {
+            setUploadingAvatar(false);
         }
     };
 
@@ -91,13 +185,58 @@ export default function Perfil() {
         setSelectedPaymentMethod(null);
     };
 
-    const handleSave = () => {
-        // Actualizar el contexto solo con la descripción
-        updateCompanyData({
-            description: formData.description
-        });
-        console.log('Datos guardados:', formData);
-        setIsEditing(false);
+    const handleSave = async () => {
+        if (!companyData?.id) return;
+        
+        setLoading(true);
+        try {
+            // Actualizar descripción en la empresa
+            const updateResult = await updateCompany(companyData.id, {
+                rif: companyData.rif || '',
+                razonsocial: companyData.razonsocial || '',
+                descripcion: formData.description,
+                direccion: companyData.direccion || '',
+                telefono: formData.contactInfo.businessPhone,
+                fecha_fundacion: companyData.fecha_fundacion || ''
+            });
+
+            if (updateResult.success) {
+                updateCompanyData({
+                    descripcion: formData.description,
+                    telefono: formData.contactInfo.businessPhone
+                });
+
+                // Guardar datos bancarios si están habilitados
+                if (formData.paymentMethods.bankTransfer && formData.bankInfo.bankCode) {
+                    await upsertBankData({
+                        id_empresa: companyData.id,
+                        codigobanco: formData.bankInfo.bankCode,
+                        nro_cuenta: formData.bankInfo.accountNumber,
+                        rif_cedula: companyData.rif
+                    });
+                }
+
+                // Guardar datos de pago móvil si están habilitados
+                if (formData.paymentMethods.mobilePayment && formData.mobilePaymentInfo.bankCode) {
+                    await upsertMobilePaymentData({
+                        id_empresa: companyData.id,
+                        codigobanco: formData.mobilePaymentInfo.bankCode,
+                        cedula_rif: formData.mobilePaymentInfo.rif,
+                        telefono: formData.mobilePaymentInfo.phoneNumber
+                    });
+                }
+
+                setPopup({ open: true, message: 'Datos guardados exitosamente!', success: true });
+                setIsEditing(false);
+            } else {
+                setPopup({ open: true, message: updateResult.message, success: false });
+            }
+        } catch (error) {
+            console.error('Error guardando datos:', error);
+            setPopup({ open: true, message: 'Error al guardar los datos', success: false });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleCancel = () => {
@@ -167,6 +306,22 @@ export default function Perfil() {
 
     const paymentMethodData = selectedPaymentMethod ? getPaymentMethodData(selectedPaymentMethod) : null;
 
+    // Cerrar popup automáticamente después de 2.5s
+    useEffect(() => {
+        if (popup.open) {
+            const timer = setTimeout(() => setPopup({ ...popup, open: false }), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [popup]);
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center">Cargando datos del perfil...</div>;
+    }
+
+    if (!companyData) {
+        return <div className="min-h-screen flex items-center justify-center">No se encontraron datos de la empresa.</div>;
+    }
+
     return (
         <motion.div 
             initial={{ opacity: 0 }}
@@ -174,6 +329,11 @@ export default function Perfil() {
             transition={{ duration: 0.5 }}
             className="min-h-screen h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-full overflow-y-auto"
         >
+            {popup.open && (
+                <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white ${popup.success ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {popup.message}
+                </div>
+            )}
             {/* Header with Profile Info */}
             <motion.div 
                 initial={{ y: -50, opacity: 0 }}
@@ -193,11 +353,11 @@ export default function Perfil() {
                             <motion.div 
                                 whileHover={{ scale: 1.05 }}
                                 className={`w-32 h-32 lg:w-40 lg:h-40 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                                    companyData.profileImage 
+                                    companyData.avatar 
                                         ? 'bg-cover bg-center' 
                                         : 'bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-600)]'
                                 }`}
-                                style={companyData.profileImage ? { backgroundImage: `url(${companyData.profileImage})` } : { backgroundImage: `url('${companyData.avatar}')` }}
+                                style={companyData.avatar ? { backgroundImage: `url(${companyData.avatar})` } : {}}
                             >
                             </motion.div>
                             
@@ -233,10 +393,10 @@ export default function Perfil() {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 leading-tight">
-                                        {formData.companyName}
+                                        {companyData.nombrecomercial}
                                     </h1>
                                     <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed font-medium">
-                                        {formData.companyType}
+                                        {companyData.razonsocial}
                                     </p>
                                 </div>
                                 

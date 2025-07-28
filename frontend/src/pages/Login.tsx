@@ -148,7 +148,7 @@ export default function Login() {
         <div className="w-full lg:w-2/5 bg-white flex flex-col justify-center px-6 sm:px-8 lg:px-10 py-8 lg:py-0 relative">
           {/* Back button */}
           <div className="absolute top-4 lg:top-6 left-4 lg:left-6">
-            <Link to="/Login-register" className="text-[var(--color-primary-600)] hover:text-[#2b7de0] transition-colors">
+            <Link to="/" className="text-[var(--color-primary-600)] hover:text-[#2b7de0] transition-colors">
               <ReturnIcon className="w-6 h-6 lg:w-8 lg:h-8" />
             </Link>
           </div>

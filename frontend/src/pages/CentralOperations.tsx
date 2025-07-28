@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
+import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany, findExistingClient, findClientByCI, getClientsByCompany, createServiceSale, getServiceSalesByCompany, getEmployeesByCompany, createEmployee, updateEmployee, deleteEmployee } from '../supabase/data';
+import { useCompany } from '../context/CompanyContext';
+import { client } from '../supabase/client';
 
 const mockEmpleados = [
   { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, foto: '', pagado: false }
@@ -92,61 +95,49 @@ const mockProductos = [
   },
 ];
 
-// Mock services data - usando el mismo formato que ProductsServices.tsx
-const mockServicios = [
-  {
-    nombre_servicio: 'Mantenimiento de Computadoras',
-    descripcion_servicio: 'Servicio completo de mantenimiento preventivo y correctivo para computadoras',
-    precio_servicio: '1500'
-  },
-  {
-    nombre_servicio: 'Instalación de Software',
-    descripcion_servicio: 'Instalación y configuración de software especializado',
-    precio_servicio: '800'
-  },
-  {
-    nombre_servicio: 'Recuperación de Datos',
-    descripcion_servicio: 'Servicio de recuperación de datos perdidos o eliminados',
-    precio_servicio: '2500'
-  },
-  {
-    nombre_servicio: 'Configuración de Red',
-    descripcion_servicio: 'Configuración e instalación de redes WiFi y cableadas',
-    precio_servicio: '1200'
-  },
-  {
-    nombre_servicio: 'Reparación de Impresoras',
-    descripcion_servicio: 'Servicio técnico especializado en impresoras y escáneres',
-    precio_servicio: '900'
-  },
-  {
-    nombre_servicio: 'Consultoría IT',
-    descripcion_servicio: 'Asesoramiento en tecnología y optimización de sistemas',
-    precio_servicio: '2000'
-  },
-  {
-    nombre_servicio: 'Backup y Seguridad',
-    descripcion_servicio: 'Implementación de sistemas de backup y seguridad informática',
-    precio_servicio: '1800'
-  },
-  {
-    nombre_servicio: 'Desarrollo Web',
-    descripcion_servicio: 'Desarrollo de sitios web y aplicaciones web personalizadas',
-    precio_servicio: '3500'
-  }
-];
+// Los servicios se cargarán desde Supabase
 
 const metodosPago = ['Efectivo', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Transferencia', 'PayPal'];
 
 // Types - actualizados para usar el formato de ProductsServices.tsx
 interface Producto {
-  id_producto: string;
-  rif_pyme: string;
+  id_producto: number;
+  rif_pyme?: string;
   nombre_producto: string;
   descripcion_producto: string;
-  precio_producto: string;
+  precio_producto: number;
   categoria_producto: string;
-  stock_producto: string;
+  stock_producto: number;
+  imagen_producto?: string;
+  cantidad?: number;
+  subtotal?: number;
+}
+
+// Interfaz para productos de Supabase
+interface SupabaseProducto {
+  id_empresa: number;
+  id_producto: number;
+  precio_venta: number;
+  cantidad_actual: number;
+  productos: {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    cantidad_minima: number;
+    cantidad_maxima: number;
+    imagen: string;
+    categoria: string;
+  };
+}
+
+// Interfaz para productos adaptados para ventas
+interface ProductoVenta {
+  id_producto: number;
+  nombre_producto: string;
+  descripcion_producto: string;
+  precio_producto: number;
+  categoria_producto: string;
+  stock_producto: number;
   imagen_producto?: string;
   cantidad?: number;
   subtotal?: number;
@@ -161,19 +152,20 @@ interface Servicio {
 }
 
 interface Cliente {
+  ci?: string;
   nombre: string;
+  apellido?: string;
   email: string;
   telefono: string;
-  direccion: string;
 }
 
 interface Venta {
   id: number;
-  productos: Producto[];
+  productos: ProductoVenta[];
   cliente: Cliente;
   metodoPago: string;
   fechaVenta: string;
-  fechaPago?: string;
+  fechaPago?: string | null;
   total: number;
   pagada: boolean;
 }
@@ -189,11 +181,35 @@ interface ServicioVenta {
   pagado: boolean;
 }
 
+interface SupabaseServicio {
+  id_empresa: number;
+  nro_servicio: number;
+  nombre: string;
+  descripcion: string;
+  plazo?: string;
+  precio: number;
+}
+
+interface SupabaseEmpleado {
+  ci: string;
+  nombre: string;
+  puesto: string;
+  categoria: string;
+  salario: number;
+  foto: string;
+  pagado: boolean;
+  email: string;
+  telefono: string;
+  fecha_ingreso?: string;
+}
+
 export default function CentralOperations() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
   const [cat, setCat] = useState('Todos');
   const [isInitialized, setIsInitialized] = useState(false);
+  const { companyData } = useCompany();
+  
   // Task planner state
   const [tareas, setTareas] = useState([
     { texto: 'Enviar facturas pendientes', prioridad: 'Alta', completada: false },
@@ -206,16 +222,40 @@ export default function CentralOperations() {
   const [editTexto, setEditTexto] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [empleados, setEmpleados] = useState(mockEmpleados.map(e => ({ ...e, pagado: false })));
+  const [empleados, setEmpleados] = useState<SupabaseEmpleado[]>([]);
+  const [loadingEmpleados, setLoadingEmpleados] = useState(false);
+  const [creatingEmpleado, setCreatingEmpleado] = useState(false);
+  const [updatingEmpleado, setUpdatingEmpleado] = useState(false);
+  const [deletingEmpleado, setDeletingEmpleado] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEditarEmpleado, setModalEditarEmpleado] = useState(false);
   const [empleadoEditando, setEmpleadoEditando] = useState<number | null>(null);
-  const [nuevoEmpleado, setNuevoEmpleado] = useState({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
+  const [nuevoEmpleado, setNuevoEmpleado] = useState({ 
+    ci: '', 
+    email: '', 
+    nombre: '', 
+    apellido: '', 
+    telefono: '', 
+    fecha_ingreso: '', 
+    puesto: '', 
+    categoria: 'Administrativo', 
+    salario: '', 
+    foto: '', 
+    pagado: false 
+  });
 
   // Sales state
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [modalVentaOpen, setModalVentaOpen] = useState(false);
-  const [productos, setProductos] = useState(mockProductos);
+  const [productos, setProductos] = useState<ProductoVenta[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(false);
+  const [loadingVentas, setLoadingVentas] = useState(false);
+  const [loadingServicios, setLoadingServicios] = useState(false);
+  const [creatingVenta, setCreatingVenta] = useState(false);
+  const [creatingServicio, setCreatingServicio] = useState(false);
+  const [saleSuccess, setSaleSuccess] = useState<string | null>(null);
+  const [clientesExistentes, setClientesExistentes] = useState<any[]>([]);
+
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date();
@@ -228,10 +268,11 @@ export default function CentralOperations() {
   const [nuevaVenta, setNuevaVenta] = useState({
     productos: [] as Producto[],
     cliente: {
+      ci: '',
       nombre: '',
+      apellido: '',
       email: '',
-      telefono: '',
-      direccion: ''
+      telefono: ''
     },
     metodoPago: 'Efectivo',
     fechaVenta: getCurrentDate(),
@@ -239,21 +280,22 @@ export default function CentralOperations() {
     total: 0,
     pagada: false
   });
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState<number | ''>('');
   const [cantidadProducto, setCantidadProducto] = useState(1);
   const [inputCantidadProducto, setInputCantidadProducto] = useState('1');
 
   // Services state
   const [ventasServicios, setVentasServicios] = useState<ServicioVenta[]>([]);
   const [modalServicioOpen, setModalServicioOpen] = useState(false);
-  const [servicios, setServicios] = useState(mockServicios);
+  const [servicios, setServicios] = useState<SupabaseServicio[]>([]);
   const [nuevaServicioVenta, setNuevaServicioVenta] = useState({
     servicios: [] as Servicio[],
     cliente: {
+      ci: '',
       nombre: '',
+      apellido: '',
       email: '',
-      telefono: '',
-      direccion: ''
+      telefono: ''
     },
     metodoPago: 'Efectivo',
     fechaServicio: getCurrentDate(),
@@ -288,101 +330,17 @@ export default function CentralOperations() {
     }
   }, [searchParams]);
 
+  // Guardar tareas en localStorage
   useEffect(() => {
     if (isInitialized) {
-      console.log('💾 Guardando tareas:', tareas);
       localStorage.setItem('task_planner', JSON.stringify(tareas));
     }
   }, [tareas, isInitialized]);
 
-  // Cargar todos los datos del localStorage al inicializar
+  // Marcar como inicializado
   useEffect(() => {
-    console.log('🔄 Cargando datos desde localStorage...');
-    
-    // Cargar tareas
-    const tareasGuardadas = localStorage.getItem('task_planner');
-    if (tareasGuardadas) {
-      const tareasCargadas = JSON.parse(tareasGuardadas);
-      setTareas(tareasCargadas);
-      console.log('📝 Tareas cargadas:', tareasCargadas);
-    }
-
-    // Cargar ventas
-    const ventasGuardadas = localStorage.getItem('ventas');
-    if (ventasGuardadas) {
-      const ventasCargadas = JSON.parse(ventasGuardadas);
-      setVentas(ventasCargadas);
-      console.log('💰 Ventas cargadas:', ventasCargadas);
-    }
-
-    // Cargar servicios vendidos
-    const ventasServiciosGuardadas = localStorage.getItem('ventasServicios');
-    if (ventasServiciosGuardadas) {
-      const serviciosCargados = JSON.parse(ventasServiciosGuardadas);
-      setVentasServicios(serviciosCargados);
-      console.log('🔧 Servicios vendidos cargados:', serviciosCargados);
-    }
-
-    // Cargar empleados
-    const empleadosGuardados = localStorage.getItem('empleados');
-    if (empleadosGuardados) {
-      const empleadosCargados = JSON.parse(empleadosGuardados);
-      setEmpleados(empleadosCargados);
-      console.log('👥 Empleados cargados:', empleadosCargados);
-    }
-
-    // Cargar productos del localStorage (sincronización con ProductsServices)
-    const productosGuardados = localStorage.getItem('productos');
-    if (productosGuardados) {
-      const productosCargados = JSON.parse(productosGuardados);
-      setProductos(productosCargados);
-      console.log('📦 Productos cargados:', productosCargados);
-    }
-
-    // Cargar servicios del localStorage (sincronización con ProductsServices)
-    const serviciosGuardados = localStorage.getItem('servicios');
-    if (serviciosGuardados) {
-      const serviciosCargados = JSON.parse(serviciosGuardados);
-      setServicios(serviciosCargados);
-      console.log('🔧 Servicios cargados:', serviciosCargados);
-    }
-
-    // Marcar como inicializado después de cargar todo
     setIsInitialized(true);
-    console.log('✅ Inicialización completada');
   }, []);
-
-  useEffect(() => {
-    const ventasGuardadas = localStorage.getItem('ventas');
-    console.log('Cargando ventas del localStorage:', ventasGuardadas);
-    if (ventasGuardadas) {
-      setVentas(JSON.parse(ventasGuardadas));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando ventas:', ventas);
-      localStorage.setItem('ventas', JSON.stringify(ventas));
-    }
-  }, [ventas, isInitialized]);
-
-
-
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando servicios vendidos:', ventasServicios);
-      localStorage.setItem('ventasServicios', JSON.stringify(ventasServicios));
-    }
-  }, [ventasServicios, isInitialized]);
-
-  // Guardar empleados en localStorage
-  useEffect(() => {
-    if (isInitialized) {
-      console.log('💾 Guardando empleados:', empleados);
-      localStorage.setItem('empleados', JSON.stringify(empleados));
-    }
-  }, [empleados, isInitialized]);
 
 
 
@@ -444,70 +402,189 @@ export default function CentralOperations() {
     setDragOverIdx(null);
   };
 
-  const handleAddEmpleado = (e: React.FormEvent) => {
+  const handleAddEmpleado = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEmpleado.nombre.trim() || !nuevoEmpleado.puesto.trim() || !nuevoEmpleado.salario) return;
-    setEmpleados([
-      ...empleados,
-      {
+    
+    // Validar campos obligatorios
+    if (!nuevoEmpleado.ci?.trim() || !nuevoEmpleado.email?.trim() || !nuevoEmpleado.nombre?.trim() || 
+        !nuevoEmpleado.apellido?.trim() || !nuevoEmpleado.telefono?.trim()) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    if (!companyData?.id) {
+      alert('Error: No se pudo obtener la información de la empresa');
+      return;
+    }
+
+    setCreatingEmpleado(true);
+    
+    try {
+      const empleadoData = {
+        ci: nuevoEmpleado.ci,
+        email: nuevoEmpleado.email,
         nombre: nuevoEmpleado.nombre,
-        puesto: nuevoEmpleado.puesto,
-        categoria: nuevoEmpleado.categoria,
-        salario: parseFloat(nuevoEmpleado.salario),
-        foto: nuevoEmpleado.foto,
-        pagado: false
+        apellido: nuevoEmpleado.apellido,
+        telefono: nuevoEmpleado.telefono,
+        fecha_ingreso: nuevoEmpleado.fecha_ingreso || null,
+        cargo: nuevoEmpleado.puesto,
+        salario: nuevoEmpleado.salario ? parseFloat(nuevoEmpleado.salario) : 0,
+        id_empresa: companyData.id
+      };
+
+      const result = await createEmployee(empleadoData);
+      
+      if (result.success && result.data) {
+        console.log('✅ Empleado creado exitosamente:', result.data);
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+        
+        // Limpiar formulario
+        setNuevoEmpleado({ 
+          ci: '', 
+          email: '', 
+          nombre: '', 
+          apellido: '', 
+          telefono: '', 
+          fecha_ingreso: '', 
+          puesto: '', 
+          categoria: 'Administrativo', 
+          salario: '', 
+          foto: '', 
+          pagado: false 
+        });
+        setModalOpen(false);
+      } else {
+        console.error('❌ Error creando empleado:', result.error);
+        alert(`Error al crear empleado: ${result.error}`);
       }
-    ]);
-    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
-    setModalOpen(false);
+    } catch (error) {
+      console.error('❌ Error creando empleado:', error);
+      alert('Error inesperado al crear empleado');
+    } finally {
+      setCreatingEmpleado(false);
+    }
   };
   const togglePagado = (idx: number) => {
     setEmpleados(empleados.map((e, i) => i === idx ? { ...e, pagado: !e.pagado } : e));
   };
 
   // Funciones para eliminar y editar empleados
-  const eliminarEmpleado = (idx: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
-      setEmpleados(empleados.filter((_, i) => i !== idx));
+  const eliminarEmpleado = async (ci: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+      return;
+    }
+
+    if (!companyData?.id) {
+      alert('Error: No se pudo obtener la información de la empresa');
+      return;
+    }
+
+    setDeletingEmpleado(ci);
+    
+    try {
+      const result = await deleteEmployee(ci, companyData.id);
+      
+      if (result.success) {
+        console.log('✅ Empleado eliminado exitosamente');
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+      } else {
+        console.error('❌ Error eliminando empleado:', result.message);
+        alert(`Error al eliminar empleado: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error eliminando empleado:', error);
+      alert('Error inesperado al eliminar empleado');
+    } finally {
+      setDeletingEmpleado(null);
     }
   };
 
-  const editarEmpleado = (idx: number) => {
-    const empleado = empleados[idx];
+  const editarEmpleado = (empleado: SupabaseEmpleado) => {
     setNuevoEmpleado({
+      ci: empleado.ci,
+      email: empleado.email,
       nombre: empleado.nombre,
+      apellido: empleado.apellido,
+      telefono: empleado.telefono,
+      fecha_ingreso: empleado.fecha_ingreso || '',
       puesto: empleado.puesto,
       categoria: empleado.categoria,
       salario: empleado.salario.toString(),
       foto: empleado.foto || '',
       pagado: empleado.pagado
     });
-    setEmpleadoEditando(idx);
+    setEmpleadoEditando(empleados.findIndex(e => e.ci === empleado.ci));
     setModalEditarEmpleado(true);
   };
 
-  const handleEditarEmpleado = (e: React.FormEvent) => {
+  const handleEditarEmpleado = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEmpleado.nombre.trim() || !nuevoEmpleado.puesto.trim() || !nuevoEmpleado.salario) return;
     
-    if (empleadoEditando !== null) {
-      setEmpleados(empleados.map((e, i) => 
-        i === empleadoEditando 
-          ? {
-              nombre: nuevoEmpleado.nombre,
-              puesto: nuevoEmpleado.puesto,
-              categoria: nuevoEmpleado.categoria,
-              salario: parseFloat(nuevoEmpleado.salario),
-              foto: nuevoEmpleado.foto,
-              pagado: nuevoEmpleado.pagado
-            }
-          : e
-      ));
+    // Validar campos obligatorios
+    if (!nuevoEmpleado.ci?.trim() || !nuevoEmpleado.email?.trim() || !nuevoEmpleado.nombre?.trim() || 
+        !nuevoEmpleado.apellido?.trim() || !nuevoEmpleado.telefono?.trim()) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
     }
+
+    if (!companyData?.id || empleadoEditando === null) {
+      alert('Error: No se pudo obtener la información necesaria');
+      return;
+    }
+
+    setUpdatingEmpleado(true);
     
-    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
-    setEmpleadoEditando(null);
-    setModalEditarEmpleado(false);
+    try {
+      const empleadoData = {
+        ci: nuevoEmpleado.ci,
+        email: nuevoEmpleado.email,
+        nombre: nuevoEmpleado.nombre,
+        apellido: nuevoEmpleado.apellido,
+        telefono: nuevoEmpleado.telefono,
+        fecha_ingreso: nuevoEmpleado.fecha_ingreso || null,
+        cargo: nuevoEmpleado.puesto,
+        salario: nuevoEmpleado.salario ? parseFloat(nuevoEmpleado.salario) : 0,
+        id_empresa: companyData.id
+      };
+
+      const result = await updateEmployee(empleadoData);
+      
+      if (result.success && result.data) {
+        console.log('✅ Empleado actualizado exitosamente:', result.data);
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+        
+        // Limpiar formulario
+        setNuevoEmpleado({ 
+          ci: '', 
+          email: '', 
+          nombre: '', 
+          apellido: '', 
+          telefono: '', 
+          fecha_ingreso: '', 
+          puesto: '', 
+          categoria: 'Administrativo', 
+          salario: '', 
+          foto: '', 
+          pagado: false 
+        });
+        setEmpleadoEditando(null);
+        setModalEditarEmpleado(false);
+      } else {
+        console.error('❌ Error actualizando empleado:', result.error);
+        alert(`Error al actualizar empleado: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Error actualizando empleado:', error);
+      alert('Error inesperado al actualizar empleado');
+    } finally {
+      setUpdatingEmpleado(false);
+    }
   };
 
   // Sales handlers
@@ -527,7 +604,7 @@ export default function CentralOperations() {
         ...nuevaVenta,
         productos: nuevaVenta.productos.map(p => 
           p.id_producto === producto.id_producto 
-            ? { ...p, cantidad: (p.cantidad || 0) + cantidad, subtotal: ((p.cantidad || 0) + cantidad) * parseFloat(p.precio_producto) }
+            ? { ...p, cantidad: (p.cantidad || 0) + cantidad, subtotal: ((p.cantidad || 0) + cantidad) * p.precio_producto }
             : p
         )
       });
@@ -537,7 +614,7 @@ export default function CentralOperations() {
         productos: [...nuevaVenta.productos, {
           ...producto,
           cantidad: cantidad,
-          subtotal: parseFloat(producto.precio_producto) * cantidad
+          subtotal: producto.precio_producto * cantidad
         }]
       });
     }
@@ -548,14 +625,14 @@ export default function CentralOperations() {
     setErroresVenta(prev => ({ ...prev, cantidad: '' }));
   };
 
-  const removerProductoDeVenta = (productoId: string) => {
+  const removerProductoDeVenta = (productoId: number) => {
     setNuevaVenta({
       ...nuevaVenta,
       productos: nuevaVenta.productos.filter(p => p.id_producto !== productoId)
     });
   };
 
-  const actualizarCantidadProducto = (productoId: string, nuevaCantidad: number) => {
+  const actualizarCantidadProducto = (productoId: number, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
       removerProductoDeVenta(productoId);
       return;
@@ -565,7 +642,7 @@ export default function CentralOperations() {
       ...nuevaVenta,
       productos: nuevaVenta.productos.map(p => 
         p.id_producto === productoId 
-          ? { ...p, cantidad: nuevaCantidad, subtotal: parseFloat(p.precio_producto) * nuevaCantidad }
+          ? { ...p, cantidad: nuevaCantidad, subtotal: p.precio_producto * nuevaCantidad }
           : p
       )
     });
@@ -575,40 +652,80 @@ export default function CentralOperations() {
     return nuevaVenta.productos.reduce((total, producto) => total + (producto.subtotal || 0), 0);
   };
 
-  const handleCrearVenta = (e: React.FormEvent) => {
+  const handleCrearVenta = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nuevaVenta.productos.length === 0) return;
     if (!nuevaVenta.cliente.nombre.trim()) return;
+    if (!companyData?.id) return;
 
-    const ventaCompleta: Venta = {
-      id: Date.now(),
-      ...nuevaVenta,
-      total: calcularTotal(),
-      fechaVenta: new Date(nuevaVenta.fechaVenta).toISOString(),
-      fechaPago: nuevaVenta.fechaPago ? new Date(nuevaVenta.fechaPago).toISOString() : undefined,
-      pagada: !!nuevaVenta.fechaPago
-    };
+    setCreatingVenta(true);
+    console.log('🔄 Creando venta en Supabase...');
+    console.log('📦 Productos:', nuevaVenta.productos);
+    console.log('👤 Cliente:', nuevaVenta.cliente);
+    console.log('🏢 Empresa ID:', companyData.id);
 
+    try {
+      const total = calcularTotal();
+      
+      // Preparar datos para Supabase
+      const productosParaSupabase = nuevaVenta.productos.map(producto => ({
+        id_producto: producto.id_producto,
+        cantidad: producto.cantidad || 0,
+        precio: producto.precio_producto
+      }));
 
-    setVentas([ventaCompleta, ...ventas]);
-    
-    // Reset form
-    setNuevaVenta({
-      productos: [],
-      cliente: {
-        nombre: '',
-        email: '',
-        telefono: '',
-        direccion: ''
-      },
-      metodoPago: 'Efectivo',
-      fechaVenta: getCurrentDate(),
-      fechaPago: '',
-      total: 0,
-      pagada: false
-    });
-    
-    setModalVentaOpen(false);
+      const result = await createSale({
+        cliente: nuevaVenta.cliente,
+        productos: productosParaSupabase,
+        metodoPago: nuevaVenta.metodoPago,
+        fechaVenta: nuevaVenta.fechaVenta,
+        fechaPago: nuevaVenta.fechaPago || undefined,
+        total,
+        id_empresa: companyData.id
+      });
+
+      console.log('📊 Resultado de creación de venta:', result);
+
+      if (result.success) {
+        console.log('✅ Venta creada exitosamente en Supabase');
+        // Recargar ventas desde Supabase
+        await loadVentas();
+        
+        // Recargar lista de clientes existentes para incluir el nuevo cliente
+        await loadClientesExistentes();
+        
+        // Reset form
+        setNuevaVenta({
+          productos: [],
+          cliente: {
+            ci: '',
+            nombre: '',
+            apellido: '',
+            email: '',
+            telefono: ''
+          },
+          metodoPago: 'Efectivo',
+          fechaVenta: getCurrentDate(),
+          fechaPago: '',
+          total: 0,
+          pagada: false
+        });
+        
+        setModalVentaOpen(false);
+        setSaleSuccess('Venta creada exitosamente');
+        setTimeout(() => setSaleSuccess(null), 3000);
+      } else {
+        console.error('❌ Error creando venta:', result.message);
+        setSaleSuccess('Error al crear la venta: ' + result.message);
+        setTimeout(() => setSaleSuccess(null), 5000);
+      }
+    } catch (error) {
+      console.error('Error creando venta:', error);
+      setSaleSuccess('Error interno al crear la venta');
+      setTimeout(() => setSaleSuccess(null), 5000);
+    } finally {
+      setCreatingVenta(false);
+    }
   };
 
   const eliminarVenta = (ventaId: number) => {
@@ -649,17 +766,17 @@ export default function CentralOperations() {
     const cantidad = typeof cantidadServicio === 'string' ? parseInt(cantidadServicio) || 1 : cantidadServicio;
     if (cantidad <= 0) return;
     
-    const servicio = servicios.find(s => s.nombre_servicio === servicioSeleccionado);
+    const servicio = servicios.find(s => s.nombre === servicioSeleccionado);
     if (!servicio) return;
 
-    const servicioExistente = nuevaServicioVenta.servicios.find(s => s.nombre_servicio === servicio.nombre_servicio);
+    const servicioExistente = nuevaServicioVenta.servicios.find(s => s.nombre_servicio === servicio.nombre);
     
     if (servicioExistente) {
       setNuevaServicioVenta({
         ...nuevaServicioVenta,
         servicios: nuevaServicioVenta.servicios.map(s => 
-          s.nombre_servicio === servicio.nombre_servicio 
-            ? { ...s, cantidad: (s.cantidad || 0) + cantidad, subtotal: ((s.cantidad || 0) + cantidad) * parseFloat(s.precio_servicio) }
+          s.nombre_servicio === servicio.nombre 
+            ? { ...s, cantidad: (s.cantidad || 0) + cantidad, subtotal: ((s.cantidad || 0) + cantidad) * servicio.precio }
             : s
         )
       });
@@ -667,9 +784,11 @@ export default function CentralOperations() {
       setNuevaServicioVenta({
         ...nuevaServicioVenta,
         servicios: [...nuevaServicioVenta.servicios, {
-          ...servicio,
+          nombre_servicio: servicio.nombre,
+          descripcion_servicio: servicio.descripcion,
+          precio_servicio: servicio.precio.toString(),
           cantidad: cantidad,
-          subtotal: parseFloat(servicio.precio_servicio) * cantidad
+          subtotal: servicio.precio * cantidad
         }]
       });
     }
@@ -705,40 +824,70 @@ export default function CentralOperations() {
     return nuevaServicioVenta.servicios.reduce((total, servicio) => total + (servicio.subtotal || 0), 0);
   };
 
-  const handleCrearServicioVenta = (e: React.FormEvent) => {
+  const handleCrearServicioVenta = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nuevaServicioVenta.servicios.length === 0) return;
     if (!nuevaServicioVenta.cliente.nombre.trim()) return;
 
-    const servicioVentaCompleta: ServicioVenta = {
-      id: Date.now(),
-      ...nuevaServicioVenta,
-      total: calcularTotalServicios(),
-      fechaServicio: new Date(nuevaServicioVenta.fechaServicio).toISOString(),
-      fechaPago: nuevaServicioVenta.fechaPago ? new Date(nuevaServicioVenta.fechaPago).toISOString() : undefined,
-      pagado: !!nuevaServicioVenta.fechaPago
-    };
+    if (!companyData?.id) {
+      alert('Error: No se pudo identificar la empresa');
+      return;
+    }
 
+    setCreatingServicio(true);
 
-    setVentasServicios([servicioVentaCompleta, ...ventasServicios]);
-    
-    // Reset form
-    setNuevaServicioVenta({
-      servicios: [],
-      cliente: {
-        nombre: '',
-        email: '',
-        telefono: '',
-        direccion: ''
-      },
-      metodoPago: 'Efectivo',
-      fechaServicio: new Date().toISOString().split('T')[0],
-      fechaPago: '',
-      total: 0,
-      pagado: false
-    });
-    
-    setModalServicioOpen(false);
+    try {
+      const result = await createServiceSale({
+        cliente: nuevaServicioVenta.cliente,
+        servicios: nuevaServicioVenta.servicios.map(servicio => ({
+          nombre_servicio: servicio.nombre_servicio,
+          descripcion_servicio: servicio.descripcion_servicio,
+          precio_servicio: servicio.precio_servicio,
+          cantidad: servicio.cantidad || 1
+        })),
+        metodoPago: nuevaServicioVenta.metodoPago,
+        fechaServicio: nuevaServicioVenta.fechaServicio,
+        fechaPago: nuevaServicioVenta.fechaPago || undefined,
+        total: calcularTotalServicios(),
+        id_empresa: companyData.id
+      });
+
+      if (result.success) {
+        // Recargar las ventas de servicios desde Supabase
+        await loadVentasServicios();
+        
+        // Recargar lista de clientes existentes para incluir el nuevo cliente
+        await loadClientesExistentes();
+        
+        // Reset form
+        setNuevaServicioVenta({
+          servicios: [],
+          cliente: {
+            ci: '',
+            nombre: '',
+            apellido: '',
+            email: '',
+            telefono: ''
+          },
+          metodoPago: 'Efectivo',
+          fechaServicio: new Date().toISOString().split('T')[0],
+          fechaPago: '',
+          total: 0,
+          pagado: false
+        });
+        
+        setModalServicioOpen(false);
+        setSaleSuccess('Venta de servicios creada exitosamente');
+        setTimeout(() => setSaleSuccess(''), 3000);
+      } else {
+        alert('Error al crear la venta de servicios: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error creando venta de servicios:', error);
+      alert('Error interno al crear la venta de servicios');
+    } finally {
+      setCreatingServicio(false);
+    }
   };
 
   const eliminarServicioVenta = (servicioVentaId: number) => {
@@ -782,8 +931,197 @@ export default function CentralOperations() {
     });
   };
 
+  // Cargar productos desde Supabase
+  const loadProductos = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingProductos(true);
+    try {
+      const result = await getProductsByCompany(companyData.id);
+      if (result.success && result.data) {
+        // Convertir productos de Supabase al formato necesario para ventas
+        const productosAdaptados: ProductoVenta[] = result.data.map((item: any) => ({
+          id_producto: item.productos.id,
+          nombre_producto: item.productos.nombre,
+          descripcion_producto: item.productos.descripcion,
+          precio_producto: item.precio_venta,
+          categoria_producto: item.productos.categoria,
+          stock_producto: item.cantidad_actual,
+          imagen_producto: item.productos.imagen
+        }));
+        setProductos(productosAdaptados);
+      } else {
+        console.error('Error cargando productos:', result.error);
+        setProductos([]);
+      }
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+      setProductos([]);
+    } finally {
+      setLoadingProductos(false);
+    }
+  };
+
+  // Cargar ventas desde Supabase
+  const loadVentas = async () => {
+    if (!companyData?.id) return;
+    
+    console.log('🔄 Cargando ventas desde Supabase para empresa:', companyData.id);
+    setLoadingVentas(true);
+    try {
+      const result = await getSalesByCompany(companyData.id);
+      console.log('📊 Resultado de carga de ventas:', result);
+      if (result.success) {
+        setVentas(result.data || []);
+        console.log('✅ Ventas cargadas desde Supabase:', result.data);
+      } else {
+        console.error('❌ Error cargando ventas:', result.error);
+        setVentas([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando ventas:', error);
+      setVentas([]);
+    } finally {
+      setLoadingVentas(false);
+    }
+  };
+
+  // Cargar servicios desde Supabase
+  const loadServicios = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingServicios(true);
+    try {
+      const result = await getServicesByCompany(companyData.id);
+      console.log('📊 Resultado de carga de servicios:', result);
+      if (result.success) {
+        setServicios(result.data || []);
+        console.log('✅ Servicios cargados desde Supabase:', result.data);
+      } else {
+        console.error('❌ Error cargando servicios:', result.error);
+        setServicios([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando servicios:', error);
+      setServicios([]);
+    } finally {
+      setLoadingServicios(false);
+    }
+  };
+
+  // Cargar ventas de servicios desde Supabase
+  const loadVentasServicios = async () => {
+    if (!companyData?.id) return;
+    
+    try {
+      const result = await getServiceSalesByCompany(companyData.id);
+      if (result.success && result.data) {
+        setVentasServicios(result.data);
+        console.log('✅ Ventas de servicios cargadas desde Supabase:', result.data.length);
+      } else {
+        console.error('Error cargando ventas de servicios:', result.error);
+        setVentasServicios([]);
+      }
+    } catch (error) {
+      console.error('Error cargando ventas de servicios:', error);
+      setVentasServicios([]);
+    }
+  };
+
+  // Cargar clientes existentes desde Supabase
+  const loadClientesExistentes = async () => {
+    if (!companyData?.id) {
+      console.log('⚠️ No hay companyData.id disponible para cargar clientes');
+      return;
+    }
+    
+    console.log('🔄 Cargando clientes existentes para empresa:', companyData.id);
+    try {
+      const result = await getClientsByCompany(companyData.id);
+      console.log('📊 Resultado de carga de clientes:', result);
+      if (result.success) {
+        setClientesExistentes(result.data || []);
+        console.log('✅ Clientes cargados desde Supabase:', result.data?.length || 0);
+        console.log('👥 Lista de clientes:', result.data);
+        console.log('🔍 Detalle de clientes:');
+        result.data?.forEach((cliente, index) => {
+          console.log(`  ${index + 1}. ${cliente.nombre} ${cliente.apellido} - ${cliente.email || cliente.telefono} (CI: ${cliente.ci})`);
+        });
+      } else {
+        console.error('❌ Error cargando clientes:', result.error);
+        setClientesExistentes([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando clientes:', error);
+      setClientesExistentes([]);
+    }
+  };
+
+  const loadEmpleados = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingEmpleados(true);
+    try {
+      const result = await getEmployeesByCompany(companyData.id);
+      if (result.success && result.data) {
+        setEmpleados(result.data);
+        console.log('✅ Empleados cargados desde Supabase:', result.data.length);
+      } else {
+        console.error('❌ Error cargando empleados:', result.error);
+        setEmpleados([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando empleados:', error);
+      setEmpleados([]);
+    } finally {
+      setLoadingEmpleados(false);
+    }
+  };
+
+  // Aplicar datos de cliente encontrado
+  const aplicarClienteEncontrado = (cliente: any, esVenta: boolean = true) => {
+    const clienteData = {
+      ci: cliente.ci,
+      nombre: cliente.nombre,
+      apellido: cliente.apellido || '',
+      email: cliente.email || '',
+      telefono: cliente.telefono || ''
+    };
+
+    if (esVenta) {
+      setNuevaVenta({
+        ...nuevaVenta,
+        cliente: clienteData
+      });
+    } else {
+      setNuevaServicioVenta({
+        ...nuevaServicioVenta,
+        cliente: clienteData
+      });
+    }
+  };
+
+  // Cargar productos cuando se inicializa el componente
+  useEffect(() => {
+    if (companyData?.id) {
+      loadProductos();
+      loadVentas();
+      loadServicios();
+      loadVentasServicios();
+      loadClientesExistentes();
+      loadEmpleados();
+    }
+  }, [companyData?.id]);
+
   return (
-    <div className="w-full mx-auto px-20 py-10 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
+    <div className="w-full mx-auto px-20 py-10 pb-30 bg-[var(--color-background)] min-h-screen h-screen overflow-y-auto">
+      {/* Mensaje de éxito */}
+      {saleSuccess && (
+        <div className="fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 bg-green-500 text-white">
+          {saleSuccess}
+        </div>
+      )}
+      
       {/* Tabs */}
       <div className="flex mb-8 w-full px-20 mx-auto">
         <div className="flex w-full rounded-2xl border-2 border-[var(--color-primary-600)] bg-white overflow-hidden">
@@ -906,16 +1244,18 @@ export default function CentralOperations() {
                   {/* Botones de acción */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => editarEmpleado(idx)}
-                      className="bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)] px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-300)] transition-colors cursor-pointer"
+                      onClick={() => editarEmpleado(emp)}
+                      disabled={updatingEmpleado}
+                      className="bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)] px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-300)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Editar
+                      {updatingEmpleado ? 'Editando...' : 'Editar'}
                     </button>
                     <button
-                      onClick={() => eliminarEmpleado(idx)}
-                      className="bg-[var(--color-secondary-400)] text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+                      onClick={() => eliminarEmpleado(emp.ci)}
+                      disabled={deletingEmpleado === emp.ci}
+                      className="bg-[var(--color-secondary-400)] text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Eliminar
+                      {deletingEmpleado === emp.ci ? 'Eliminando...' : 'Eliminar'}
                     </button>
                   </div>
                 </div>
@@ -985,7 +1325,12 @@ export default function CentralOperations() {
       {/* Lista de ventas */}
       {tab === 'ventas' && (
         <div className="flex flex-col gap-4 mb-15">
-          {ventas.length === 0 ? (
+          {loadingVentas ? (
+            <div className="text-center text-gray-400 py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary-600)] mx-auto mb-4"></div>
+              <p className="text-xl mb-2">Cargando ventas...</p>
+            </div>
+          ) : ventas.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-xl mb-2">No hay ventas registradas</p>
               <p>Haz clic en "Nueva Venta" para comenzar</p>
@@ -1226,8 +1571,8 @@ export default function CentralOperations() {
                     <h4 className="font-semibold text-[var(--color-primary-600)] mb-2">Servicios</h4>
                     <div className="space-y-1">
                       {servicioVenta.servicios.map((servicio) => (
-                        <div key={servicio.nombre_servicio} className="flex justify-between text-sm">
-                          <span className="flex-1 mr-2">{servicio.nombre_servicio} x{servicio.cantidad}</span>
+                                        <div key={servicio.nombre_servicio} className="flex justify-between text-sm">
+                  <span className="flex-1 mr-2">{servicio.nombre_servicio} x{servicio.cantidad}</span>
                           <span className="font-medium whitespace-nowrap">${(servicio.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                         </div>
                       ))}
@@ -1275,25 +1620,120 @@ export default function CentralOperations() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Agregar empleado" size="md">
         <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-full">
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Nombre</span>
-            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Puesto</span>
-            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Categoría</span>
-            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
-            </select>
-          </label>
+          {/* Campos obligatorios */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cédula de Identidad *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.ci} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, ci: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: V-12345678"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Email *</span>
+              <input 
+                type="email" 
+                value={nuevoEmpleado.email} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, email: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="empleado@empresa.com"
+                required 
+              />
+            </label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Nombre *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.nombre} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Apellido *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.apellido} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Teléfono *</span>
+              <input 
+                type="tel" 
+                value={nuevoEmpleado.telefono} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, telefono: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="0412-1234567"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Fecha de Ingreso</span>
+              <input 
+                type="date" 
+                value={nuevoEmpleado.fecha_ingreso} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, fecha_ingreso: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cargo</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.puesto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: Desarrollador, Gerente, etc."
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Categoría</span>
+              <select 
+                value={nuevoEmpleado.categoria} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              >
+                {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Salario mensual</span>
-            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={nuevoEmpleado.salario} 
+              onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} 
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              placeholder="0.00"
+            />
           </label>
-          <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          
+          {nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) && (
+            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+              Pago quincenal: <span className="font-semibold">${(Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Foto del empleado</span>
             <div className="flex gap-2">
@@ -1346,32 +1786,140 @@ export default function CentralOperations() {
               </div>
             )}
           </label>
-          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer">Agregar</button>
+          
+          <button 
+            type="submit" 
+            disabled={creatingEmpleado}
+            className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {creatingEmpleado ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Creando...
+              </>
+            ) : (
+              'Agregar Empleado'
+            )}
+          </button>
         </form>
       </Modal>
 
       {/* Modal para editar empleado */}
       <Modal open={modalEditarEmpleado} onClose={() => setModalEditarEmpleado(false)} title="Editar Empleado" size="md">
         <form onSubmit={handleEditarEmpleado} className="flex flex-col gap-4 w-full">
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Nombre</span>
-            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Puesto</span>
-            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Categoría</span>
-            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
-            </select>
-          </label>
+          {/* Campos obligatorios */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cédula de Identidad *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.ci} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, ci: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: V-12345678"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Email *</span>
+              <input 
+                type="email" 
+                value={nuevoEmpleado.email} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, email: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="empleado@empresa.com"
+                required 
+              />
+            </label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Nombre *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.nombre} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Apellido *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.apellido} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Teléfono *</span>
+              <input 
+                type="tel" 
+                value={nuevoEmpleado.telefono} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, telefono: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="0412-1234567"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Fecha de Ingreso</span>
+              <input 
+                type="date" 
+                value={nuevoEmpleado.fecha_ingreso} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, fecha_ingreso: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cargo</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.puesto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: Desarrollador, Gerente, etc."
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Categoría</span>
+              <select 
+                value={nuevoEmpleado.categoria} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              >
+                {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Salario mensual</span>
-            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={nuevoEmpleado.salario} 
+              onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} 
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              placeholder="0.00"
+            />
           </label>
-          <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          
+          {nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) && (
+            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+              Pago quincenal: <span className="font-semibold">${(Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Foto del empleado</span>
             <div className="flex gap-2">
@@ -1434,9 +1982,17 @@ export default function CentralOperations() {
             </button>
             <button 
               type="submit" 
-              className="flex-1 bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+              disabled={updatingEmpleado}
+              className="flex-1 bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Guardar Cambios
+              {updatingEmpleado ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Actualizando...
+                </>
+              ) : (
+                'Guardar Cambios'
+              )}
             </button>
           </div>
         </form>
@@ -1451,7 +2007,49 @@ export default function CentralOperations() {
               {/* Información del cliente */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Información del Cliente</h3>
+                
+                {/* Búsqueda de cliente existente */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">Seleccionar Cliente Existente</h4>
+                  
+                  {/* Desplegable de clientes existentes */}
+                  <div className="mb-3">
+                    <select
+                      className="w-full rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        const clienteId = e.target.value;
+                        if (clienteId) {
+                          const cliente = clientesExistentes.find(c => c.ci === clienteId);
+                          if (cliente) {
+                            aplicarClienteEncontrado(cliente, true);
+                          }
+                        }
+                      }}
+                      value=""
+                    >
+                      <option value="">Seleccionar cliente existente...</option>
+                      {clientesExistentes.map(cliente => (
+                        <option key={cliente.ci} value={cliente.ci}>
+                          {cliente.nombre} {cliente.apellido} - {cliente.email || cliente.telefono}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+
+                </div>
+
                 <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Cédula de Identidad</span>
+                    <input 
+                      type="text" 
+                      value={nuevaVenta.cliente.ci || ''} 
+                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, ci: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      placeholder="Ej: V-12345678"
+                    />
+                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Nombre *</span>
                     <input 
@@ -1460,6 +2058,15 @@ export default function CentralOperations() {
                       onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, nombre: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                       required 
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Apellido</span>
+                    <input 
+                      type="text" 
+                      value={nuevaVenta.cliente.apellido || ''} 
+                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, apellido: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
                   <label className="flex flex-col gap-1">
@@ -1497,15 +2104,7 @@ export default function CentralOperations() {
                     />
                     {erroresVenta.telefono && <span className="text-xs text-red-500 mt-1">{erroresVenta.telefono}</span>}
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="font-semibold">Dirección</span>
-                    <input 
-                      type="text" 
-                      value={nuevaVenta.cliente.direccion} 
-                      onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, direccion: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                    />
-                  </label>
+
                 </div>
               </div>
 
@@ -1560,13 +2159,16 @@ export default function CentralOperations() {
                   <div className="flex flex-col sm:flex-row gap-2">
                     <select
                       value={productoSeleccionado}
-                      onChange={e => setProductoSeleccionado(e.target.value)}
+                      onChange={e => setProductoSeleccionado(e.target.value ? parseInt(e.target.value) : '')}
                       className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                      disabled={loadingProductos}
                     >
-                      <option value="">Seleccionar producto...</option>
+                      <option value="">
+                        {loadingProductos ? 'Cargando productos...' : 'Seleccionar producto...'}
+                      </option>
                       {productos.map(producto => (
                         <option key={producto.id_producto} value={producto.id_producto}>
-                          {producto.nombre_producto} - ${parseFloat(producto.precio_producto).toLocaleString('es-MX')}
+                          {producto.nombre_producto} - ${producto.precio_producto.toLocaleString('es-MX')}
                         </option>
                       ))}
                     </select>
@@ -1585,7 +2187,7 @@ export default function CentralOperations() {
                             const prod = productos.find(p => p.id_producto === productoSeleccionado);
                             let error = '';
                             if (val < 1) error = 'Cantidad mínima 1';
-                            else if (prod && val > parseInt(prod.stock_producto)) error = `Stock máximo: ${prod.stock_producto}`;
+                            else if (prod && val > prod.stock_producto) error = `Stock máximo: ${prod.stock_producto}`;
                             setErroresVenta(prev => ({ ...prev, cantidad: error }));
                           } else {
                             setErroresVenta(prev => ({ ...prev, cantidad: '' }));
@@ -1622,7 +2224,7 @@ export default function CentralOperations() {
                         <div key={producto.id_producto} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2 rounded gap-2">
                           <div className="flex-1 min-w-0">
                             <span className="font-medium text-sm sm:text-base truncate block">{producto.nombre_producto}</span>
-                            <span className="text-xs sm:text-sm text-gray-500">${parseFloat(producto.precio_producto).toLocaleString('es-MX')} c/u</span>
+                            <span className="text-xs sm:text-sm text-gray-500">${producto.precio_producto.toLocaleString('es-MX')} c/u</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <input
@@ -1679,10 +2281,17 @@ export default function CentralOperations() {
             </button>
             <button
               type="submit"
-              disabled={nuevaVenta.productos.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
+              disabled={nuevaVenta.productos.length === 0 || creatingVenta}
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2"
             >
-              Crear Venta
+              {creatingVenta ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creando...
+                </>
+              ) : (
+                'Crear Venta'
+              )}
             </button>
           </div>
         </form>
@@ -1697,7 +2306,49 @@ export default function CentralOperations() {
               {/* Información del cliente */}
               <div>
                 <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Información del Cliente</h3>
+                
+                {/* Búsqueda de cliente existente */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">Seleccionar Cliente Existente</h4>
+                  
+                  {/* Desplegable de clientes existentes */}
+                  <div className="mb-3">
+                    <select
+                      className="w-full rounded border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      onChange={e => {
+                        const clienteId = e.target.value;
+                        if (clienteId) {
+                          const cliente = clientesExistentes.find(c => c.ci === clienteId);
+                          if (cliente) {
+                            aplicarClienteEncontrado(cliente, false);
+                          }
+                        }
+                      }}
+                      value=""
+                    >
+                      <option value="">Seleccionar cliente existente...</option>
+                      {clientesExistentes.map(cliente => (
+                        <option key={cliente.ci} value={cliente.ci}>
+                          {cliente.nombre} {cliente.apellido} - {cliente.email || cliente.telefono}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+
+                </div>
+
                 <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Cédula de Identidad</span>
+                    <input 
+                      type="text" 
+                      value={nuevaServicioVenta.cliente.ci || ''} 
+                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, ci: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                      placeholder="Ej: V-12345678"
+                    />
+                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="font-semibold">Nombre *</span>
                     <input 
@@ -1706,6 +2357,15 @@ export default function CentralOperations() {
                       onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, nombre: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                       required 
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="font-semibold">Apellido</span>
+                    <input 
+                      type="text" 
+                      value={nuevaServicioVenta.cliente.apellido || ''} 
+                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, apellido: e.target.value}})} 
+                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
                   <label className="flex flex-col gap-1">
@@ -1726,15 +2386,7 @@ export default function CentralOperations() {
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
                     />
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="font-semibold">Dirección</span>
-                    <input 
-                      type="text" 
-                      value={nuevaServicioVenta.cliente.direccion} 
-                      onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, direccion: e.target.value}})} 
-                      className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                    />
-                  </label>
+
                 </div>
               </div>
 
@@ -1794,9 +2446,9 @@ export default function CentralOperations() {
                     >
                       <option value="">Seleccionar servicio...</option>
                       {servicios.map(servicio => (
-                        <option key={servicio.nombre_servicio} value={servicio.nombre_servicio}>
-                          {servicio.nombre_servicio} - ${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')}
-                        </option>
+                                        <option key={servicio.nro_servicio} value={servicio.nombre}>
+                  {servicio.nombre} - ${servicio.precio.toLocaleString('es-MX')}
+                </option>
                       ))}
                     </select>
                     <div className="flex gap-2">
@@ -1893,10 +2545,17 @@ export default function CentralOperations() {
             </button>
             <button
               type="submit"
-              disabled={nuevaServicioVenta.servicios.length === 0}
-              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer"
+              disabled={nuevaServicioVenta.servicios.length === 0 || creatingServicio}
+              className="bg-[var(--color-secondary-500)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[var(--color-secondary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2 w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2"
             >
-              Crear Servicio
+              {creatingServicio ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creando...
+                </>
+              ) : (
+                'Crear Servicio'
+              )}
             </button>
           </div>
         </form>

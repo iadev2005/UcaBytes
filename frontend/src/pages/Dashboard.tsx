@@ -4,6 +4,8 @@ import LoadingScreen from '../components/marketing/LoadingScreen';
 import TokenInputModal from '../components/marketing/TokenInputModal';
 import TokenGuide from '../components/marketing/TokenGuide';
 import { cn } from '../lib/utils';
+import { getSalesByCompany, getProductsByCompany, getServicesByCompany, getEmployeesByCompany } from '../supabase/data';
+import { useCompany } from '../context/CompanyContext';
 
 interface FollowerData {
   name: string;
@@ -75,11 +77,12 @@ export default function Dashboard() {
   const [reachData, setReachData] = useState(0);
   const [impressionsData, setImpressionsData] = useState(0);
   
-  // Estados para datos de operaciones centrales
+  // Estados para datos de operaciones centrales desde Supabase
   const [ventasData, setVentasData] = useState<any[]>([]);
   const [serviciosData, setServiciosData] = useState<any[]>([]);
   const [empleadosData, setEmpleadosData] = useState<any[]>([]);
   const [productosData, setProductosData] = useState<any[]>([]);
+  const [loadingSupabaseData, setLoadingSupabaseData] = useState(false);
   
   // Estados para el token de Instagram
   const [instagramToken, setInstagramToken] = useState<string>('');
@@ -88,6 +91,8 @@ export default function Dashboard() {
   const [validatingToken, setValidatingToken] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [showTokenGuide, setShowTokenGuide] = useState(false);
+  // Contexto de la empresa
+  const { companyData } = useCompany();
 
   // Función para cargar token guardado
   const loadSavedToken = async () => {
@@ -191,53 +196,274 @@ export default function Dashboard() {
     setShowTokenGuide(true);
   };
 
-  // Cargar datos de operaciones centrales
-  useEffect(() => {
-    const cargarDatosOperaciones = () => {
-      try {
-        // Cargar ventas
-        const ventasGuardadas = localStorage.getItem('ventas');
-        if (ventasGuardadas) {
-          const ventas = JSON.parse(ventasGuardadas);
-          setVentasData(ventas);
-        }
-
-        // Cargar servicios
-        const serviciosGuardados = localStorage.getItem('ventasServicios');
-        if (serviciosGuardados) {
-          const servicios = JSON.parse(serviciosGuardados);
-          setServiciosData(servicios);
-        }
-
-        // Cargar empleados
-        const empleadosGuardados = localStorage.getItem('empleados');
-        if (empleadosGuardados) {
-          const empleados = JSON.parse(empleadosGuardados);
-          setEmpleadosData(empleados);
-        }
-
-        // Cargar productos (desde ProductsServices)
-        const productosGuardados = localStorage.getItem('productos');
-        if (productosGuardados) {
-          const productos = JSON.parse(productosGuardados);
-          setProductosData(productos);
-        }
-
-        // Cargar servicios del catálogo (desde ProductsServices)
-        const serviciosCatalogoGuardados = localStorage.getItem('servicios');
-        if (serviciosCatalogoGuardados) {
-          const serviciosCatalogo = JSON.parse(serviciosCatalogoGuardados);
-          // Aquí podrías usar serviciosCatalogo si necesitas datos del catálogo de servicios
-        }
-      } catch (error) {
-        console.error('Error al cargar datos de operaciones centrales:', error);
+  // Cargar datos de operaciones centrales desde Supabase
+  const loadSupabaseData = async () => {
+    if (!companyData?.id) return;
+    
+    console.log('🔄 Cargando datos del Dashboard desde Supabase para empresa:', companyData.id);
+    setLoadingSupabaseData(true);
+    
+    try {
+      // Cargar ventas desde Supabase
+      const ventasResult = await getSalesByCompany(companyData.id);
+      if (ventasResult.success) {
+        setVentasData(ventasResult.data || []);
+        console.log('✅ Ventas cargadas desde Supabase:', ventasResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando ventas:', ventasResult.error);
+        setVentasData([]);
       }
-    };
 
-    cargarDatosOperaciones();
-  }, []);
+      // Cargar productos desde Supabase
+      const productosResult = await getProductsByCompany(companyData.id);
+      if (productosResult.success) {
+        setProductosData(productosResult.data || []);
+        console.log('✅ Productos cargados desde Supabase:', productosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando productos:', productosResult.error);
+        setProductosData([]);
+      }
 
-  // Funciones para procesar datos reales
+      // Cargar servicios desde Supabase
+      const serviciosResult = await getServicesByCompany(companyData.id);
+      if (serviciosResult.success) {
+        setServiciosData(serviciosResult.data || []);
+        console.log('✅ Servicios cargados desde Supabase:', serviciosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando servicios:', serviciosResult.error);
+        setServiciosData([]);
+      }
+
+      // Cargar empleados desde Supabase
+      const empleadosResult = await getEmployeesByCompany(companyData.id);
+      if (empleadosResult.success) {
+        setEmpleadosData(empleadosResult.data || []);
+        console.log('✅ Empleados cargados desde Supabase:', empleadosResult.data?.length || 0);
+      } else {
+        console.error('❌ Error cargando empleados:', empleadosResult.error);
+        setEmpleadosData([]);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando datos de Supabase:', error);
+      setVentasData([]);
+      setProductosData([]);
+      setServiciosData([]);
+      setEmpleadosData([]);
+    } finally {
+      setLoadingSupabaseData(false);
+    }
+  };
+
+  // Cargar datos de Supabase cuando se inicializa el componente
+  useEffect(() => {
+    if (companyData?.id) {
+      loadSupabaseData();
+    }
+  }, [companyData?.id]);
+
+  // Función para actualizar y cargar datos de Instagram
+  const updateAndFetchData = async () => {
+    try {
+      setDataUpdating(true);
+      setError(null);
+      
+      // Verificar si hay token disponible
+      if (!instagramToken) {
+        setShowTokenModal(true);
+        return;
+      }
+      
+      // Primero ejecutar los scripts para actualizar los datos
+      const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: instagramToken }),
+      });
+      
+      if (!updateResponse.ok) {
+        throw new Error('Error al actualizar los datos');
+      }
+      setDataUpdating(false);
+      setLoading(true);
+      
+      // Ahora cargar los datos actualizados
+      const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/demographics'),
+        fetch('http://localhost:3001/api/follower-insights'),
+        fetch('http://localhost:3001/api/instagram-details'),
+        fetch('http://localhost:3001/api/reach-insights'),
+        fetch('http://localhost:3001/api/impressions-insights')
+      ]);
+      
+      if (!followerInsightsResponse.ok) {
+        throw new Error(`Error HTTP en follower insights: ${followerInsightsResponse.status}`);
+      }
+      
+      const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
+      const followerInsightsJson = await followerInsightsResponse.json();
+      const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
+      const reachJson = reachResponse.ok ? await reachResponse.json() : null;
+      const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
+      
+      // Procesar datos de follower insights para el histograma (obligatorio)
+      let processedFollowersData = [];
+      if (followerInsightsJson && followerInsightsJson.data && followerInsightsJson.data[0] && followerInsightsJson.data[0].values) {
+        const values = followerInsightsJson.data[0].values;
+        processedFollowersData = values.map((item: { end_time: string; value: number }) => ({
+          name: new Date(item.end_time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
+          seguidores: item.value,
+          originalDate: item.end_time.split('T')[0]
+        }));
+        
+        // Obtener el último valor para current followers
+        const lastValue = values[values.length - 1];
+        if (lastValue) {
+          setCurrentFollowers(lastValue.value);
+        }
+      } else {
+        throw new Error('No se pudieron obtener los datos de follower insights');
+      }
+      
+      // Calculate growth percentage comparing yesterday vs today
+      const sortedData = processedFollowersData.sort((a: FollowerData, b: FollowerData) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
+      
+      if (sortedData.length >= 2) {
+        // Buscar explícitamente las últimas dos fechas disponibles
+        const allDates = sortedData.map((item: FollowerData) => item.originalDate).filter((date: string | undefined) => date);
+        const uniqueDates = [...new Set(allDates)].sort();
+        
+        if (uniqueDates.length >= 2) {
+          const todayDate = uniqueDates[uniqueDates.length - 1]; // Última fecha disponible
+          const yesterdayDate = uniqueDates[uniqueDates.length - 2]; // Penúltima fecha disponible
+          
+          const todayData = sortedData.find((item: FollowerData) => item.originalDate === todayDate);
+          const yesterdayData = sortedData.find((item: FollowerData) => item.originalDate === yesterdayDate);
+          
+          if (todayData && yesterdayData) {
+            const todayFollowers = todayData.seguidores;
+            const yesterdayFollowers = yesterdayData.seguidores;
+            
+            const growth = todayFollowers - yesterdayFollowers;
+            let growthPercent = 0;
+            
+            if (yesterdayFollowers === 0 && todayFollowers === 0) {
+              // Si ambos días son 0, no hay crecimiento
+              growthPercent = 0;
+            } else if (yesterdayFollowers === 0 && todayFollowers > 0) {
+              // Si ayer era 0 y hoy hay seguidores, es crecimiento infinito (mostrar 100%)
+              growthPercent = 100;
+            } else {
+              // Cálculo normal
+              growthPercent = (growth / yesterdayFollowers) * 100;
+            }
+            setGrowthPercentage(Math.round(growthPercent));
+            
+            // Mostrar la fecha de ayer (día de referencia)
+            // Agregar tiempo para evitar problemas de zona horaria
+            const yesterdayDateObj = new Date(yesterdayDate + 'T12:00:00');
+            setFirstDate(yesterdayDateObj.toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric'
+            }));
+          }
+        }
+      }
+
+      setFollowersData(processedFollowersData);
+
+      // Obtener el total real de seguidores desde instagram_details.json
+      let totalFollowersFromDetails = currentFollowers; // fallback al valor anterior
+      if (instagramDetailsJson && instagramDetailsJson.data && instagramDetailsJson.data[0]) {
+        const instagramData = instagramDetailsJson.data[0];
+        if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
+          totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
+          setCurrentFollowers(totalFollowersFromDetails);
+        }
+      }
+
+      // Procesar datos de alcance (reach)
+      if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
+        const reachValues = reachJson.data[0].values;
+        if (reachValues.length > 0) {
+          const latestReach = reachValues[reachValues.length - 1].value;
+          setReachData(latestReach);
+        }
+      }
+
+      // Procesar datos de impresiones
+      if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
+        const impressionsValues = impressionsJson.data[0].values;
+        if (impressionsValues.length > 0) {
+          const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
+          setImpressionsData(latestImpressions);
+        }
+      }
+
+      // Procesar datos demográficos del nuevo formato
+      if (demographicsJson) {
+        const processedDemographics = {
+          gender: {},
+          age: {},
+          city: {}
+        };
+        
+        // Extraer datos de género
+        if (demographicsJson.gender && demographicsJson.gender.data && demographicsJson.gender.data[0]) {
+          const genderData = demographicsJson.gender.data[0];
+          if (genderData.total_value && genderData.total_value.breakdowns && genderData.total_value.breakdowns[0]) {
+            const results = genderData.total_value.breakdowns[0].results;
+            const genderObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              genderObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.gender = genderObj;
+          }
+        }
+        
+        // Extraer datos de edad
+        if (demographicsJson.age && demographicsJson.age.data && demographicsJson.age.data[0]) {
+          const ageData = demographicsJson.age.data[0];
+          if (ageData.total_value && ageData.total_value.breakdowns && ageData.total_value.breakdowns[0]) {
+            const results = ageData.total_value.breakdowns[0].results;
+            const ageObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              ageObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.age = ageObj;
+          }
+        }
+        
+        // Extraer datos de ciudad
+        if (demographicsJson.city && demographicsJson.city.data && demographicsJson.city.data[0]) {
+          const cityData = demographicsJson.city.data[0];
+          if (cityData.total_value && cityData.total_value.breakdowns && cityData.total_value.breakdowns[0]) {
+            const results = cityData.total_value.breakdowns[0].results;
+            const cityObj: Record<string, number> = {};
+            results.forEach((result: any) => {
+              cityObj[result.dimension_values[0]] = result.value;
+            });
+            processedDemographics.city = cityObj;
+          }
+        }
+        
+        setDemographics(processedDemographics);
+      }
+
+      setError(null);
+    } catch (error) {
+      console.error('Error completo:', error);
+      setError('Error al cargar los datos del dashboard');
+      setDataUpdating(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funciones para procesar datos reales desde Supabase
   const procesarDatosVentas = () => {
     if (!ventasData.length) return { totalVentas: 0, ventasMes: 0, clientesUnicos: 0, ticketPromedio: 0, ventasMensuales: [], productosVendidos: [] };
 
@@ -265,7 +491,7 @@ export default function Dashboard() {
       ventas: total
     }));
 
-    // Procesar productos vendidos usando los campos correctos
+    // Procesar productos vendidos usando la estructura de Supabase
     const productosVendidos = ventasData.reduce((acc, venta) => {
       if (venta.productos && Array.isArray(venta.productos)) {
         venta.productos.forEach((prod: any) => {
@@ -291,34 +517,24 @@ export default function Dashboard() {
     if (!serviciosData.length) return { totalServicios: 0, ingresosServicios: 0, clientesUnicos: 0, serviciosMensuales: [], serviciosPorTipo: [] };
 
     const totalServicios = serviciosData.length;
-    const ingresosServicios = serviciosData.reduce((total, servicio) => total + (servicio.total || 0), 0);
-    const clientesUnicos = new Set(serviciosData.map(servicio => servicio.cliente?.nombre || 'Cliente sin nombre')).size;
+    // Para servicios, calculamos el valor total basado en el precio de cada servicio
+    const ingresosServicios = serviciosData.reduce((total, servicio) => total + (servicio.precio || 0), 0);
+    // Como no tenemos datos de clientes para servicios individuales, usamos el total de servicios
+    const clientesUnicos = totalServicios; // Simulación: cada servicio representa un cliente potencial
 
-    // Agrupar servicios por mes
-    const serviciosPorMes = serviciosData.reduce((acc, servicio) => {
-      const fecha = new Date(servicio.fechaServicio || new Date());
-      const mes = fecha.toLocaleDateString('es-ES', { month: 'short' });
-      if (!acc[mes]) acc[mes] = { servicios: 0, ingresos: 0 };
-      acc[mes].servicios += 1;
-      acc[mes].ingresos += servicio.total || 0;
-      return acc;
-    }, {} as Record<string, { servicios: number; ingresos: number }>);
+    // Agrupar servicios por mes (usando la fecha actual ya que no tenemos fechas de venta)
+    const mesActual = new Date().toLocaleDateString('es-ES', { month: 'short' });
+    const serviciosMensuales = [{
+      mes: mesActual,
+      servicios: totalServicios,
+      ingresos: ingresosServicios
+    }];
 
-    const serviciosMensuales = Object.entries(serviciosPorMes).map(([mes, data]) => ({
-      mes,
-      servicios: (data as any).servicios,
-      ingresos: (data as any).ingresos
-    }));
-
-    // Procesar servicios por tipo usando los campos correctos
+    // Procesar servicios por tipo usando la estructura de Supabase
     const serviciosPorTipo = serviciosData.reduce((acc, servicio) => {
-      if (servicio.servicios && Array.isArray(servicio.servicios)) {
-        servicio.servicios.forEach((serv: any) => {
-          const tipo = serv.nombre_servicio || 'Servicio General';
-          if (!acc[tipo]) acc[tipo] = 0;
-          acc[tipo] += (serv.cantidad as number) || 1;
-        });
-      }
+      const tipo = servicio.nombre || 'Servicio General';
+      if (!acc[tipo]) acc[tipo] = 0;
+      acc[tipo] += 1; // Contamos cada servicio como 1
       return acc;
     }, {} as Record<string, number>);
 
@@ -345,8 +561,16 @@ export default function Dashboard() {
     const salarioPromedio = empleadosData.reduce((total, emp) => total + (emp.salario || 0), 0) / totalEmpleados;
     const empleadosPagados = empleadosData.filter(emp => emp.pagado).length;
     
-    // Simular empleados nuevos vs actuales (en un sistema real esto vendría de fechas de contratación)
-    const empleadosNuevos = totalEmpleados > 1 ? Math.floor(totalEmpleados * 0.3) : 0; // 30% nuevos, mínimo 0
+    // Calcular empleados nuevos vs actuales basado en fecha de ingreso
+    const fechaActual = new Date();
+    const seisMesesAtras = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 6, fechaActual.getDate());
+    
+    const empleadosNuevos = empleadosData.filter(emp => {
+      if (!emp.fecha_ingreso) return false;
+      const fechaIngreso = new Date(emp.fecha_ingreso);
+      return fechaIngreso >= seisMesesAtras;
+    }).length;
+    
     const empleadosActuales = totalEmpleados - empleadosNuevos;
 
     // Agrupar empleados por categoría usando el campo correcto
@@ -377,12 +601,13 @@ export default function Dashboard() {
 
     const totalProductos = productosData.length;
     const valorInventario = productosData.reduce((total, prod) => {
-      return total + (parseFloat(prod.precio_producto || '0') * parseInt(prod.stock_producto || '0'));
+      // Usar la estructura de Supabase: prod.precio_venta y prod.cantidad_actual
+      return total + ((prod.precio_venta || 0) * (prod.cantidad_actual || 0));
     }, 0);
 
-    // Agrupar productos por categoría usando el campo correcto
+    // Agrupar productos por categoría usando la estructura de Supabase
     const productosPorCategoria = productosData.reduce((acc, prod) => {
-      const categoria = prod.categoria_producto || 'Sin categoría';
+      const categoria = prod.productos?.categoria || 'Sin categoría';
       if (!acc[categoria]) acc[categoria] = 0;
       acc[categoria] += 1;
       return acc;
@@ -402,210 +627,6 @@ export default function Dashboard() {
       const hasValidToken = await loadSavedToken();
       setInitializing(false);
       
-      const updateAndFetchData = async () => {
-      try {
-        setDataUpdating(true);
-        setError(null);
-        
-        // Verificar si hay token disponible
-        if (!instagramToken) {
-          setShowTokenModal(true);
-          return;
-        }
-        
-        // Primero ejecutar los scripts para actualizar los datos
-        const updateResponse = await fetch('http://localhost:3001/api/update-dashboard-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token: instagramToken }),
-        });
-        
-        if (!updateResponse.ok) {
-          throw new Error('Error al actualizar los datos');
-        }
-        setDataUpdating(false);
-        setLoading(true);
-        
-        // Ahora cargar los datos actualizados
-        const [demographicsResponse, followerInsightsResponse, instagramDetailsResponse, reachResponse, impressionsResponse] = await Promise.all([
-          fetch('http://localhost:3001/api/demographics'),
-          fetch('http://localhost:3001/api/follower-insights'),
-          fetch('http://localhost:3001/api/instagram-details'),
-          fetch('http://localhost:3001/api/reach-insights'),
-          fetch('http://localhost:3001/api/impressions-insights')
-        ]);
-        
-        if (!followerInsightsResponse.ok) {
-          throw new Error(`Error HTTP en follower insights: ${followerInsightsResponse.status}`);
-        }
-        
-        const demographicsJson = demographicsResponse.ok ? await demographicsResponse.json() : null;
-        const followerInsightsJson = await followerInsightsResponse.json();
-        const instagramDetailsJson = instagramDetailsResponse.ok ? await instagramDetailsResponse.json() : null;
-        const reachJson = reachResponse.ok ? await reachResponse.json() : null;
-        const impressionsJson = impressionsResponse.ok ? await impressionsResponse.json() : null;
-        
-        // Procesar datos de follower insights para el histograma (obligatorio)
-        let processedFollowersData = [];
-        if (followerInsightsJson && followerInsightsJson.data && followerInsightsJson.data[0] && followerInsightsJson.data[0].values) {
-          const values = followerInsightsJson.data[0].values;
-          processedFollowersData = values.map((item: { end_time: string; value: number }) => ({
-            name: new Date(item.end_time).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
-            seguidores: item.value,
-            originalDate: item.end_time.split('T')[0]
-          }));
-          
-          // Obtener el último valor para current followers
-          const lastValue = values[values.length - 1];
-          if (lastValue) {
-            setCurrentFollowers(lastValue.value);
-          }
-        } else {
-          throw new Error('No se pudieron obtener los datos de follower insights');
-        }
-        
-        // Calculate growth percentage comparing yesterday vs today
-        const sortedData = processedFollowersData.sort((a: FollowerData, b: FollowerData) => a.originalDate?.localeCompare(b.originalDate || '') || 0);
-        
-        if (sortedData.length >= 2) {
-          // Buscar explícitamente las últimas dos fechas disponibles
-          const allDates = sortedData.map((item: FollowerData) => item.originalDate).filter((date: string | undefined) => date);
-          const uniqueDates = [...new Set(allDates)].sort();
-          
-
-          
-          if (uniqueDates.length >= 2) {
-            const todayDate = uniqueDates[uniqueDates.length - 1]; // Última fecha disponible
-            const yesterdayDate = uniqueDates[uniqueDates.length - 2]; // Penúltima fecha disponible
-            
-            const todayData = sortedData.find((item: FollowerData) => item.originalDate === todayDate);
-            const yesterdayData = sortedData.find((item: FollowerData) => item.originalDate === yesterdayDate);
-            
-            if (todayData && yesterdayData) {
-              const todayFollowers = todayData.seguidores;
-              const yesterdayFollowers = yesterdayData.seguidores;
-              
-              const growth = todayFollowers - yesterdayFollowers;
-              let growthPercent = 0;
-              
-              if (yesterdayFollowers === 0 && todayFollowers === 0) {
-                // Si ambos días son 0, no hay crecimiento
-                growthPercent = 0;
-              } else if (yesterdayFollowers === 0 && todayFollowers > 0) {
-                // Si ayer era 0 y hoy hay seguidores, es crecimiento infinito (mostrar 100%)
-                growthPercent = 100;
-              } else {
-                // Cálculo normal
-                growthPercent = (growth / yesterdayFollowers) * 100;
-              }
-              setGrowthPercentage(Math.round(growthPercent));
-              
-              // Mostrar la fecha de ayer (día de referencia)
-              // Agregar tiempo para evitar problemas de zona horaria
-              const yesterdayDateObj = new Date(yesterdayDate + 'T12:00:00');
-              setFirstDate(yesterdayDateObj.toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-              }));
-            }
-          }
-        }
-
-        setFollowersData(processedFollowersData);
-
-        // Obtener el total real de seguidores desde instagram_details.json
-        let totalFollowersFromDetails = currentFollowers; // fallback al valor anterior
-        if (instagramDetailsJson && instagramDetailsJson.data && instagramDetailsJson.data[0]) {
-          const instagramData = instagramDetailsJson.data[0];
-          if (instagramData.instagram_business_account && instagramData.instagram_business_account.followers_count) {
-            totalFollowersFromDetails = instagramData.instagram_business_account.followers_count;
-            setCurrentFollowers(totalFollowersFromDetails);
-          }
-        }
-
-        // Procesar datos de alcance (reach)
-        if (reachJson && reachJson.data && reachJson.data[0] && reachJson.data[0].values) {
-          const reachValues = reachJson.data[0].values;
-          if (reachValues.length > 0) {
-            const latestReach = reachValues[reachValues.length - 1].value;
-            setReachData(latestReach);
-          }
-        }
-
-
-
-        // Procesar datos de impresiones
-        if (impressionsJson && impressionsJson.data && impressionsJson.data[0] && impressionsJson.data[0].values) {
-          const impressionsValues = impressionsJson.data[0].values;
-          if (impressionsValues.length > 0) {
-            const latestImpressions = impressionsValues[impressionsValues.length - 1].value;
-            setImpressionsData(latestImpressions);
-          }
-        }
-
-        // Procesar datos demográficos del nuevo formato
-        if (demographicsJson) {
-          const processedDemographics = {
-            gender: {},
-            age: {},
-            city: {}
-          };
-          
-          // Extraer datos de género
-          if (demographicsJson.gender && demographicsJson.gender.data && demographicsJson.gender.data[0]) {
-            const genderData = demographicsJson.gender.data[0];
-            if (genderData.total_value && genderData.total_value.breakdowns && genderData.total_value.breakdowns[0]) {
-              const results = genderData.total_value.breakdowns[0].results;
-              const genderObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                genderObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.gender = genderObj;
-            }
-          }
-          
-          // Extraer datos de edad
-          if (demographicsJson.age && demographicsJson.age.data && demographicsJson.age.data[0]) {
-            const ageData = demographicsJson.age.data[0];
-            if (ageData.total_value && ageData.total_value.breakdowns && ageData.total_value.breakdowns[0]) {
-              const results = ageData.total_value.breakdowns[0].results;
-              const ageObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                ageObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.age = ageObj;
-            }
-          }
-          
-          // Extraer datos de ciudad
-          if (demographicsJson.city && demographicsJson.city.data && demographicsJson.city.data[0]) {
-            const cityData = demographicsJson.city.data[0];
-            if (cityData.total_value && cityData.total_value.breakdowns && cityData.total_value.breakdowns[0]) {
-              const results = cityData.total_value.breakdowns[0].results;
-              const cityObj: Record<string, number> = {};
-              results.forEach((result: any) => {
-                cityObj[result.dimension_values[0]] = result.value;
-              });
-              processedDemographics.city = cityObj;
-            }
-          }
-          
-          setDemographics(processedDemographics);
-        }
-
-        setError(null);
-      } catch (error) {
-        console.error('Error completo:', error);
-        setError('Error al cargar los datos del dashboard');
-        setDataUpdating(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
       // Solo ejecutar updateAndFetchData si hay token
       if (instagramToken) {
         updateAndFetchData();
@@ -1020,9 +1041,7 @@ export default function Dashboard() {
         const datosProductos = procesarDatosProductos();
 
         // Crear datos para gráficos basados en datos reales
-        const ventasChartData = datosVentas.ventasMensuales.length > 0 ? datosVentas.ventasMensuales : [
-          { mes: 'Sin datos', ventas: 0 }
-        ];
+        const ventasChartData = datosVentas.ventasMensuales.length > 0 ? datosVentas.ventasMensuales : [];
 
         // Usar productos vendidos reales si existen, sino usar productos del inventario
         const productosVendidos = datosVentas.productosVendidos.length > 0 ? datosVentas.productosVendidos : 
@@ -1030,14 +1049,34 @@ export default function Dashboard() {
             nombre: prod.categoria,
             cantidad: prod.cantidad,
             porcentaje: Math.round(((prod.cantidad as number) / datosProductos.totalProductos) * 100)
-          })) : [
-            { nombre: 'Sin productos', cantidad: 0, porcentaje: 0 }
-          ]);
-
-
+          })) : []);
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
+            
+            {/* Indicador de carga para datos de Supabase */}
+            {loadingSupabaseData && (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Cargando datos desde Supabase...
+                </div>
+              </div>
+            )}
+            
+            {/* Botón de recarga */}
+            <div className="flex justify-end">
+              <button
+                onClick={loadSupabaseData}
+                disabled={loadingSupabaseData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {loadingSupabaseData ? 'Actualizando...' : 'Actualizar datos'}
+              </button>
+            </div>
             
             {/* Métricas principales */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1068,52 +1107,70 @@ export default function Dashboard() {
               {/* Gráfico de ventas mensuales */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Ventas Mensuales</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={ventasChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Bar dataKey="ventas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {ventasChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={ventasChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [`$${value.toLocaleString()}`, 'Ventas']}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Bar dataKey="ventas" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📊</div>
+                      <p className="text-gray-500 text-lg">No hay datos de ventas disponibles</p>
+                      <p className="text-gray-400 text-sm">Registra algunas ventas para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gráfico de productos más vendidos */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Productos Más Vendidos</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={productosVendidos}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomPieLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {productosVendidos.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value, name) => [`${value} unidades`, name === 'cantidad' ? 'Cantidad' : 'Producto']}
-                      labelFormatter={(label) => `Producto: ${label}`}
-                      contentStyle={{
-                        fontSize: '12px',
-                        padding: '8px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {productosVendidos.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={productosVendidos}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomPieLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="cantidad"
+                      >
+                        {productosVendidos.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value, name) => [`${value} unidades`, name === 'cantidad' ? 'Cantidad' : 'Producto']}
+                        labelFormatter={(label) => `Producto: ${label}`}
+                        contentStyle={{
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📦</div>
+                      <p className="text-gray-500 text-lg">No hay productos vendidos</p>
+                      <p className="text-gray-400 text-sm">Registra ventas con productos para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
-
-
             </div>
           </div>
         );
@@ -1125,20 +1182,10 @@ export default function Dashboard() {
         const datosServicios = procesarDatosServicios();
 
         // Crear datos para gráficos basados en datos reales
-        const serviciosChartData = datosServicios.serviciosMensuales.length > 0 ? datosServicios.serviciosMensuales : [
-          { mes: 'Sin datos', servicios: 0, ingresos: 0 }
-        ];
+        const serviciosChartData = datosServicios.serviciosMensuales.length > 0 ? datosServicios.serviciosMensuales : [];
 
         // Usar servicios por tipo reales si existen
-        const serviciosPorTipo = datosServicios.serviciosPorTipo.length > 0 ? datosServicios.serviciosPorTipo : 
-          (datosServicios.totalServicios > 0 ? [
-            { tipo: 'Servicios Generales', cantidad: Math.ceil(datosServicios.totalServicios * 0.4), porcentaje: 40 },
-            { tipo: 'Mantenimiento', cantidad: Math.ceil(datosServicios.totalServicios * 0.3), porcentaje: 30 },
-            { tipo: 'Consultoría', cantidad: Math.ceil(datosServicios.totalServicios * 0.2), porcentaje: 20 },
-            { tipo: 'Otros', cantidad: Math.ceil(datosServicios.totalServicios * 0.1), porcentaje: 10 }
-          ] : [
-            { tipo: 'Sin servicios', cantidad: 0, porcentaje: 0 }
-          ]);
+        const serviciosPorTipo = datosServicios.serviciosPorTipo.length > 0 ? datosServicios.serviciosPorTipo : [];
 
 
 
@@ -1174,59 +1221,136 @@ export default function Dashboard() {
               {/* Gráfico de servicios mensuales */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servicios Mensuales</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={serviciosChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value, name) => [
-                        name === 'servicios' ? `${value} servicios` : name === 'ingresos' ? `$${value.toLocaleString()}` : `${value} clientes`, 
-                        name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes'
-                      ]}
-                      labelFormatter={(label) => `Mes: ${label}`}
-                    />
-                    <Bar dataKey="servicios" fill="#10B981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="ingresos" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {serviciosChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={serviciosChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          name === 'servicios' ? `${value} servicios` : name === 'ingresos' ? `$${value.toLocaleString()}` : `${value} clientes`, 
+                          name === 'servicios' ? 'Servicios' : name === 'ingresos' ? 'Ingresos' : 'Clientes'
+                        ]}
+                        labelFormatter={(label) => `Mes: ${label}`}
+                      />
+                      <Bar dataKey="servicios" fill="#10B981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="ingresos" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">🔧</div>
+                      <p className="text-gray-500 text-lg">No hay datos de servicios disponibles</p>
+                      <p className="text-gray-400 text-sm">Registra algunos servicios para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gráfico de servicios por tipo */}
               <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Servicios por Tipo</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={serviciosPorTipo}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomPieLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="cantidad"
-                    >
-                      {serviciosPorTipo.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value, name) => [`${value} servicios`, name === 'cantidad' ? 'Cantidad' : 'Servicio']}
-                      labelFormatter={(label) => `Tipo: ${label}`}
-                      contentStyle={{
-                        fontSize: '12px',
-                        padding: '8px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {serviciosPorTipo.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={serviciosPorTipo}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomPieLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="cantidad"
+                      >
+                        {serviciosPorTipo.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'][index]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value, name) => [`${value} servicios`, name === 'cantidad' ? 'Cantidad' : 'Servicio']}
+                        labelFormatter={(label) => `Tipo: ${label}`}
+                        contentStyle={{
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📋</div>
+                      <p className="text-gray-500 text-lg">No hay servicios registrados</p>
+                      <p className="text-gray-400 text-sm">Agrega algunos servicios para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
-
-
-
-
             </div>
+
+            {/* Tabla de empleados */}
+            {empleadosData.length > 0 && (
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Lista de Empleados</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Empleado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Cargo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Departamento</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Salario</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha Ingreso</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Contacto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {empleadosData.slice(0, 10).map((emp, index) => (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                                {emp.nombre.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{emp.nombre}</div>
+                                <div className="text-xs text-gray-500">{emp.ci}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700">{emp.puesto}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {emp.categoria}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-medium text-gray-900">
+                            ${emp.salario?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {emp.fecha_ingreso ? new Date(emp.fecha_ingreso).toLocaleDateString('es-MX') : 'No especificada'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-xs">
+                              <div className="text-gray-600">{emp.email}</div>
+                              <div className="text-gray-500">{emp.telefono}</div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {empleadosData.length > 10 && (
+                    <div className="text-center py-4 text-sm text-gray-500">
+                      Mostrando 10 de {empleadosData.length} empleados
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -1247,17 +1371,13 @@ export default function Dashboard() {
         const empleadosPorDeptoRRHH = datosEmpleados.empleadosPorCategoria.length > 0 ? datosEmpleados.empleadosPorCategoria.map(emp => ({
           departamento: emp.categoria || 'Sin categoría',
           empleados: Number(emp.cantidad) || 0
-        })) : [
-          { departamento: 'Administrativo', empleados: 2 },
-          { departamento: 'Ventas', empleados: 3 },
-          { departamento: 'Soporte', empleados: 1 }
-        ];
+        })) : [];
 
         return (
           <div className="w-full bg-white rounded-2xl shadow-lg p-8 flex flex-col gap-8 mb-12">
             
             {/* Métricas principales */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
                 <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Total Empleados</h3>
                 <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.totalEmpleados}</p>
@@ -1268,64 +1388,102 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${(datosEmpleados.salarioPromedio * datosEmpleados.totalEmpleados).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
                 <p className="text-sm text-[var(--color-secondary-500)] mt-1">Total mensual</p>
               </div>
-              <div className="bg-[var(--color-primary-50)] rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-[var(--color-primary-700)] mb-2">Empleados Pagados</h3>
-                <p className="text-3xl font-bold text-[var(--color-primary-600)]">{datosEmpleados.empleadosPagados}</p>
-                <p className="text-sm text-[var(--color-primary-500)] mt-1">Nómina pagada</p>
+              <div className="bg-green-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-green-700 mb-2">Empleados Nuevos</h3>
+                <p className="text-3xl font-bold text-green-600">{datosEmpleados.empleadosNuevos}</p>
+                <p className="text-sm text-green-500 mt-1">Últimos 6 meses</p>
               </div>
-              <div className="bg-[var(--color-secondary-50)] rounded-xl p-6 text-center">
-                <h3 className="text-lg font-semibold text-[var(--color-secondary-700)] mb-2">Salario Promedio</h3>
-                <p className="text-3xl font-bold text-[var(--color-secondary-600)]">${datosEmpleados.salarioPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-                <p className="text-sm text-[var(--color-secondary-500)] mt-1">Por empleado</p>
+              <div className="bg-blue-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-blue-700 mb-2">Salario Promedio</h3>
+                <p className="text-3xl font-bold text-blue-600">${datosEmpleados.salarioPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-blue-500 mt-1">Por empleado</p>
+              </div>
+            </div>
+
+            {/* Métricas secundarias */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-orange-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-orange-700 mb-2">Empleados Actuales</h3>
+                <p className="text-3xl font-bold text-orange-600">{datosEmpleados.empleadosActuales}</p>
+                <p className="text-sm text-orange-500 mt-1">Más de 6 meses</p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-purple-700 mb-2">Departamentos</h3>
+                <p className="text-3xl font-bold text-purple-600">{datosEmpleados.empleadosPorCategoria.length}</p>
+                <p className="text-sm text-purple-500 mt-1">Categorías activas</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-6 text-center">
+                <h3 className="text-lg font-semibold text-red-700 mb-2">Tasa de Crecimiento</h3>
+                <p className="text-3xl font-bold text-red-600">
+                  {datosEmpleados.totalEmpleados > 0 ? 
+                    ((datosEmpleados.empleadosNuevos / datosEmpleados.totalEmpleados) * 100).toFixed(1) : '0'}%
+                </p>
+                <p className="text-sm text-red-500 mt-1">Nuevos vs total</p>
               </div>
             </div>
 
             {/* Gráficos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Gráfico de empleados */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mes" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value, name) => {
-                        const labels = {
-                          total: 'Total',
-                          pagados: 'Pagados'
-                        };
-                        return [`${value} empleados`, labels[name as keyof typeof labels] || name];
-                      }}
-                      labelFormatter={(label) => `Período: ${label}`}
-                    />
-                    <Bar dataKey="total" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="pagados" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-
-
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Gráfico de empleados por departamento */}
-              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] lg:col-span-2">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Empleados por Departamento</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={empleadosPorDeptoRRHH}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="departamento" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`${value} empleados`, 'Empleados']}
-                      labelFormatter={(label) => `Departamento: ${label}`}
-                    />
-                    <Bar dataKey="empleados" fill="#06B6D4" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {empleadosPorDeptoRRHH.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={empleadosPorDeptoRRHH}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="departamento" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [`${value} empleados`, 'Empleados']}
+                        labelFormatter={(label) => `Departamento: ${label}`}
+                      />
+                      <Bar dataKey="empleados" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">👥</div>
+                      <p className="text-gray-500 text-lg">No hay empleados registrados</p>
+                      <p className="text-gray-400 text-sm">Agrega algunos empleados para ver el gráfico</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-
+              {/* Gráfico de empleados nuevos vs actuales */}
+              <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribución de Empleados</h3>
+                {datosEmpleados.totalEmpleados > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Nuevos', value: datosEmpleados.empleadosNuevos, fill: '#10B981' },
+                          { name: 'Actuales', value: datosEmpleados.empleadosActuales, fill: '#F59E0B' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} empleados`, 'Cantidad']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-6xl mb-4">📊</div>
+                      <p className="text-gray-500 text-lg">No hay empleados</p>
+                      <p className="text-gray-400 text-sm">Agrega empleados para ver la distribución</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
