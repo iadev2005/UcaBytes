@@ -152,6 +152,52 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
         },
         isVisible: true,
         order: 0
+      },
+      {
+        id: 'features',
+        type: 'features',
+        content: {
+          title: 'Nuestras ventajas',
+          features: [
+            { 
+              title: 'Envío rápido',
+              description: 'Recibe tus productos en 24-48 horas',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Calidad garantizada',
+              description: 'Todos nuestros productos pasan control de calidad',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Atención personalizada',
+              description: 'Nuestro equipo está disponible para ayudarte',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            }
+          ],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          style: {
+            backgroundColor: '#F9FAFB',
+            padding: 64
+          }
+        },
+        isVisible: true,
+        order: 1
       }
     ]
   },
@@ -194,6 +240,52 @@ export const WEBSITE_TEMPLATES: WebTemplate[] = [
         },
         isVisible: true,
         order: 0
+      },
+      {
+        id: 'features',
+        type: 'features',
+        content: {
+          title: 'Nuestros servicios',
+          features: [
+            { 
+              title: 'Consultoría especializada',
+              description: 'Análisis detallado y recomendaciones personalizadas',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Desarrollo de proyectos',
+              description: 'Implementación completa de soluciones empresariales',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            },
+            { 
+              title: 'Soporte continuo',
+              description: 'Acompañamiento y mantenimiento post-implementación',
+              style: {
+                backgroundColor: '#FFFFFF',
+                padding: 24,
+                borderRadius: 8
+              }
+            }
+          ],
+          products: [],
+          testimonials: [],
+          stats: [],
+          titleStyle: defaultStyles.titleStyle,
+          style: {
+            backgroundColor: '#F9FAFB',
+            padding: 64
+          }
+        },
+        isVisible: true,
+        order: 1
       }
     ]
   }

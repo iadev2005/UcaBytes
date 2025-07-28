@@ -204,9 +204,14 @@ const BusinessInfoForm = ({ onSubmit }: BusinessInfoFormProps) => {
 
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          className="w-full px-6 py-3 bg-[var(--color-secondary-500)] text-white rounded-lg hover:bg-[var(--color-secondary-600)] focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary-500)] focus:ring-offset-2 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer mb-8"
         >
-          Continuar
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+            Crear mi sitio web
+          </div>
         </button>
       </form>
     </div>

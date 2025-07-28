@@ -96,7 +96,7 @@ function AuthRedirect() {
 
 function PublicSite() {
   const { siteId } = useParams();
-  const [page, setPage] = useState<unknown>(null);
+  const [page, setPage] = useState<any>(null);
   useEffect(() => {
     if (siteId) {
       getDoc(doc(db, 'sites', siteId)).then((snap) => {
@@ -106,7 +106,11 @@ function PublicSite() {
     }
   }, [siteId]);
   if (!page) return <div className="min-h-screen flex items-center justify-center text-gray-500">Sitio no encontrado</div>;
-  return <PagePreview page={page} isEditor={false} />;
+  return (
+    <div style={{ overflow: 'auto', height: '100vh' }}>
+      <PagePreview page={page} isEditor={false} />
+    </div>
+  );
 }
 
 function LayoutWithChat() {

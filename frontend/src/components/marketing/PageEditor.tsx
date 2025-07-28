@@ -215,6 +215,7 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -437,10 +438,17 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
   };
 
   const handlePublish = async () => {
-    if (isDirty) {
-      await handleSave();
+    try {
+      setIsPublishing(true);
+      if (isDirty) {
+        await handleSave();
+      }
+      await onPublish(currentPage);
+    } catch (error) {
+      console.error('Error al publicar:', error);
+    } finally {
+      setIsPublishing(false);
     }
-    await onPublish(currentPage);
   };
 
   const handleAddSection = (type: PageSection['type']) => {
@@ -2196,9 +2204,17 @@ export default function PageEditor({ page, onSave, onPublish }: PageEditorProps)
           </button>
           <button
             onClick={handlePublish}
-            className="px-3 py-2 md:px-4 md:py-2 bg-[var(--color-primary-600)] text-white rounded-lg hover:bg-[var(--color-primary-700)] transition-colors text-sm md:text-base cursor-pointer"
+            disabled={isPublishing}
+            className="px-3 py-2 md:px-4 md:py-2 bg-[var(--color-primary-600)] text-white rounded-lg hover:bg-[var(--color-primary-700)] transition-colors text-sm md:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Publicar
+            {isPublishing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Publicando...
+              </>
+            ) : (
+              'Publicar'
+            )}
           </button>
           <button
             onClick={toggleFullscreen}
