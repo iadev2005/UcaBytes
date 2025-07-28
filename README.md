@@ -42,6 +42,7 @@ PymeUp es una aplicación web moderna que ofrece a las PyMEs todas las herramien
 
 ### **Backend**
 - **Node.js** con Express
+- **Python** para procesamiento de datos y APIs
 - **Firebase** (Hosting + Firestore)
 - **Supabase** (PostgreSQL + Auth + Real-time)
 
@@ -223,11 +224,11 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 **PymeUp** fue desarrollado durante el Hackathon de Cudicoders por un equipo multidisciplinario:
 
 ### **Desarrolladores**
-- **[iadev2005](https://github.com/iadev2005)** - Desarrollador Principal
-- **[Kobalt09](https://github.com/Kobalt09)** - Cristian Baczek
-- **[notoriussss](https://github.com/notoriussss)** - Samuel Guzmán
-- **[wildeswt](https://github.com/wildeswt)** - María Sandoval
-- **[Carlos19men](https://github.com/Carlos19men)** - Carlos Méndez
+- **[iadev2005](https://github.com/iadev2005)** - Ignacio Aliendres (Middleware)
+- **[Kobalt09](https://github.com/Kobalt09)** - Cristian Baczek (Middleware)
+- **[notoriussss](https://github.com/notoriussss)** - Samuel Guzmán (Backend)
+- **[wildeswt](https://github.com/wildeswt)** - María Sandoval (Frontend)
+- **[Carlos19men](https://github.com/Carlos19men)** - Carlos Méndez (Backend)
 
 ### **Proyecto**
 - **Evento**: Hackathon Cudicoders
