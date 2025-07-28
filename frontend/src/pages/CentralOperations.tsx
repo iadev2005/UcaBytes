@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany, findExistingClient, findClientByCI, getClientsByCompany, createServiceSale, getServiceSalesByCompany } from '../supabase/data';
+import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompany, findExistingClient, findClientByCI, getClientsByCompany, createServiceSale, getServiceSalesByCompany, getEmployeesByCompany, createEmployee, updateEmployee, deleteEmployee } from '../supabase/data';
 import { useCompany } from '../context/CompanyContext';
 import { client } from '../supabase/client';
 
@@ -190,6 +190,19 @@ interface SupabaseServicio {
   precio: number;
 }
 
+interface SupabaseEmpleado {
+  ci: string;
+  nombre: string;
+  puesto: string;
+  categoria: string;
+  salario: number;
+  foto: string;
+  pagado: boolean;
+  email: string;
+  telefono: string;
+  fecha_ingreso?: string;
+}
+
 export default function CentralOperations() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<'empleados' | 'tareas' | 'ventas' | 'servicios'>('empleados');
@@ -209,11 +222,27 @@ export default function CentralOperations() {
   const [editTexto, setEditTexto] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [empleados, setEmpleados] = useState(mockEmpleados);
+  const [empleados, setEmpleados] = useState<SupabaseEmpleado[]>([]);
+  const [loadingEmpleados, setLoadingEmpleados] = useState(false);
+  const [creatingEmpleado, setCreatingEmpleado] = useState(false);
+  const [updatingEmpleado, setUpdatingEmpleado] = useState(false);
+  const [deletingEmpleado, setDeletingEmpleado] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEditarEmpleado, setModalEditarEmpleado] = useState(false);
   const [empleadoEditando, setEmpleadoEditando] = useState<number | null>(null);
-  const [nuevoEmpleado, setNuevoEmpleado] = useState({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
+  const [nuevoEmpleado, setNuevoEmpleado] = useState({ 
+    ci: '', 
+    email: '', 
+    nombre: '', 
+    apellido: '', 
+    telefono: '', 
+    fecha_ingreso: '', 
+    puesto: '', 
+    categoria: 'Administrativo', 
+    salario: '', 
+    foto: '', 
+    pagado: false 
+  });
 
   // Sales state
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -373,70 +402,189 @@ export default function CentralOperations() {
     setDragOverIdx(null);
   };
 
-  const handleAddEmpleado = (e: React.FormEvent) => {
+  const handleAddEmpleado = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEmpleado.nombre.trim() || !nuevoEmpleado.puesto.trim() || !nuevoEmpleado.salario) return;
-    setEmpleados([
-      ...empleados,
-      {
+    
+    // Validar campos obligatorios
+    if (!nuevoEmpleado.ci?.trim() || !nuevoEmpleado.email?.trim() || !nuevoEmpleado.nombre?.trim() || 
+        !nuevoEmpleado.apellido?.trim() || !nuevoEmpleado.telefono?.trim()) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    if (!companyData?.id) {
+      alert('Error: No se pudo obtener la información de la empresa');
+      return;
+    }
+
+    setCreatingEmpleado(true);
+    
+    try {
+      const empleadoData = {
+        ci: nuevoEmpleado.ci,
+        email: nuevoEmpleado.email,
         nombre: nuevoEmpleado.nombre,
-        puesto: nuevoEmpleado.puesto,
-        categoria: nuevoEmpleado.categoria,
-        salario: parseFloat(nuevoEmpleado.salario),
-        foto: nuevoEmpleado.foto,
-        pagado: false
+        apellido: nuevoEmpleado.apellido,
+        telefono: nuevoEmpleado.telefono,
+        fecha_ingreso: nuevoEmpleado.fecha_ingreso || null,
+        cargo: nuevoEmpleado.puesto,
+        salario: nuevoEmpleado.salario ? parseFloat(nuevoEmpleado.salario) : 0,
+        id_empresa: companyData.id
+      };
+
+      const result = await createEmployee(empleadoData);
+      
+      if (result.success && result.data) {
+        console.log('✅ Empleado creado exitosamente:', result.data);
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+        
+        // Limpiar formulario
+        setNuevoEmpleado({ 
+          ci: '', 
+          email: '', 
+          nombre: '', 
+          apellido: '', 
+          telefono: '', 
+          fecha_ingreso: '', 
+          puesto: '', 
+          categoria: 'Administrativo', 
+          salario: '', 
+          foto: '', 
+          pagado: false 
+        });
+        setModalOpen(false);
+      } else {
+        console.error('❌ Error creando empleado:', result.error);
+        alert(`Error al crear empleado: ${result.error}`);
       }
-    ]);
-    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
-    setModalOpen(false);
+    } catch (error) {
+      console.error('❌ Error creando empleado:', error);
+      alert('Error inesperado al crear empleado');
+    } finally {
+      setCreatingEmpleado(false);
+    }
   };
   const togglePagado = (idx: number) => {
     setEmpleados(empleados.map((e, i) => i === idx ? { ...e, pagado: !e.pagado } : e));
   };
 
   // Funciones para eliminar y editar empleados
-  const eliminarEmpleado = (idx: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
-      setEmpleados(empleados.filter((_, i) => i !== idx));
+  const eliminarEmpleado = async (ci: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+      return;
+    }
+
+    if (!companyData?.id) {
+      alert('Error: No se pudo obtener la información de la empresa');
+      return;
+    }
+
+    setDeletingEmpleado(ci);
+    
+    try {
+      const result = await deleteEmployee(ci, companyData.id);
+      
+      if (result.success) {
+        console.log('✅ Empleado eliminado exitosamente');
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+      } else {
+        console.error('❌ Error eliminando empleado:', result.message);
+        alert(`Error al eliminar empleado: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error eliminando empleado:', error);
+      alert('Error inesperado al eliminar empleado');
+    } finally {
+      setDeletingEmpleado(null);
     }
   };
 
-  const editarEmpleado = (idx: number) => {
-    const empleado = empleados[idx];
+  const editarEmpleado = (empleado: SupabaseEmpleado) => {
     setNuevoEmpleado({
+      ci: empleado.ci,
+      email: empleado.email,
       nombre: empleado.nombre,
+      apellido: empleado.apellido,
+      telefono: empleado.telefono,
+      fecha_ingreso: empleado.fecha_ingreso || '',
       puesto: empleado.puesto,
       categoria: empleado.categoria,
       salario: empleado.salario.toString(),
       foto: empleado.foto || '',
       pagado: empleado.pagado
     });
-    setEmpleadoEditando(idx);
+    setEmpleadoEditando(empleados.findIndex(e => e.ci === empleado.ci));
     setModalEditarEmpleado(true);
   };
 
-  const handleEditarEmpleado = (e: React.FormEvent) => {
+  const handleEditarEmpleado = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoEmpleado.nombre.trim() || !nuevoEmpleado.puesto.trim() || !nuevoEmpleado.salario) return;
     
-    if (empleadoEditando !== null) {
-      setEmpleados(empleados.map((e, i) => 
-        i === empleadoEditando 
-          ? {
-              nombre: nuevoEmpleado.nombre,
-              puesto: nuevoEmpleado.puesto,
-              categoria: nuevoEmpleado.categoria,
-              salario: parseFloat(nuevoEmpleado.salario),
-              foto: nuevoEmpleado.foto,
-              pagado: nuevoEmpleado.pagado
-            }
-          : e
-      ));
+    // Validar campos obligatorios
+    if (!nuevoEmpleado.ci?.trim() || !nuevoEmpleado.email?.trim() || !nuevoEmpleado.nombre?.trim() || 
+        !nuevoEmpleado.apellido?.trim() || !nuevoEmpleado.telefono?.trim()) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
     }
+
+    if (!companyData?.id || empleadoEditando === null) {
+      alert('Error: No se pudo obtener la información necesaria');
+      return;
+    }
+
+    setUpdatingEmpleado(true);
     
-    setNuevoEmpleado({ nombre: '', puesto: '', categoria: 'Administrativo', salario: '', foto: '', pagado: false });
-    setEmpleadoEditando(null);
-    setModalEditarEmpleado(false);
+    try {
+      const empleadoData = {
+        ci: nuevoEmpleado.ci,
+        email: nuevoEmpleado.email,
+        nombre: nuevoEmpleado.nombre,
+        apellido: nuevoEmpleado.apellido,
+        telefono: nuevoEmpleado.telefono,
+        fecha_ingreso: nuevoEmpleado.fecha_ingreso || null,
+        cargo: nuevoEmpleado.puesto,
+        salario: nuevoEmpleado.salario ? parseFloat(nuevoEmpleado.salario) : 0,
+        id_empresa: companyData.id
+      };
+
+      const result = await updateEmployee(empleadoData);
+      
+      if (result.success && result.data) {
+        console.log('✅ Empleado actualizado exitosamente:', result.data);
+        
+        // Recargar la lista de empleados
+        await loadEmpleados();
+        
+        // Limpiar formulario
+        setNuevoEmpleado({ 
+          ci: '', 
+          email: '', 
+          nombre: '', 
+          apellido: '', 
+          telefono: '', 
+          fecha_ingreso: '', 
+          puesto: '', 
+          categoria: 'Administrativo', 
+          salario: '', 
+          foto: '', 
+          pagado: false 
+        });
+        setEmpleadoEditando(null);
+        setModalEditarEmpleado(false);
+      } else {
+        console.error('❌ Error actualizando empleado:', result.error);
+        alert(`Error al actualizar empleado: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Error actualizando empleado:', error);
+      alert('Error inesperado al actualizar empleado');
+    } finally {
+      setUpdatingEmpleado(false);
+    }
   };
 
   // Sales handlers
@@ -909,7 +1057,26 @@ export default function CentralOperations() {
     }
   };
 
-
+  const loadEmpleados = async () => {
+    if (!companyData?.id) return;
+    
+    setLoadingEmpleados(true);
+    try {
+      const result = await getEmployeesByCompany(companyData.id);
+      if (result.success && result.data) {
+        setEmpleados(result.data);
+        console.log('✅ Empleados cargados desde Supabase:', result.data.length);
+      } else {
+        console.error('❌ Error cargando empleados:', result.error);
+        setEmpleados([]);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando empleados:', error);
+      setEmpleados([]);
+    } finally {
+      setLoadingEmpleados(false);
+    }
+  };
 
   // Aplicar datos de cliente encontrado
   const aplicarClienteEncontrado = (cliente: any, esVenta: boolean = true) => {
@@ -942,6 +1109,7 @@ export default function CentralOperations() {
       loadServicios();
       loadVentasServicios();
       loadClientesExistentes();
+      loadEmpleados();
     }
   }, [companyData?.id]);
 
@@ -1076,16 +1244,18 @@ export default function CentralOperations() {
                   {/* Botones de acción */}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => editarEmpleado(idx)}
-                      className="bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)] px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-300)] transition-colors cursor-pointer"
+                      onClick={() => editarEmpleado(emp)}
+                      disabled={updatingEmpleado}
+                      className="bg-[var(--color-secondary-200)] text-[var(--color-secondary-700)] px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-300)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Editar
+                      {updatingEmpleado ? 'Editando...' : 'Editar'}
                     </button>
                     <button
-                      onClick={() => eliminarEmpleado(idx)}
-                      className="bg-[var(--color-secondary-400)] text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+                      onClick={() => eliminarEmpleado(emp.ci)}
+                      disabled={deletingEmpleado === emp.ci}
+                      className="bg-[var(--color-secondary-400)] text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Eliminar
+                      {deletingEmpleado === emp.ci ? 'Eliminando...' : 'Eliminar'}
                     </button>
                   </div>
                 </div>
@@ -1450,25 +1620,120 @@ export default function CentralOperations() {
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Agregar empleado" size="md">
         <form onSubmit={handleAddEmpleado} className="flex flex-col gap-4 w-full">
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Nombre</span>
-            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Puesto</span>
-            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Categoría</span>
-            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
-            </select>
-          </label>
+          {/* Campos obligatorios */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cédula de Identidad *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.ci} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, ci: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: V-12345678"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Email *</span>
+              <input 
+                type="email" 
+                value={nuevoEmpleado.email} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, email: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="empleado@empresa.com"
+                required 
+              />
+            </label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Nombre *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.nombre} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Apellido *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.apellido} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Teléfono *</span>
+              <input 
+                type="tel" 
+                value={nuevoEmpleado.telefono} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, telefono: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="0412-1234567"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Fecha de Ingreso</span>
+              <input 
+                type="date" 
+                value={nuevoEmpleado.fecha_ingreso} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, fecha_ingreso: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cargo</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.puesto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: Desarrollador, Gerente, etc."
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Categoría</span>
+              <select 
+                value={nuevoEmpleado.categoria} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              >
+                {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Salario mensual</span>
-            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={nuevoEmpleado.salario} 
+              onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} 
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              placeholder="0.00"
+            />
           </label>
-          <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          
+          {nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) && (
+            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+              Pago quincenal: <span className="font-semibold">${(Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Foto del empleado</span>
             <div className="flex gap-2">
@@ -1521,32 +1786,140 @@ export default function CentralOperations() {
               </div>
             )}
           </label>
-          <button type="submit" className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer">Agregar</button>
+          
+          <button 
+            type="submit" 
+            disabled={creatingEmpleado}
+            className="bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold mt-2 hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {creatingEmpleado ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Creando...
+              </>
+            ) : (
+              'Agregar Empleado'
+            )}
+          </button>
         </form>
       </Modal>
 
       {/* Modal para editar empleado */}
       <Modal open={modalEditarEmpleado} onClose={() => setModalEditarEmpleado(false)} title="Editar Empleado" size="md">
         <form onSubmit={handleEditarEmpleado} className="flex flex-col gap-4 w-full">
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Nombre</span>
-            <input type="text" value={nuevoEmpleado.nombre} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Puesto</span>
-            <input type="text" value={nuevoEmpleado.puesto} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Categoría</span>
-            <select value={nuevoEmpleado.categoria} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
-            </select>
-          </label>
+          {/* Campos obligatorios */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cédula de Identidad *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.ci} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, ci: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: V-12345678"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Email *</span>
+              <input 
+                type="email" 
+                value={nuevoEmpleado.email} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, email: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="empleado@empresa.com"
+                required 
+              />
+            </label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Nombre *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.nombre} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Apellido *</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.apellido} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                required 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Teléfono *</span>
+              <input 
+                type="tel" 
+                value={nuevoEmpleado.telefono} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, telefono: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="0412-1234567"
+                required 
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Fecha de Ingreso</span>
+              <input 
+                type="date" 
+                value={nuevoEmpleado.fecha_ingreso} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, fecha_ingreso: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Cargo</span>
+              <input 
+                type="text" 
+                value={nuevoEmpleado.puesto} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, puesto: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+                placeholder="Ej: Desarrollador, Gerente, etc."
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-semibold">Categoría</span>
+              <select 
+                value={nuevoEmpleado.categoria} 
+                onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, categoria: e.target.value })} 
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+              >
+                {categorias.filter(c => c !== 'Todos').map(c => <option key={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Salario mensual</span>
-            <input type="number" min="0" step="0.01" value={nuevoEmpleado.salario} onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" required />
+            <input 
+              type="number" 
+              min="0" 
+              step="0.01" 
+              value={nuevoEmpleado.salario} 
+              onChange={e => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} 
+              className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
+              placeholder="0.00"
+            />
           </label>
-          <div className="text-sm text-gray-600">Pago quincenal: <span className="font-semibold">${nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) ? (Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+          
+          {nuevoEmpleado.salario && !isNaN(Number(nuevoEmpleado.salario)) && (
+            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+              Pago quincenal: <span className="font-semibold">${(Number(nuevoEmpleado.salario)/2).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Foto del empleado</span>
             <div className="flex gap-2">
@@ -1609,9 +1982,17 @@ export default function CentralOperations() {
             </button>
             <button 
               type="submit" 
-              className="flex-1 bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer"
+              disabled={updatingEmpleado}
+              className="flex-1 bg-[var(--color-secondary-500)] text-white rounded-lg py-2 font-semibold hover:bg-[var(--color-secondary-600)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Guardar Cambios
+              {updatingEmpleado ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Actualizando...
+                </>
+              ) : (
+                'Guardar Cambios'
+              )}
             </button>
           </div>
         </form>

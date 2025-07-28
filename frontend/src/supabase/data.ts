@@ -824,3 +824,157 @@ export async function getServiceSalesByCompany(id_empresa: number) {
     return { success: false, error: 'Error interno del servidor' };
   }
 }
+
+// ===== FUNCIONES DE EMPLEADOS =====
+
+// Obtener empleados de una empresa
+export async function getEmployeesByCompany(id_empresa: number) {
+  try {
+    const { data: empleados, error } = await client
+      .from('empleados')
+      .select('*')
+      .eq('empresa_trabaja', id_empresa)
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // Transformar los datos al formato esperado por el frontend
+    const empleadosTransformados = empleados?.map(empleado => ({
+      ci: empleado.ci,
+      nombre: `${empleado.nombre} ${empleado.apellido}`,
+      puesto: empleado.cargo || 'Sin cargo',
+      categoria: empleado.cargo || 'Administrativo', // Usar cargo como categoría
+      salario: empleado.salario || 0,
+      foto: '', // Por ahora vacío, se puede agregar campo de foto después
+      pagado: false, // Estado de pago se maneja localmente
+      email: empleado.email,
+      telefono: empleado.telefono,
+      fecha_ingreso: empleado.fecha_ingreso
+    })) || [];
+
+    return { success: true, data: empleadosTransformados };
+  } catch (error) {
+    console.error('Error obteniendo empleados:', error);
+    return { success: false, error: 'Error interno del servidor' };
+  }
+}
+
+// Crear un nuevo empleado
+export async function createEmployee({
+  ci,
+  email,
+  nombre,
+  apellido,
+  telefono,
+  fecha_ingreso,
+  cargo,
+  salario,
+  id_empresa
+}: {
+  ci: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  fecha_ingreso?: string;
+  cargo?: string;
+  salario: number;
+  id_empresa: number;
+}) {
+  try {
+    const { data, error } = await client
+      .from('empleados')
+      .insert({
+        ci,
+        email,
+        nombre,
+        apellido,
+        telefono,
+        fecha_ingreso: fecha_ingreso ? new Date(fecha_ingreso) : new Date(),
+        cargo,
+        empresa_trabaja: id_empresa,
+        salario
+      })
+      .select();
+
+    if (error) {
+      return { success: false, message: 'No se pudo crear el empleado: ' + error.message };
+    }
+
+    return { success: true, message: 'Empleado creado exitosamente', data: data[0] };
+  } catch (error) {
+    console.error('Error creando empleado:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
+
+// Actualizar un empleado existente
+export async function updateEmployee({
+  ci,
+  email,
+  nombre,
+  apellido,
+  telefono,
+  fecha_ingreso,
+  cargo,
+  salario,
+  id_empresa
+}: {
+  ci: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  fecha_ingreso?: string;
+  cargo?: string;
+  salario: number;
+  id_empresa: number;
+}) {
+  try {
+    const { data, error } = await client
+      .from('empleados')
+      .update({
+        email,
+        nombre,
+        apellido,
+        telefono,
+        fecha_ingreso: fecha_ingreso ? new Date(fecha_ingreso) : undefined,
+        cargo,
+        salario
+      })
+      .eq('ci', ci)
+      .eq('empresa_trabaja', id_empresa)
+      .select();
+
+    if (error) {
+      return { success: false, message: 'No se pudo actualizar el empleado: ' + error.message };
+    }
+
+    return { success: true, message: 'Empleado actualizado exitosamente', data: data[0] };
+  } catch (error) {
+    console.error('Error actualizando empleado:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
+
+// Eliminar un empleado
+export async function deleteEmployee(ci: string, id_empresa: number) {
+  try {
+    const { error } = await client
+      .from('empleados')
+      .delete()
+      .eq('ci', ci)
+      .eq('empresa_trabaja', id_empresa);
+
+    if (error) {
+      return { success: false, message: 'No se pudo eliminar el empleado: ' + error.message };
+    }
+
+    return { success: true, message: 'Empleado eliminado exitosamente' };
+  } catch (error) {
+    console.error('Error eliminando empleado:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
