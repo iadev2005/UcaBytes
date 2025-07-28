@@ -1,6 +1,196 @@
 import {client} from  '../supabase/client'
 
-//obtener los datos de una empresa medante el correo del usuario 
+// ===== FUNCIONES DE VALIDACIÓN =====
+
+// Validar CI venezolano (formato: 12345678)
+export function validateVenezuelanCI(ci: string): boolean {
+  // Remover espacios
+  const cleanCI = ci.replace(/\s/g, '');
+  
+  // Verificar que sea solo números y tenga entre 6 y 8 dígitos
+  if (!/^\d{6,8}$/.test(cleanCI)) {
+    return false;
+  }
+  
+  // Validación básica de CI venezolano
+  const digits = cleanCI.split('').map(Number);
+  let sum = 0;
+  
+  for (let i = 0; i < digits.length - 1; i++) {
+    let multiplier = (i % 2 === 0) ? 2 : 1;
+    let product = digits[i] * multiplier;
+    
+    if (product > 9) {
+      product = Math.floor(product / 10) + (product % 10);
+    }
+    
+    sum += product;
+  }
+  
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return checkDigit === digits[digits.length - 1];
+}
+
+// Validar formato de email
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Validar formato de teléfono venezolano
+export function validatePhone(phone: string): boolean {
+  // Remover espacios, guiones y paréntesis
+  const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Verificar formato venezolano: +58, 58, 0, o directo
+  const phoneRegex = /^(\+58|58|0)?(4\d{2}|2\d{2}|1\d{2})\d{7}$/;
+  return phoneRegex.test(cleanPhone);
+}
+
+// Validar datos completos del cliente
+export function validateClientData(cliente: {
+  nombre: string;
+  email: string;
+  telefono: string;
+  ci?: string;
+  apellido?: string;
+}): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Validar nombre
+  if (!cliente.nombre.trim()) {
+    errors.push('El nombre es obligatorio');
+  }
+  
+  // Validar email
+  if (!cliente.email.trim()) {
+    errors.push('El email es obligatorio');
+  } else if (!validateEmail(cliente.email)) {
+    errors.push('El formato del email no es válido');
+  }
+  
+  // Validar teléfono
+  if (!cliente.telefono.trim()) {
+    errors.push('El teléfono es obligatorio');
+  } else if (!validatePhone(cliente.telefono)) {
+    errors.push('El formato del teléfono no es válido');
+  }
+  
+  // Validar CI si se proporciona (ahora es opcional y más flexible)
+  if (cliente.ci && cliente.ci.trim()) {
+    // Solo validar que sea un string no vacío
+    if (cliente.ci.trim().length < 3) {
+      errors.push('El CI debe tener al menos 3 caracteres');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// ===== FUNCIONES DE GESTIÓN DE CLIENTES =====
+
+// Crear un nuevo cliente
+export async function createClient({
+  ci,
+  nombre,
+  apellido,
+  email,
+  telefono,
+  id_empresa
+}: {
+  ci: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  id_empresa: number;
+}) {
+  try {
+    // Validar datos del cliente
+    const validation = validateClientData({ nombre, email, telefono, ci, apellido });
+    if (!validation.isValid) {
+      return { success: false, message: 'Datos del cliente inválidos: ' + validation.errors.join(', ') };
+    }
+    
+    // Verificar si el cliente ya existe
+    const existingClient = await findClientByCI(ci);
+    if (existingClient.success && existingClient.data) {
+      return { success: false, message: 'Ya existe un cliente con este CI' };
+    }
+    
+    // Crear cliente
+    const { data, error } = await client
+      .from('clientes')
+      .insert({
+        ci,
+        nombre,
+        apellido,
+        email,
+        telefono
+      })
+      .select();
+    
+    if (error) {
+      return { success: false, message: 'Error creando cliente: ' + error.message };
+    }
+    
+    // Relacionar con empresa
+    const { error: empresaError } = await client
+      .from('clientesempresa')
+      .insert({
+        id_empresa,
+        ci_cliente: ci
+      });
+    
+    if (empresaError) {
+      return { success: false, message: 'Cliente creado pero error relacionando con empresa: ' + empresaError.message };
+    }
+    
+    return { success: true, data: data[0], message: 'Cliente creado exitosamente' };
+  } catch (error) {
+    console.error('Error creando cliente:', error);
+    return { success: false, message: 'Error interno del servidor' };
+  }
+}
+
+// Buscar cliente por email o teléfono (sin CI)
+export async function findClientByContact(email?: string, telefono?: string) {
+  try {
+    if (!email && !telefono) {
+      return { success: false, data: null, message: 'Se requiere email o teléfono para buscar cliente' };
+    }
+    
+    let query = client.from('clientes').select('*');
+    
+    if (email && telefono) {
+      query = query.or(`email.eq.${email},telefono.eq.${telefono}`);
+    } else if (email) {
+      query = query.eq('email', email);
+    } else if (telefono) {
+      query = query.eq('telefono', telefono);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      return { success: false, data: null, message: 'Error buscando cliente: ' + error.message };
+    }
+    
+    return { 
+      success: true, 
+      data: data && data.length > 0 ? data[0] : null, 
+      message: data && data.length > 0 ? 'Cliente encontrado' : 'Cliente no encontrado' 
+    };
+  } catch (error) {
+    console.error('Error buscando cliente por contacto:', error);
+    return { success: false, data: null, message: 'Error interno del servidor' };
+  }
+}
+
+// Obtener los datos de una empresa medante el correo del usuario 
 export async function getCompany(email:string) {
     
     try{
@@ -27,16 +217,66 @@ export async function updateCompany(id: number, data: {
   fecha_fundacion: string;
 }) {
   try {
-    const { error } = await client
+    // 1. Verificar que la empresa existe
+    const { data: existingCompany, error: fetchError } = await client
       .from('empresas')
-      .update(data)
-      .eq('id', id);
-    if (error) {
-      return { success: false, message: 'No se pudieron actualizar los datos: ' + error.message };
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingCompany) {
+      return { success: false, message: 'Empresa no encontrada' };
     }
+
+    // 2. Validar que el RIF no esté duplicado (si se está actualizando)
+    if (data.rif && data.rif !== existingCompany.rif) {
+      const { data: duplicateRif, error: rifCheckError } = await client
+        .from('empresas')
+        .select('id')
+        .eq('rif', data.rif)
+        .neq('id', id)
+        .single();
+
+      if (duplicateRif) {
+        return { success: false, message: 'Ya existe una empresa con este RIF' };
+      }
+    }
+
+    // 3. Actualizar solo los campos proporcionados
+    const updateData: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key as keyof typeof data] !== undefined && data[key as keyof typeof data] !== '') {
+        updateData[key] = data[key as keyof typeof data];
+      }
+    });
+
+    // 4. Realizar la actualización
+    const { error: updateError } = await client
+      .from('empresas')
+      .update(updateData)
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error actualizando empresa:', updateError);
+      
+      // Manejar errores específicos
+      if (updateError.code === '23505') {
+        // Error de clave duplicada
+        if (updateError.message.includes('rif')) {
+          return { success: false, message: 'Ya existe una empresa con este RIF' };
+        } else if (updateError.message.includes('email')) {
+          return { success: false, message: 'Ya existe una empresa con este email' };
+        } else {
+          return { success: false, message: 'Error de clave duplicada: ' + updateError.message };
+        }
+      }
+      
+      return { success: false, message: 'No se pudieron actualizar los datos: ' + updateError.message };
+    }
+
     return { success: true, message: '¡Datos actualizados con éxito!' };
   } catch (err) {
-    console.error(err);
+    console.error('Error en updateCompany:', err);
     return { success: false, message: 'No se pudieron actualizar los datos.' };
   }
 }
@@ -173,6 +413,7 @@ export async function deleteProduct(id_producto: number) {
 export async function createSale({
   cliente,
   productos,
+  servicios,
   metodoPago,
   fechaVenta,
   fechaPago,
@@ -192,6 +433,13 @@ export async function createSale({
     cantidad: number;
     precio: number;
   }>;
+  servicios: Array<{
+    nombre_servicio: string;
+    descripcion_servicio: string;
+    precio_servicio: string;
+    cantidad: number;
+    fecha_vencimiento?: string;
+  }>;
   metodoPago: string;
   fechaVenta: string;
   fechaPago?: string;
@@ -199,23 +447,56 @@ export async function createSale({
   id_empresa: number;
 }) {
   try {
-    // 1. Crear o actualizar cliente
-    const ci_cliente = cliente.ci || `CI-${Date.now()}`; // Usar CI existente o generar uno temporal
-    const { error: clienteError } = await client
-      .from('clientes')
-      .upsert({
-        ci: ci_cliente,
-        nombre: cliente.nombre,
-        apellido: cliente.apellido || cliente.nombre, // Usar apellido si existe, sino usar nombre
-        email: cliente.email,
-        telefono: cliente.telefono
-      });
-
-    if (clienteError) {
-      return { success: false, message: 'No se pudo crear/actualizar el cliente: ' + clienteError.message };
+    // 1. Validar datos del cliente
+    const validation = validateClientData(cliente);
+    if (!validation.isValid) {
+      return { success: false, message: 'Datos del cliente inválidos: ' + validation.errors.join(', ') };
     }
 
-    // 2. Relacionar cliente con empresa
+    // 2. Verificar si el cliente existe o necesita ser creado
+    let ci_cliente: string;
+    let clienteExiste = false;
+
+    if (cliente.ci) {
+      // Si se proporciona CI, verificar si existe
+      const existingClient = await findClientByCI(cliente.ci);
+      if (existingClient.success && existingClient.data) {
+        ci_cliente = cliente.ci;
+        clienteExiste = true;
+      } else {
+        // CI proporcionado pero no existe, crear nuevo cliente
+        const newClient = await createClient({
+          ci: cliente.ci,
+        nombre: cliente.nombre,
+          apellido: cliente.apellido || '',
+        email: cliente.email,
+          telefono: cliente.telefono,
+          id_empresa
+        });
+        
+        if (!newClient.success) {
+          return { success: false, message: newClient.message };
+        }
+        
+        ci_cliente = cliente.ci;
+      }
+    } else {
+      // No se proporciona CI, buscar por email o teléfono
+      const existingClient = await findClientByContact(cliente.email, cliente.telefono);
+      if (existingClient.success && existingClient.data) {
+        ci_cliente = existingClient.data.ci;
+        clienteExiste = true;
+      } else {
+        // Cliente no existe y no se proporciona CI
+        return { 
+          success: false, 
+          message: 'El cliente no existe. Para crear una venta, el cliente debe tener un CI válido o existir previamente en el sistema.' 
+        };
+      }
+    }
+
+    // 3. Si el cliente existe pero no está relacionado con la empresa, crear la relación
+    if (clienteExiste) {
     const { error: clienteEmpresaError } = await client
       .from('clientesempresa')
       .upsert({
@@ -225,9 +506,10 @@ export async function createSale({
 
     if (clienteEmpresaError) {
       return { success: false, message: 'No se pudo relacionar el cliente con la empresa: ' + clienteEmpresaError.message };
+      }
     }
 
-    // 3. Crear orden de venta
+    // 4. Crear orden de venta
     const referencia = `V-${Date.now()}`;
     const { data: ordenVentaData, error: ordenVentaError } = await client
       .from('ordenventa')
@@ -246,7 +528,7 @@ export async function createSale({
 
     const ordenVenta = ordenVentaData[0];
 
-    // 4. Agregar productos a la orden de venta
+    // 5. Agregar productos a la orden de venta
     const productosVenta = productos.map(producto => ({
       nro_orden: ordenVenta.nro_orden,
       id_producto: producto.id_producto,
@@ -262,7 +544,7 @@ export async function createSale({
       return { success: false, message: 'No se pudo agregar los productos a la venta: ' + productosError.message };
     }
 
-    // 5. Actualizar inventario (reducir stock)
+    // 6. Actualizar inventario (reducir stock)
     for (const producto of productos) {
       // Primero obtener la cantidad actual
       const { data: inventarioActual } = await client
@@ -274,6 +556,15 @@ export async function createSale({
 
       if (inventarioActual) {
         const nuevaCantidad = inventarioActual.cantidad_actual - producto.cantidad;
+        
+        // Verificar que no se venda más de lo disponible
+        if (nuevaCantidad < 0) {
+          return { 
+            success: false, 
+            message: `Stock insuficiente para el producto ID ${producto.id_producto}. Disponible: ${inventarioActual.cantidad_actual}, Solicitado: ${producto.cantidad}` 
+          };
+        }
+        
         const { error: inventarioError } = await client
           .from('inventario')
           .update({ cantidad_actual: nuevaCantidad })
@@ -282,6 +573,10 @@ export async function createSale({
 
         if (inventarioError) {
           console.error('Error actualizando inventario para producto:', producto.id_producto, inventarioError);
+          return { 
+            success: false, 
+            message: 'Error actualizando inventario. La venta no se completó.' 
+          };
         }
       }
     }
@@ -665,23 +960,56 @@ export async function createServiceSale({
   id_empresa: number;
 }) {
   try {
-    // 1. Crear o actualizar cliente
-    const ci_cliente = cliente.ci || `CI-${Date.now()}`; // Usar CI existente o generar uno temporal
-    const { error: clienteError } = await client
-      .from('clientes')
-      .upsert({
-        ci: ci_cliente,
-        nombre: cliente.nombre,
-        apellido: cliente.apellido || cliente.nombre, // Usar apellido si existe, sino usar nombre
-        email: cliente.email,
-        telefono: cliente.telefono
-      });
-
-    if (clienteError) {
-      return { success: false, message: 'No se pudo crear/actualizar el cliente: ' + clienteError.message };
+    // 1. Validar datos del cliente
+    const validation = validateClientData(cliente);
+    if (!validation.isValid) {
+      return { success: false, message: 'Datos del cliente inválidos: ' + validation.errors.join(', ') };
     }
 
-    // 2. Relacionar cliente con empresa
+    // 2. Verificar si el cliente existe o necesita ser creado
+    let ci_cliente: string;
+    let clienteExiste = false;
+
+    if (cliente.ci) {
+      // Si se proporciona CI, verificar si existe
+      const existingClient = await findClientByCI(cliente.ci);
+      if (existingClient.success && existingClient.data) {
+        ci_cliente = cliente.ci;
+        clienteExiste = true;
+      } else {
+        // CI proporcionado pero no existe, crear nuevo cliente
+        const newClient = await createClient({
+          ci: cliente.ci,
+        nombre: cliente.nombre,
+          apellido: cliente.apellido || '',
+        email: cliente.email,
+          telefono: cliente.telefono,
+          id_empresa
+        });
+        
+        if (!newClient.success) {
+          return { success: false, message: newClient.message };
+        }
+        
+        ci_cliente = cliente.ci;
+      }
+    } else {
+      // No se proporciona CI, buscar por email o teléfono
+      const existingClient = await findClientByContact(cliente.email, cliente.telefono);
+      if (existingClient.success && existingClient.data) {
+        ci_cliente = existingClient.data.ci;
+        clienteExiste = true;
+      } else {
+        // Cliente no existe y no se proporciona CI
+        return { 
+          success: false, 
+          message: 'El cliente no existe. Para crear una venta de servicios, el cliente debe tener un CI válido o existir previamente en el sistema.' 
+        };
+      }
+    }
+
+    // 3. Si el cliente existe pero no está relacionado con la empresa, crear la relación
+    if (clienteExiste) {
     const { error: clienteEmpresaError } = await client
       .from('clientesempresa')
       .upsert({
@@ -691,9 +1019,10 @@ export async function createServiceSale({
 
     if (clienteEmpresaError) {
       return { success: false, message: 'No se pudo relacionar el cliente con la empresa: ' + clienteEmpresaError.message };
+      }
     }
 
-    // 3. Crear orden de venta
+    // 4. Crear orden de venta
     const referencia = `S-${Date.now()}`;
     const { data: ordenVentaData, error: ordenVentaError } = await client
       .from('ordenventa')
@@ -712,7 +1041,7 @@ export async function createServiceSale({
 
     const ordenVenta = ordenVentaData[0];
 
-    // 4. Agregar servicios a la orden de venta
+    // 5. Agregar servicios a la orden de venta
     for (const servicio of servicios) {
       // Buscar el servicio en la base de datos
       const { data: servicioData, error: servicioError } = await client
@@ -740,6 +1069,10 @@ export async function createServiceSale({
 
       if (ordenServicioError) {
         console.error('Error insertando servicio en orden:', ordenServicioError);
+        return { 
+          success: false, 
+          message: 'Error agregando servicio a la venta: ' + ordenServicioError.message 
+        };
       }
     }
 

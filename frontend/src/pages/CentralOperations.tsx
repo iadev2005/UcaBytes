@@ -5,9 +5,7 @@ import { getProductsByCompany, createSale, getSalesByCompany, getServicesByCompa
 import { useCompany } from '../context/CompanyContext';
 import { client } from '../supabase/client';
 
-const mockEmpleados = [
-  { nombre: 'Samuel Guzmán', puesto: 'Mi Novio', categoria: 'Administrativo', salario: 100000, foto: '', pagado: false }
-];
+
 const categorias = ['Todos', 'Administrativo', 'Ventas', 'Soporte'];
 const prioridades = ['Alta', 'Media', 'Baja'];
 
@@ -283,6 +281,11 @@ export default function CentralOperations() {
   const [productoSeleccionado, setProductoSeleccionado] = useState<number | ''>('');
   const [cantidadProducto, setCantidadProducto] = useState(1);
   const [inputCantidadProducto, setInputCantidadProducto] = useState('1');
+  
+  // Estados para servicios en venta
+  const [servicioSeleccionadoVenta, setServicioSeleccionadoVenta] = useState('');
+  const [cantidadServicioVenta, setCantidadServicioVenta] = useState<number | string>(1);
+  const [fechaVencimientoServicio, setFechaVencimientoServicio] = useState('');
 
   // Services state
   const [ventasServicios, setVentasServicios] = useState<ServicioVenta[]>([]);
@@ -2047,7 +2050,7 @@ export default function CentralOperations() {
                       value={nuevaVenta.cliente.ci || ''} 
                       onChange={e => setNuevaVenta({...nuevaVenta, cliente: {...nuevaVenta.cliente, ci: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                      placeholder="Ej: V-12345678"
+                      placeholder="Ej: 12345678"
                     />
                   </label>
                   <label className="flex flex-col gap-1">
@@ -2267,6 +2270,104 @@ export default function CentralOperations() {
                   </div>
                 )}
               </div>
+
+              {/* Agregar servicios */}
+              <div>
+                <h3 className="font-bold text-lg text-[var(--color-primary-700)] mb-3">Servicios</h3>
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={servicioSeleccionado}
+                      onChange={e => setServicioSeleccionado(e.target.value)}
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                    >
+                      <option value="">Seleccionar servicio...</option>
+                      {servicios.map(servicio => (
+                        <option key={servicio.nro_servicio} value={servicio.nombre}>
+                          {servicio.nombre} - ${servicio.precio.toLocaleString('es-MX')}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={cantidadServicio}
+                        onChange={e => {
+                          const inputValue = e.target.value;
+                          const val = inputValue === '' ? 1 : parseInt(inputValue) || 1;
+                          setCantidadServicio(val);
+                        }}
+                        onBlur={e => {
+                          const val = parseInt(e.target.value) || 1;
+                          setCantidadServicio(val);
+                        }}
+                        className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarServicioAVenta}
+                        disabled={!servicioSeleccionado}
+                        className="bg-[var(--color-primary-600)] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[var(--color-primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lista de servicios en la venta */}
+                {nuevaServicioVenta.servicios.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg p-3">
+                    <h4 className="font-semibold mb-2">Servicios en la venta:</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {nuevaServicioVenta.servicios.map((servicio) => (
+                        <div key={servicio.nombre_servicio} className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 p-2 rounded gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm sm:text-base truncate block">{servicio.nombre_servicio}</span>
+                            <span className="text-xs sm:text-sm text-gray-500">${parseFloat(servicio.precio_servicio).toLocaleString('es-MX')} c/u</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={servicio.cantidad}
+                              onChange={e => {
+                                const inputValue = e.target.value;
+                                const val = inputValue === '' ? 1 : parseInt(inputValue) || 1;
+                                actualizarCantidadServicio(servicio.nombre_servicio, val);
+                              }}
+                              onBlur={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                actualizarCantidadServicio(servicio.nombre_servicio, val);
+                              }}
+                              className="w-16 sm:w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-400)]"
+                            />
+                            <span className="font-semibold min-w-[70px] sm:min-w-[90px] text-right text-sm">
+                              ${(servicio.subtotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removerServicioDeVenta(servicio.nombre_servicio)}
+                              className="text-red-500 hover:text-red-700 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-gray-200 mt-3 pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-base sm:text-lg">Total:</span>
+                        <span className="font-bold text-lg sm:text-xl text-[var(--color-secondary-600)]">
+                          ${calcularTotalServicios().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2346,7 +2447,7 @@ export default function CentralOperations() {
                       value={nuevaServicioVenta.cliente.ci || ''} 
                       onChange={e => setNuevaServicioVenta({...nuevaServicioVenta, cliente: {...nuevaServicioVenta.cliente, ci: e.target.value}})} 
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]" 
-                      placeholder="Ej: V-12345678"
+                      placeholder="Ej: 12345678"
                     />
                   </label>
                   <label className="flex flex-col gap-1">
