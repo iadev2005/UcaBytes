@@ -296,7 +296,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] p-8 items-center relative overflow-hidden">
-      <CompanyInfo />
+      
       <h1 className="text-4xl md:text-3xl sm:text-2xl font-bold mb-8">¡Bienvenido al Panel de Control!</h1>
 
       <div className="grid [grid-template-columns:2fr_min-content_0.8fr] gap-8 w-full max-w-5xl flex-1 justify-start z-10">
