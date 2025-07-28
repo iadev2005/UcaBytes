@@ -32,7 +32,7 @@ def main():
         print(f"Contenedor creado con ID: {creation_id}")
         
         # Intentar publicar el video con múltiples intentos
-        max_attempts = 5
+        max_attempts = 10
         attempt = 1
         
         while attempt <= max_attempts:

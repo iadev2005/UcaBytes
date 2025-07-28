@@ -2,7 +2,7 @@
 # Ejecuta el smart_scheduler.py cada minuto solo cuando hay publicaciones programadas
 
 $TaskName = "InstagramSmartScheduler"
-$ScriptPath = Join-Path $PSScriptRoot "run_auto_scheduler.vbs"
+$ScriptPath = Join-Path $PSScriptRoot "run_smart_scheduler.vbs"
 
 Write-Host "Configurando Windows Task Scheduler para Instagram Smart Scheduler..." -ForegroundColor Green
 
@@ -32,6 +32,7 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $Task
 Write-Host "✅ Tarea programada creada exitosamente!" -ForegroundColor Green
 Write-Host "Nombre de la tarea: $TaskName" -ForegroundColor Cyan
 Write-Host "Se ejecutará cada minuto y solo procesará cuando hay publicaciones programadas." -ForegroundColor Cyan
+Write-Host "Usando smart_scheduler.py con token del localStorage" -ForegroundColor Green
 Write-Host ""
 Write-Host "Para verificar el estado de la tarea:" -ForegroundColor Yellow
 Write-Host "Get-ScheduledTask -TaskName '$TaskName'" -ForegroundColor White

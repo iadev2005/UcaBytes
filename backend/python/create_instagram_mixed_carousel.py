@@ -105,7 +105,7 @@ def main():
             # Crear contenedor individual con reintentos si es video
             if is_video:
                 print(f"Creando contenedor de video con reintentos...")
-                max_container_attempts = 3
+                max_container_attempts = 10
                 container_attempt = 1
                 container_response = None
                 

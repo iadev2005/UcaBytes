@@ -122,7 +122,7 @@ def main():
         print(f"[DEBUG] Parámetros del carrusel: {carousel_params}")
         
         # Reintentos para crear el carrusel principal
-        max_carousel_attempts = 3
+        max_carousel_attempts = 10
         carousel_attempt = 1
         
         while carousel_attempt <= max_carousel_attempts:
