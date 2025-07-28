@@ -5,8 +5,6 @@ import { updateCompany } from '../supabase/data';
 export default function Settings() {
   // Todos los hooks deben ir aquí, antes de cualquier return condicional
   const { companyData, companyLoading, updateCompanyData } = useCompany();
-  const [language, setLanguage] = useState('es');
-  const [theme, setTheme] = useState('light');
   const [popup, setPopup] = useState<{ open: boolean; message: string; success: boolean }>({ open: false, message: '', success: false });
   const [form, setForm] = useState({
     rif: '',
@@ -26,7 +24,7 @@ export default function Settings() {
         descripcion: companyData.descripcion || '',
         direccion: companyData.direccion || '',
         telefono: companyData.telefono || '',
-        fecha_fundacion: companyData.fecha_fundacion || '',
+        fecha_fundacion: companyData.fecha_fundacion ? new Date(companyData.fecha_fundacion).toISOString().split('T')[0] : '',
       });
     }
   }, [companyData]);
@@ -49,10 +47,22 @@ export default function Settings() {
   // Handler para aplicar cambios y mostrar popup
   const handleApplyChanges = async () => {
     if (!companyData) return;
-    const result = await updateCompany(companyData.id, form);
+    
+    // Preparar los datos para enviar, convirtiendo la fecha si es necesario
+    const dataToSend = { ...form };
+    
+    // Si hay fecha_fundacion, convertirla al formato YYYY-MM-DD para PostgreSQL
+    if (dataToSend.fecha_fundacion) {
+      const date = new Date(dataToSend.fecha_fundacion);
+      if (!isNaN(date.getTime())) {
+        dataToSend.fecha_fundacion = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      }
+    }
+    
+    const result = await updateCompany(companyData.id, dataToSend);
     setPopup({ open: true, message: result.message, success: result.success });
     if (result.success) {
-      updateCompanyData(form);
+      updateCompanyData(dataToSend);
     }
   };
 
@@ -116,7 +126,7 @@ export default function Settings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Fecha de Fundación</label>
-            <input type="text" name="fecha_fundacion" value={form.fecha_fundacion} onChange={handleChange} className="w-sm rounded-lg border border-gray-300 px-3 py-2" />
+            <input type="date" name="fecha_fundacion" value={form.fecha_fundacion} onChange={handleChange} className="w-sm rounded-lg border border-gray-300 px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Avatar</label>
@@ -133,28 +143,7 @@ export default function Settings() {
           </button>
         </div>
       </section>
-      <hr className="my-4 border-gray-300" />
-      {/* Apariencia */}
-      <section className="mb-2">
-        <h2 className="text-2xl font-semibold mb-4">Apariencia</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium mb-1">Tema</label>
-            <select value={theme} onChange={e => setTheme(e.target.value)} className="w-xs rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              <option value="light">Claro</option>
-              <option value="dark">Oscuro</option>
-              <option value="system">Sistema</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Idioma</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)} className="w-sm rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]">
-              <option value="es">Español</option>
-              <option value="en">Próximamente más idiomas...</option>
-            </select>
-          </div>
-        </div>
-      </section>
+
     </div>
   );
 } 
