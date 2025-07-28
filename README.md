@@ -237,9 +237,9 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ## 📞 Soporte
 
 Para soporte técnico o consultas:
-- 📧 Email: [tu-email@ejemplo.com]
+- 📧 Email: [iadev0721@gmail.com](mailto:iadev0721@gmail.com)
 - 🐛 Issues: [GitHub Issues](https://github.com/iadev2005/PymeUp/issues)
 
 ---
 
-**PymeUp** - Transformando PyMEs con tecnología moderna 🚀
+**PymeUp** - Transforma la forma en la que trabajas y vendes 🚀
