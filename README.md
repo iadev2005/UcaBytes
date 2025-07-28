@@ -220,8 +220,18 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ## 👥 Equipo
 
-- **Desarrollador Principal**: [iadev2005](https://github.com/iadev2005)
-- **Proyecto**: Hackathon Cudicoders
+**PymeUp** fue desarrollado durante el Hackathon de Cudicoders por un equipo multidisciplinario:
+
+### **Desarrolladores**
+- **[iadev2005](https://github.com/iadev2005)** - Desarrollador Principal
+- **[Kobalt09](https://github.com/Kobalt09)** - Cristian Baczek
+- **[notoriussss](https://github.com/notoriussss)** - Samuel Guzmán
+- **[wildeswt](https://github.com/wildeswt)** - María Sandoval
+- **[Carlos19men](https://github.com/Carlos19men)** - Carlos Méndez
+
+### **Proyecto**
+- **Evento**: Hackathon Cudicoders
+- **Plataforma**: PymeUp - Transformando PyMEs con tecnología moderna
 
 ## 📞 Soporte
 
